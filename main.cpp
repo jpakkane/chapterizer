@@ -37,9 +37,44 @@ std::vector<std::string> eager_split(const std::vector<std::string> &words,
             current_line = w;
             continue;
         }
-        if(current_line.length() >= target_width) {
+        if(current_line.length() + w.length() >= target_width) {
             lines.emplace_back(std::move(current_line));
             current_line = w;
+        } else {
+            current_line += ' ';
+            current_line += w;
+        }
+    }
+    if(!current_line.empty()) {
+        lines.emplace_back(std::move(current_line));
+    }
+    return lines;
+}
+
+std::vector<std::string> slightly_smarter_split(const std::vector<std::string> &words,
+                                                const size_t target_width) {
+    std::vector<std::string> lines;
+    std::string current_line;
+    for(const auto &w : words) {
+        if(current_line.empty()) {
+            current_line = w;
+            continue;
+        }
+        const auto current_w = int(current_line.length());
+        const auto appended_w = int(current_line.length() + w.length() + 1);
+
+        if(appended_w >= (int)target_width) {
+            const auto current_delta = abs(current_w - (int)target_width);
+            const auto appended_delta = abs(appended_w - (int)target_width);
+            if(current_delta <= appended_delta) {
+                lines.emplace_back(std::move(current_line));
+                current_line = w;
+            } else {
+                current_line += ' ';
+                current_line += w;
+                lines.emplace_back(std::move(current_line));
+                current_line = "";
+            }
         } else {
             current_line += ' ';
             current_line += w;
@@ -68,7 +103,10 @@ int main() {
 
     auto words = split(text);
     printf("Text has %d words.\n\n", (int)words.size());
-    const auto eager = eager_split(words, target_width);
-    print_output(eager, target_width);
+    const auto eager_lines = eager_split(words, target_width);
+    print_output(eager_lines, target_width);
+    printf("\n\n");
+    const auto smarter_lines = slightly_smarter_split(words, target_width);
+    print_output(smarter_lines, target_width);
     return 0;
 }
