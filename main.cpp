@@ -92,7 +92,17 @@ void print_output(const std::vector<std::string> &lines, const size_t target_wid
     }
 }
 
+#include <wordhyphenator.hpp>
+void hyphentest() {
+    WordHyphenator wp;
+    std::string test_word{"inconceivable"};
+    const auto result = wp.hyphenate(test_word);
+    printf("The hyphenated form is %s\n", result.c_str());
+    exit(0);
+}
+
 int main() {
+    hyphentest();
     const size_t target_width = 66;
     std::string text{raw_text};
     for(size_t i = 0; i < text.size(); ++i) {
