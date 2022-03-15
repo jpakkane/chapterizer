@@ -97,7 +97,16 @@ void hyphentest() {
     WordHyphenator wp;
     std::string test_word{"inconceivable"};
     const auto result = wp.hyphenate(test_word);
-    printf("The hyphenated form is %s\n", result.c_str());
+    printf("The hyphenated form is ");
+    size_t hyphenloc = 0;
+    for(size_t i = 0; i < result.word.length(); ++i) {
+        printf("%c", result.word[i]);
+        if(hyphenloc < result.hyphens.size() && result.hyphens[hyphenloc] == i) {
+            printf("-");
+            ++hyphenloc;
+        }
+    }
+    printf(".\n");
     exit(0);
 }
 

@@ -5,12 +5,17 @@
 #include <string>
 #include <vector>
 
+struct HyphenatedWord {
+    std::vector<size_t> hyphens;
+    std::string word;
+};
+
 class WordHyphenator {
 public:
     WordHyphenator();
     ~WordHyphenator();
 
-    std::string hyphenate(const std::string &word) const;
+    HyphenatedWord hyphenate(const std::string &word) const;
 
 private:
     HyphenDict *dict;

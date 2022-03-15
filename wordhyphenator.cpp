@@ -1,5 +1,19 @@
 #include "wordhyphenator.hpp"
 #include <cassert>
+#include <cctype>
+
+namespace {
+
+std::string lowerword(const std::string &w) {
+    std::string lw;
+    lw.reserve(w.size());
+    for(const auto c : w) {
+        lw.push_back(tolower(c));
+    }
+    return lw;
+}
+
+} // namespace
 
 WordHyphenator::WordHyphenator() {
     dict = hnj_hyphen_load("/usr/share/hyphen/hyph_en.dic");
@@ -8,7 +22,7 @@ WordHyphenator::WordHyphenator() {
 
 WordHyphenator::~WordHyphenator() { hnj_hyphen_free(dict); }
 
-std::string WordHyphenator::hyphenate(const std::string &word) const {
+HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
     assert(word.find(' ') == std::string::npos);
     std::vector<char> output(word.size() * 2 + 1, '\0');
     char **rep = nullptr;
@@ -17,15 +31,16 @@ std::string WordHyphenator::hyphenate(const std::string &word) const {
     std::vector<char> hyphens(word.size() + 5, (char)-1);
     // The hyphenation function only deals with lower case single words.
     // Trailing punctuation, capital letters and hyphens within words break it.
+    const auto lw = lowerword(word);
     const auto rc = hnj_hyphen_hyphenate2(
-        dict, word.c_str(), (int)word.size(), hyphens.data(), output.data(), &rep, &pos, &cut);
+        dict, lw.c_str(), (int)lw.size(), hyphens.data(), output.data(), &rep, &pos, &cut);
     assert(rc == 0);
 
-    std::string result;
+    HyphenatedWord result;
+    result.word = word;
     for(size_t i = 0; i < word.size(); ++i) {
-        result.push_back(word[i]);
         if(hyphens[i] & 1) {
-            result.push_back('-');
+            result.hyphens.push_back(i);
         }
     }
 
