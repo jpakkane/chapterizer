@@ -110,6 +110,8 @@ size_t detect_optimal_split_point(const HyphenatedWord &word,
     if(loc == word.hyphens.end()) {
         return word.hyphens.back();
     }
+    // Check if the split point before is better than the current one.
+    // I.e. if "overshoot" is better than "undershoot".
     return *loc;
 }
 
@@ -172,7 +174,7 @@ std::vector<HyphenatedWord> do_hyphenstuff(const std::vector<std::string> &plain
 
 void hyphentest() {
     WordHyphenator wp;
-    std::string test_word{"branches"};
+    std::string test_word{"monotonous"};
     const auto result = wp.hyphenate(test_word);
     printf("The hyphenated form is ");
     size_t hyphenloc = 0;
@@ -184,10 +186,11 @@ void hyphentest() {
         }
     }
     printf(".\n");
+    exit(0);
 }
 
 int main() {
-    hyphentest();
+    // hyphentest();
     const size_t target_width = 66;
     std::string text{raw_text};
 
