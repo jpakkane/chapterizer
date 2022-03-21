@@ -7,12 +7,6 @@ cairo_dep = dependency('cairo')
 pangocairo_dep = dependency('pangocairo')
 gtk4_dep = dependency('gtk4')
 
-gladecpp = custom_target('gladesrc',
-  input: 'guilayout.ui',
-  output: 'guidata.cpp',
-  command: [find_program('uigen.py'), '@INPUT@', '@OUTPUT@']
-  )
-
 executable('chapterizer', 'main.cpp', 'wordhyphenator.cpp',
     dependencies: hyphen_dep)
 
@@ -20,4 +14,4 @@ executable('fttest', 'fttest.cpp', dependencies: [ft_dep, cairo_dep])
 
 executable('pangotest', 'pangotest.cpp', dependencies: pangocairo_dep)
 
-executable('guitool', 'guitool.cpp', gladecpp, dependencies: gtk4_dep)
+executable('guitool', 'guitool.cpp', dependencies: gtk4_dep)
