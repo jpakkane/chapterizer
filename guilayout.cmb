@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<!DOCTYPE cambalache-project SYSTEM "cambalache-project.dtd">
+<cambalache-project version="0.8.2" target_tk="gtk-4.0">
+  <ui>
+	(1,None,"guilayout.ui","guilayout.ui",None,None,None,None,None,None)
+  </ui>
+  <object>
+	(1,1,"GtkWindow","mainwin",None,None,None,None,None),
+	(1,2,"GtkGrid",None,1,None,None,None,-1),
+	(1,3,"GtkButton","hackbutton",2,None,None,None,None),
+	(1,4,"GtkTextView",None,2,None,None,None,None),
+	(1,5,"GtkTreeView",None,2,None,None,None,1),
+	(1,6,"GtkLabel","statuslabel",2,None,None,None,None)
+  </object>
+  <object_property>
+	(1,2,"GtkWidget","hexpand","True",None,None,None,None),
+	(1,2,"GtkWidget","vexpand","True",None,None,None,None),
+	(1,3,"GtkButton","label","Quit",None,None,None,None),
+	(1,4,"GtkWidget","hexpand","True",None,None,None,None),
+	(1,4,"GtkWidget","vexpand","True",None,None,None,None),
+	(1,5,"GtkWidget","vexpand","True",None,None,None,None)
+  </object_property>
+  <object_layout_property>
+	(1,2,3,"GtkGridLayoutChild","column","0",None,None,None,None),
+	(1,2,3,"GtkGridLayoutChild","column-span","2",None,None,None,None),
+	(1,2,3,"GtkGridLayoutChild","row","0",None,None,None,None),
+	(1,2,3,"GtkGridLayoutChild","row-span","1",None,None,None,None),
+	(1,2,4,"GtkGridLayoutChild","column","0",None,None,None,None),
+	(1,2,4,"GtkGridLayoutChild","column-span","1",None,None,None,None),
+	(1,2,4,"GtkGridLayoutChild","row","1",None,None,None,None),
+	(1,2,4,"GtkGridLayoutChild","row-span","1",None,None,None,None),
+	(1,2,5,"GtkGridLayoutChild","column","1",None,None,None,None),
+	(1,2,5,"GtkGridLayoutChild","column-span","1",None,None,None,None),
+	(1,2,5,"GtkGridLayoutChild","row","1",None,None,None,None),
+	(1,2,5,"GtkGridLayoutChild","row-span","1",None,None,None,None),
+	(1,2,6,"GtkGridLayoutChild","column","0",None,None,None,None),
+	(1,2,6,"GtkGridLayoutChild","column-span","2",None,None,None,None),
+	(1,2,6,"GtkGridLayoutChild","row","2",None,None,None,None),
+	(1,2,6,"GtkGridLayoutChild","row-span","1",None,None,None,None)
+  </object_layout_property>
+</cambalache-project>
