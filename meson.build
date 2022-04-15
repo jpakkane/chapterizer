@@ -7,8 +7,12 @@ cairo_dep = dependency('cairo')
 pangocairo_dep = dependency('pangocairo')
 gtk4_dep = dependency('gtk4')
 
-executable('chapterizer', 'main.cpp', 'wordhyphenator.cpp', 'splitter.cpp',
-    dependencies: hyphen_dep)
+executable('chapterizer',
+    'main.cpp',
+    'wordhyphenator.cpp',
+    'splitter.cpp',
+    'textshaper.cpp',
+    dependencies: [hyphen_dep, pangocairo_dep])
 
 executable('fttest', 'fttest.cpp', dependencies: [ft_dep, cairo_dep])
 

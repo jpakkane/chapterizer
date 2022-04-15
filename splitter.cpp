@@ -1,4 +1,4 @@
-#include "splitter.h"
+#include "splitter.hpp"
 
 #include <cassert>
 
@@ -8,14 +8,10 @@ Splitter::Splitter(const std::vector<HyphenatedWord> &words, double paragraph_wi
 std::vector<std::string> Splitter::split_lines() {
     std::vector<std::string> lines;
     precompute();
-    /*
-    for(size_t i = 0; i < 10; ++i) {
-        lines.emplace_back(build_line(0, i));
+    for(size_t i = 10; i <= split_points.size(); i += 10) {
+        lines.emplace_back(build_line(i - 10, std::min(i, split_points.size() - 1)));
     }
-    */
-    lines.emplace_back(build_line(0, 10));
-    lines.emplace_back(build_line(10, 21));
-    lines.emplace_back(build_line(21, 30));
+
     return lines;
 }
 
@@ -29,8 +25,8 @@ void Splitter::precompute() {
             split_points.emplace_back(WithinWordSplit{word_index, hyphen_index});
         }
     }
-    split_points.emplace_back(BetweenWordSplit{words.size()});
-    printf("The text has a total of %d words and %d split points.\n",
+    split_points.emplace_back(BetweenWordSplit{words.size()}); // The end sentinel
+    printf("The text has a total of %d words and %d split points.\n\n",
            (int)words.size(),
            (int)split_points.size());
     split_locations.clear();
@@ -38,6 +34,7 @@ void Splitter::precompute() {
     for(const auto &i : split_points) {
         split_locations.emplace_back(point_to_location(i));
     }
+    assert(split_points.size() == split_locations.size());
 }
 
 std::string Splitter::build_line(size_t from_split_ind, size_t to_split_ind) const {
@@ -62,7 +59,7 @@ std::string Splitter::build_line(size_t from_split_ind, size_t to_split_ind) con
     size_t current_word_index = start_loc.word_index + 1;
 
     // Intermediate words.
-    while(current_word_index < end_loc.word_index) {
+    while(current_word_index < end_loc.word_index && current_word_index < words.size()) {
         line += ' ';
         line += words[current_word_index].word;
         ++current_word_index;

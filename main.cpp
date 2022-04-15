@@ -1,5 +1,5 @@
 #include <wordhyphenator.hpp>
-#include <splitter.h>
+#include <splitter.hpp>
 #include <cstdio>
 #include <cassert>
 #include <sstream>
@@ -103,11 +103,10 @@ size_t detect_optimal_split_point(const HyphenatedWord &word,
                                   const int line_width,
                                   const int target_width) {
     const int hyphen_width = 1;
-    auto loc = std::find_if(word.hyphens.begin(),
-                            word.hyphens.end(),
-                            [&line_width, &target_width, &hyphen_width](size_t hyph_index) {
-                                return int(line_width + hyph_index + hyphen_width) > target_width;
-                            });
+    auto loc = std::find_if(
+        word.hyphens.begin(), word.hyphens.end(), [&line_width, &target_width](size_t hyph_index) {
+            return int(line_width + hyph_index + hyphen_width) > target_width;
+        });
     if(loc == word.hyphens.end()) {
         return word.hyphens.back();
     }
@@ -205,9 +204,8 @@ void monospacetest(const T1 &plain_words, const T2 &hyphenated_words) {
     print_output(hyph_lines, target_width);
 }
 
-template<typename T1, typename T2>
-void full_test(const T1 &plain_words, const T2 &hyphenated_words) {
-    const double paragraph_width = 5.0;
+template<typename T1> void full_test(const T1 &hyphenated_words) {
+    const double paragraph_width = 50.0;
     Splitter spl{hyphenated_words, paragraph_width};
     const auto lines = spl.split_lines();
     for(const auto &line : lines) {
@@ -216,6 +214,7 @@ void full_test(const T1 &plain_words, const T2 &hyphenated_words) {
 }
 
 int main() {
+    setlocale(LC_ALL, "");
     // hyphentest();
     std::string text{raw_text};
 
@@ -226,6 +225,6 @@ int main() {
         monospacetest(plain_words, hyphenated_words);
         printf("\n\n");
     }
-    full_test(plain_words, hyphenated_words);
+    full_test(hyphenated_words);
     return 0;
 }
