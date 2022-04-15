@@ -54,7 +54,7 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
     // Among other things.
     const auto trips = tripartite(word);
     const auto lw = lowerword(trips.core);
-    printf("X %s\n", lw.c_str());
+    // printf("X %s\n", lw.c_str());
     const auto rc = hnj_hyphen_hyphenate2(
         dict, lw.c_str(), (int)lw.size(), hyphens.data(), output.data(), &rep, &pos, &cut);
     assert(rc == 0);

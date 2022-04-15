@@ -222,7 +222,10 @@ int main() {
     auto plain_words = split(raw_text);
     auto hyphenated_words = do_hyphenstuff(plain_words);
 
-    monospacetest(plain_words, hyphenated_words);
+    if(false) {
+        monospacetest(plain_words, hyphenated_words);
+        printf("\n\n");
+    }
     full_test(plain_words, hyphenated_words);
     return 0;
 }
