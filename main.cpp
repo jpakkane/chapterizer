@@ -1,4 +1,5 @@
 #include <wordhyphenator.hpp>
+#include <splitter.h>
 #include <cstdio>
 #include <cassert>
 #include <sstream>
@@ -63,7 +64,7 @@ std::vector<std::string> eager_split(const std::vector<std::string> &words,
     return lines;
 }
 
-std::vector<std::string> slightly_smarter_split(std::vector<std::string> &words,
+std::vector<std::string> slightly_smarter_split(const std::vector<std::string> &words,
                                                 const size_t target_width) {
     std::vector<std::string> lines;
     std::string current_line;
@@ -189,13 +190,9 @@ void hyphentest() {
     exit(0);
 }
 
-int main() {
-    // hyphentest();
+template<typename T1, typename T2>
+void monospacetest(const T1 &plain_words, const T2 &hyphenated_words) {
     const size_t target_width = 66;
-    std::string text{raw_text};
-
-    auto plain_words = split(raw_text);
-    auto hyphenated_words = do_hyphenstuff(plain_words);
     printf("Text has %d words.\n\n", (int)plain_words.size());
     const auto eager_lines = eager_split(plain_words, target_width);
     printf("-- dumb ---\n\n");
@@ -206,5 +203,26 @@ int main() {
     printf("\n-- hyphenation ---\n\n");
     const auto hyph_lines = hyphenation_split(hyphenated_words, target_width);
     print_output(hyph_lines, target_width);
+}
+
+template<typename T1, typename T2>
+void full_test(const T1 &plain_words, const T2 &hyphenated_words) {
+    const double paragraph_width = 5.0;
+    Splitter spl{hyphenated_words, paragraph_width};
+    const auto lines = spl.split_lines();
+    for(const auto &line : lines) {
+        printf("%s\n", line.c_str());
+    }
+}
+
+int main() {
+    // hyphentest();
+    std::string text{raw_text};
+
+    auto plain_words = split(raw_text);
+    auto hyphenated_words = do_hyphenstuff(plain_words);
+
+    monospacetest(plain_words, hyphenated_words);
+    full_test(plain_words, hyphenated_words);
     return 0;
 }

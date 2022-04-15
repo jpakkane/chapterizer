@@ -5,7 +5,7 @@
 #include <cassert>
 
 int main() {
-    cairo_status_t status;
+    //    cairo_status_t status;
     cairo_surface_t *surface = cairo_pdf_surface_create("pangocairotest.pdf", 595, 842);
     cairo_t *cr = cairo_create(surface);
     cairo_move_to(cr, 72, 72);
