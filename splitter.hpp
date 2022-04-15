@@ -3,6 +3,8 @@
 #include <wordhyphenator.hpp>
 #include <variant>
 
+class TextShaper;
+
 // clang-format off
 
 /*
@@ -49,10 +51,11 @@ public:
 private:
     void precompute();
     TextLocation point_to_location(const SplitPoint &p) const;
+    size_t get_line_end(size_t start_split, TextShaper &shaper) const;
 
     std::string build_line(size_t from_split, size_t to_split) const;
     std::vector<HyphenatedWord> words;
-    double target; // in mm
+    double target_width; // in mm
     std::vector<SplitPoint> split_points;
     std::vector<TextLocation> split_locations;
 };

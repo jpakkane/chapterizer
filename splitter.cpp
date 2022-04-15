@@ -1,17 +1,22 @@
 #include "splitter.hpp"
+#include <textshaper.hpp>
 
 #include <cassert>
 
-Splitter::Splitter(const std::vector<HyphenatedWord> &words, double paragraph_width_mm)
-    : words{words}, target{paragraph_width_mm} {}
+Splitter::Splitter(const std::vector<HyphenatedWord> &words_, double paragraph_width_mm)
+    : words{words_}, target_width{paragraph_width_mm} {}
 
 std::vector<std::string> Splitter::split_lines() {
-    std::vector<std::string> lines;
     precompute();
-    for(size_t i = 10; i <= split_points.size(); i += 10) {
-        lines.emplace_back(build_line(i - 10, std::min(i, split_points.size() - 1)));
+    TextShaper shaper;
+    std::vector<std::string> lines;
+    std::vector<TextLocation> splits;
+    size_t current_split = 0;
+    while(current_split < split_points.size() - 1) {
+        auto line_end = get_line_end(current_split, shaper);
+        lines.emplace_back(build_line(current_split, line_end));
+        current_split = line_end;
     }
-
     return lines;
 }
 
@@ -89,4 +94,19 @@ TextLocation Splitter::point_to_location(const SplitPoint &p) const {
     } else {
         assert(false);
     }
+}
+
+size_t Splitter::get_line_end(size_t start_split, TextShaper &shaper) const {
+    assert(start_split < split_points.size() - 1);
+    size_t trial = start_split + 2;
+    while(trial < split_points.size()) {
+        const auto trial_line = build_line(start_split, trial);
+        const auto trial_length = shaper.text_width(trial_line.c_str());
+        if(trial_length >= target_width) {
+            --trial;
+            break;
+        }
+        ++trial;
+    }
+    return std::min(trial, split_points.size() - 1);
 }

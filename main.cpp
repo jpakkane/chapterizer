@@ -21,14 +21,14 @@ unmown grass, or circling with monotonous insistence round the dusty gilt horns 
 straggling woodbine, seemed to make the stillness more oppressive. The dim roar of
 London was like the bourdon note of a distant organ.)";
 
-std::vector<std::string> split(const std::string &raw_text) {
+std::vector<std::string> split(const std::string &in_text) {
     std::string text;
-    text.reserve(raw_text.size());
-    for(size_t i = 0; i < raw_text.size(); ++i) {
-        if(raw_text[i] == '\n') {
+    text.reserve(in_text.size());
+    for(size_t i = 0; i < in_text.size(); ++i) {
+        if(in_text[i] == '\n') {
             text.push_back(' ');
         } else {
-            text.push_back(raw_text[i]);
+            text.push_back(in_text[i]);
         }
     }
     std::string val;
@@ -174,7 +174,7 @@ std::vector<HyphenatedWord> do_hyphenstuff(const std::vector<std::string> &plain
 
 void hyphentest() {
     WordHyphenator wp;
-    std::string test_word{"monotonous"};
+    std::string test_word{"shouldering"};
     const auto result = wp.hyphenate(test_word);
     printf("The hyphenated form is ");
     size_t hyphenloc = 0;

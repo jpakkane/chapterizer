@@ -7,6 +7,8 @@ cairo_dep = dependency('cairo')
 pangocairo_dep = dependency('pangocairo')
 gtk4_dep = dependency('gtk4')
 
+add_project_arguments('-Wshadow', language: 'cpp')
+
 executable('chapterizer',
     'main.cpp',
     'wordhyphenator.cpp',
