@@ -9,21 +9,37 @@ Splitter::Splitter(const std::vector<HyphenatedWord> &words_, double paragraph_w
 std::vector<std::string> Splitter::split_lines() {
     precompute();
     TextShaper shaper;
-    if(false) {
-        return simple_split(shaper);
+    best_penalty = 1e100;
+    best_split.clear();
+    if(true) {
+        best_split = simple_split(shaper);
+        best_penalty = total_penalty(best_split);
+        return stats_to_lines(best_split);
     } else {
         return global_split(shaper);
     }
 }
 
-std::vector<std::string> Splitter::simple_split(TextShaper &shaper) {
-    std::vector<std::string> lines;
+std::vector<LineStats> Splitter::simple_split(TextShaper &shaper) {
+    std::vector<LineStats> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
     while(current_split < split_points.size() - 1) {
         auto line_end = get_line_end(current_split, shaper);
-        lines.emplace_back(build_line(current_split, line_end.end_split));
+        lines.emplace_back(line_end);
         current_split = line_end.end_split;
+    }
+    const auto total = total_penalty(lines);
+    printf("Total penalty: %.1f\n", total);
+    return lines;
+}
+
+std::vector<std::string> Splitter::stats_to_lines(const std::vector<LineStats> &linestats) const {
+    std::vector<std::string> lines;
+    lines.reserve(linestats.size());
+    lines.emplace_back(build_line(0, linestats[0].end_split));
+    for(size_t i = 1; i < linestats.size(); ++i) {
+        lines.emplace_back(build_line(linestats[i - 1].end_split, linestats[i].end_split));
     }
     return lines;
 }
@@ -40,11 +56,8 @@ std::vector<std::string> Splitter::global_split(TextShaper &shaper) {
         lines.push_back(current_line);
         current_split = line_end.end_split;
     }
-    double total_penalty = 0;
-    for(const auto &i : line_stats) {
-        total_penalty += line_penalty(i);
-    }
-    printf("Total penalty: %.1f\n", total_penalty);
+    const auto total = total_penalty(line_stats);
+    printf("Total penalty: %.1f\n", total);
     return lines;
 }
 
@@ -127,20 +140,33 @@ TextLocation Splitter::point_to_location(const SplitPoint &p) const {
 LineStats Splitter::get_line_end(size_t start_split, TextShaper &shaper) const {
     assert(start_split < split_points.size() - 1);
     size_t trial = start_split + 2;
-    double previous_length = -100.0;
+    double previous_width = -100.0;
+    double final_width = -1000000.0;
     while(trial < split_points.size()) {
         const auto trial_line = build_line(start_split, trial);
         const auto trial_width = shaper.text_width(trial_line.c_str());
         if(trial_width >= target_width) {
-            if(abs(trial_width - target_width) > abs(previous_length - target_width)) {
+            if(abs(trial_width - target_width) > abs(previous_width - target_width)) {
                 --trial;
+                final_width = previous_width;
+            } else {
+                final_width = trial_width;
             }
             break;
         }
         ++trial;
-        previous_length = trial_width;
+        previous_width = trial_width;
+        final_width = previous_width;
     }
-    return LineStats{std::min(trial, split_points.size() - 1), previous_length};
+    return LineStats{std::min(trial, split_points.size() - 1), final_width};
+}
+
+double Splitter::total_penalty(const std::vector<LineStats> &lines) const {
+    double total = 0;
+    for(const auto &l : lines) {
+        total += line_penalty(l);
+    }
+    return total;
 }
 
 double Splitter::line_penalty(const LineStats &line) const {

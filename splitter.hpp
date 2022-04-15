@@ -58,13 +58,18 @@ private:
     void precompute();
     TextLocation point_to_location(const SplitPoint &p) const;
     LineStats get_line_end(size_t start_split, TextShaper &shaper) const;
-    std::vector<std::string> simple_split(TextShaper &shaper);
+    std::vector<LineStats> simple_split(TextShaper &shaper);
     std::vector<std::string> global_split(TextShaper &shaper);
     double line_penalty(const LineStats &line) const;
+    double total_penalty(const std::vector<LineStats> &lines) const;
+    std::vector<std::string> stats_to_lines(const std::vector<LineStats> &linestats) const;
 
     std::string build_line(size_t from_split, size_t to_split) const;
     std::vector<HyphenatedWord> words;
     double target_width; // in mm
     std::vector<SplitPoint> split_points;
     std::vector<TextLocation> split_locations;
+
+    double best_penalty = 1e100;
+    std::vector<LineStats> best_split;
 };
