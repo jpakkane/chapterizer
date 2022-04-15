@@ -2,6 +2,8 @@
 
 #include <pango/pangocairo.h>
 
+// Bad name, should be something like "TextStatisticsCalculator".
+
 class TextShaper {
 public:
     TextShaper();

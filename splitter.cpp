@@ -9,14 +9,42 @@ Splitter::Splitter(const std::vector<HyphenatedWord> &words_, double paragraph_w
 std::vector<std::string> Splitter::split_lines() {
     precompute();
     TextShaper shaper;
+    if(false) {
+        return simple_split(shaper);
+    } else {
+        return global_split(shaper);
+    }
+}
+
+std::vector<std::string> Splitter::simple_split(TextShaper &shaper) {
     std::vector<std::string> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
     while(current_split < split_points.size() - 1) {
         auto line_end = get_line_end(current_split, shaper);
-        lines.emplace_back(build_line(current_split, line_end));
-        current_split = line_end;
+        lines.emplace_back(build_line(current_split, line_end.end_split));
+        current_split = line_end.end_split;
     }
+    return lines;
+}
+
+std::vector<std::string> Splitter::global_split(TextShaper &shaper) {
+    std::vector<std::string> lines;
+    std::vector<TextLocation> splits;
+    size_t current_split = 0;
+    std::vector<LineStats> line_stats;
+    while(current_split < split_points.size() - 1) {
+        auto line_end = get_line_end(current_split, shaper);
+        auto current_line = build_line(current_split, line_end.end_split);
+        line_stats.emplace_back(line_end);
+        lines.push_back(current_line);
+        current_split = line_end.end_split;
+    }
+    double total_penalty = 0;
+    for(const auto &i : line_stats) {
+        total_penalty += line_penalty(i);
+    }
+    printf("Total penalty: %.1f\n", total_penalty);
     return lines;
 }
 
@@ -96,17 +124,26 @@ TextLocation Splitter::point_to_location(const SplitPoint &p) const {
     }
 }
 
-size_t Splitter::get_line_end(size_t start_split, TextShaper &shaper) const {
+LineStats Splitter::get_line_end(size_t start_split, TextShaper &shaper) const {
     assert(start_split < split_points.size() - 1);
     size_t trial = start_split + 2;
+    double previous_length = -100.0;
     while(trial < split_points.size()) {
         const auto trial_line = build_line(start_split, trial);
-        const auto trial_length = shaper.text_width(trial_line.c_str());
-        if(trial_length >= target_width) {
-            --trial;
+        const auto trial_width = shaper.text_width(trial_line.c_str());
+        if(trial_width >= target_width) {
+            if(abs(trial_width - target_width) > abs(previous_length - target_width)) {
+                --trial;
+            }
             break;
         }
         ++trial;
+        previous_length = trial_width;
     }
-    return std::min(trial, split_points.size() - 1);
+    return LineStats{std::min(trial, split_points.size() - 1), previous_length};
+}
+
+double Splitter::line_penalty(const LineStats &line) const {
+    const auto delta = abs(line.text_width - target_width);
+    return delta * delta;
 }

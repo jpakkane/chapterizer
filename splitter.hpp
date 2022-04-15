@@ -40,6 +40,12 @@ struct TextLocation {
     size_t offset; // in characters
 };
 
+struct LineStats {
+    size_t end_split;
+    double text_width;
+    // int num_spaces;
+};
+
 typedef std::variant<BetweenWordSplit, WithinWordSplit> SplitPoint;
 
 class Splitter {
@@ -51,7 +57,10 @@ public:
 private:
     void precompute();
     TextLocation point_to_location(const SplitPoint &p) const;
-    size_t get_line_end(size_t start_split, TextShaper &shaper) const;
+    LineStats get_line_end(size_t start_split, TextShaper &shaper) const;
+    std::vector<std::string> simple_split(TextShaper &shaper);
+    std::vector<std::string> global_split(TextShaper &shaper);
+    double line_penalty(const LineStats &line) const;
 
     std::string build_line(size_t from_split, size_t to_split) const;
     std::vector<HyphenatedWord> words;
