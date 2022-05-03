@@ -50,29 +50,33 @@ std::vector<std::string> Splitter::global_split(const TextShaper &shaper) {
     size_t current_split = 0;
     std::vector<LineStats> line_stats;
     global_split_recursive(shaper, line_stats, current_split);
+    printf("Total penalty: %.2f\n", best_penalty);
     return stats_to_lines(best_split);
 }
 
 void Splitter::global_split_recursive(const TextShaper &shaper,
                                       std::vector<LineStats> &line_stats,
                                       size_t current_split) {
-    auto line_end = get_line_end(current_split, shaper);
-    if(line_end.end_split == split_points.size() - 1) {
+    auto line_end_choices = get_line_end_choices(current_split, shaper);
+    if(line_end_choices.front().end_split == split_points.size() - 1) {
         // Text exhausted.
-        line_stats.emplace_back(line_end);
+        line_stats.emplace_back(line_end_choices.front());
         const auto current_penalty = total_penalty(line_stats);
-        printf("Total penalty: %.1f\n", current_penalty);
-        // Compare against best.
-        best_split = line_stats;
+        // printf("Total penalty: %.1f\n", current_penalty);
+        if(current_penalty < best_penalty) {
+            best_penalty = current_penalty;
+            best_split = line_stats;
+        }
         line_stats.pop_back();
     } else {
-        // lines.push_back(current_line);
-        line_stats.emplace_back(line_end);
-        current_split = line_end.end_split;
-        const auto startsize = line_stats.size();
-        global_split_recursive(shaper, line_stats, line_end.end_split);
-        assert(startsize == line_stats.size());
-        line_stats.pop_back();
+        for(const auto &line_choice : line_end_choices) {
+            line_stats.emplace_back(line_choice);
+            current_split = line_choice.end_split;
+            const auto sanity_check = line_stats.size();
+            global_split_recursive(shaper, line_stats, line_choice.end_split);
+            assert(sanity_check == line_stats.size());
+            line_stats.pop_back();
+        }
     }
     // return lines;
 }
@@ -160,7 +164,7 @@ LineStats Splitter::get_line_end(size_t start_split, const TextShaper &shaper) c
     double final_width = -1000000.0;
     while(trial < split_points.size()) {
         const auto trial_line = build_line(start_split, trial);
-        const auto trial_width = shaper.text_width(trial_line.c_str());
+        const auto trial_width = shaper.text_width(trial_line);
         if(trial_width >= target_width) {
             if(abs(trial_width - target_width) > abs(previous_width - target_width)) {
                 --trial;
@@ -177,12 +181,36 @@ LineStats Splitter::get_line_end(size_t start_split, const TextShaper &shaper) c
     return LineStats{std::min(trial, split_points.size() - 1), final_width};
 }
 
+// Sorted by decreasing fitness.
+std::vector<LineStats> Splitter::get_line_end_choices(size_t start_split,
+                                                      const TextShaper &shaper) const {
+    std::vector<LineStats> potentials;
+    potentials.reserve(5);
+    auto tightest_split = get_line_end(start_split, shaper);
+    potentials.push_back(tightest_split);
+    if(tightest_split.end_split > start_split + 2) {
+        const auto trial_split = tightest_split.end_split - 1;
+        const auto trial_line = build_line(start_split, trial_split);
+        const auto trial_width = shaper.text_width(trial_line);
+        potentials.emplace_back(LineStats{trial_split, trial_width});
+    }
+    if(tightest_split.end_split + 2 < split_points.size()) {
+        const auto trial_split = tightest_split.end_split + 1;
+        const auto trial_line = build_line(start_split, trial_split);
+        const auto trial_width = shaper.text_width(trial_line);
+        potentials.emplace_back(LineStats{trial_split, trial_width});
+    }
+    return potentials;
+}
+
 double Splitter::total_penalty(const std::vector<LineStats> &lines) const {
     double total = 0;
+    double last_line_penalty = 0;
     for(const auto &l : lines) {
-        total += line_penalty(l);
+        last_line_penalty = line_penalty(l);
+        total += last_line_penalty;
     }
-    return total;
+    return total - last_line_penalty;
 }
 
 double Splitter::line_penalty(const LineStats &line) const {

@@ -13,10 +13,7 @@ TextShaper::TextShaper() {
     assert(desc);
     pango_font_description_set_absolute_size(desc, 10 * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
-    pango_layout_set_text(layout,
-                          "kenoiva ja jonka vetolujuus oli terasvaijerin tasoa. Kestavyys tuli "
-                          "tarpeeseen, silla kyseinen",
-                          -1);
+    pango_layout_set_text(layout, "I am Bender, please insert girder.", -1);
 }
 
 TextShaper::~TextShaper() {

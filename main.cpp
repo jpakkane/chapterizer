@@ -7,6 +7,15 @@
 #include <vector>
 #include <algorithm>
 
+#if 1
+const char raw_text[] =
+    R"(From the corner of the divan of Persian saddle-bags on which he was lying, smoking, as
+was his custom, innumerable cigarettes, Lord Henry Wotton could just catch the gleam of
+the honey-sweet and honey-coloured blossoms of a laburnum, whose tremulous branches
+seemed hardly able to bear the burden of a beauty so flamelike as theirs.)";
+
+#else
+
 const char raw_text[] =
     R"(From the corner of the divan of Persian saddle-bags on which he was lying, smoking, as
 was his custom, innumerable cigarettes, Lord Henry Wotton could just catch the gleam of
@@ -20,6 +29,8 @@ and motion. The sullen murmur of the bees shouldering their way through the long
 unmown grass, or circling with monotonous insistence round the dusty gilt horns of the
 straggling woodbine, seemed to make the stillness more oppressive. The dim roar of
 London was like the bourdon note of a distant organ.)";
+
+#endif
 
 std::vector<std::string> split(const std::string &in_text) {
     std::string text;
