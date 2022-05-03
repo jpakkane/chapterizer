@@ -57,9 +57,12 @@ public:
 private:
     void precompute();
     TextLocation point_to_location(const SplitPoint &p) const;
-    LineStats get_line_end(size_t start_split, TextShaper &shaper) const;
+    LineStats get_line_end(size_t start_split, const TextShaper &shaper) const;
     std::vector<LineStats> simple_split(TextShaper &shaper);
-    std::vector<std::string> global_split(TextShaper &shaper);
+    std::vector<std::string> global_split(const TextShaper &shaper);
+    void global_split_recursive(const TextShaper &shaper,
+                                std::vector<LineStats> &line_stats,
+                                size_t split_pos);
     double line_penalty(const LineStats &line) const;
     double total_penalty(const std::vector<LineStats> &lines) const;
     std::vector<std::string> stats_to_lines(const std::vector<LineStats> &linestats) const;

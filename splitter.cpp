@@ -11,7 +11,7 @@ std::vector<std::string> Splitter::split_lines() {
     TextShaper shaper;
     best_penalty = 1e100;
     best_split.clear();
-    if(true) {
+    if(false) {
         best_split = simple_split(shaper);
         best_penalty = total_penalty(best_split);
         return stats_to_lines(best_split);
@@ -44,21 +44,37 @@ std::vector<std::string> Splitter::stats_to_lines(const std::vector<LineStats> &
     return lines;
 }
 
-std::vector<std::string> Splitter::global_split(TextShaper &shaper) {
+std::vector<std::string> Splitter::global_split(const TextShaper &shaper) {
     std::vector<std::string> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
     std::vector<LineStats> line_stats;
-    while(current_split < split_points.size() - 1) {
-        auto line_end = get_line_end(current_split, shaper);
-        auto current_line = build_line(current_split, line_end.end_split);
+    global_split_recursive(shaper, line_stats, current_split);
+    return stats_to_lines(best_split);
+}
+
+void Splitter::global_split_recursive(const TextShaper &shaper,
+                                      std::vector<LineStats> &line_stats,
+                                      size_t current_split) {
+    auto line_end = get_line_end(current_split, shaper);
+    if(line_end.end_split == split_points.size() - 1) {
+        // Text exhausted.
         line_stats.emplace_back(line_end);
-        lines.push_back(current_line);
+        const auto current_penalty = total_penalty(line_stats);
+        printf("Total penalty: %.1f\n", current_penalty);
+        // Compare against best.
+        best_split = line_stats;
+        line_stats.pop_back();
+    } else {
+        // lines.push_back(current_line);
+        line_stats.emplace_back(line_end);
         current_split = line_end.end_split;
+        const auto startsize = line_stats.size();
+        global_split_recursive(shaper, line_stats, line_end.end_split);
+        assert(startsize == line_stats.size());
+        line_stats.pop_back();
     }
-    const auto total = total_penalty(line_stats);
-    printf("Total penalty: %.1f\n", total);
-    return lines;
+    // return lines;
 }
 
 void Splitter::precompute() {
@@ -137,7 +153,7 @@ TextLocation Splitter::point_to_location(const SplitPoint &p) const {
     }
 }
 
-LineStats Splitter::get_line_end(size_t start_split, TextShaper &shaper) const {
+LineStats Splitter::get_line_end(size_t start_split, const TextShaper &shaper) const {
     assert(start_split < split_points.size() - 1);
     size_t trial = start_split + 2;
     double previous_width = -100.0;
