@@ -24,11 +24,17 @@ TextShaper::~TextShaper() {
 }
 
 double TextShaper::text_width(const char *utf8_text) const {
+    auto f = widths.find(utf8_text);
+    if(f != widths.end()) {
+        return f->second;
+    }
     pango_layout_set_text(layout, utf8_text, -1);
     auto liter = pango_layout_get_iter(layout);
     PangoRectangle ink_rect, logical_rect;
     pango_layout_iter_get_line_extents(liter, &ink_rect, &logical_rect);
     pango_layout_iter_free(liter);
     // printf("Text width is %.2f mm\n", double(logical_rect.width) / PANGO_SCALE / 595 * 220);
-    return double(logical_rect.width) / PANGO_SCALE / 595 * 220;
+    const double w_mm = double(logical_rect.width) / PANGO_SCALE / 595 * 220;
+    widths[utf8_text] = w_mm;
+    return w_mm;
 }

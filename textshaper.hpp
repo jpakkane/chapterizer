@@ -2,6 +2,8 @@
 
 #include <pango/pangocairo.h>
 #include <string>
+#include <unordered_map>
+
 // Bad name, should be something like "TextStatisticsCalculator".
 
 class TextShaper {
@@ -18,4 +20,5 @@ private:
     cairo_surface_t *surface;
     PangoLayout *layout;
     PangoFontDescription *desc;
+    mutable std::unordered_map<std::string, double> widths;
 };
