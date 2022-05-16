@@ -46,6 +46,22 @@ struct LineStats {
     // int num_spaces;
 };
 
+struct UpTo {
+    double penalty;
+    std::vector<LineStats> splits;
+
+    bool operator<(const UpTo &o) const { return penalty < o.penalty; }
+};
+
+struct SplitStates {
+    size_t cache_size = 4;
+    std::vector<std::vector<UpTo>> best_to;
+
+    void clear() { best_to.clear(); }
+
+    bool abandon_search(const std::vector<LineStats> &new_splits, const double target_width);
+};
+
 typedef std::variant<BetweenWordSplit, WithinWordSplit> SplitPoint;
 
 class Splitter {
@@ -65,8 +81,6 @@ private:
     void global_split_recursive(const TextShaper &shaper,
                                 std::vector<LineStats> &line_stats,
                                 size_t split_pos);
-    double line_penalty(const LineStats &line) const;
-    double total_penalty(const std::vector<LineStats> &lines) const;
     std::vector<std::string> stats_to_lines(const std::vector<LineStats> &linestats) const;
 
     std::string build_line(size_t from_split, size_t to_split) const;
@@ -77,4 +91,7 @@ private:
 
     double best_penalty = 1e100;
     std::vector<LineStats> best_split;
+
+    // Cached results of best states we have achieved thus far.
+    SplitStates state_cache;
 };

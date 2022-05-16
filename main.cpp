@@ -7,7 +7,7 @@
 #include <vector>
 #include <algorithm>
 
-#if 1
+#if 0
 const char raw_text[] =
     R"(From the corner of the divan of Persian saddle-bags on which he was lying, smoking, as
 was his custom, innumerable cigarettes, Lord Henry Wotton could just catch the gleam of

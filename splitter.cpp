@@ -1,7 +1,26 @@
 #include "splitter.hpp"
 #include <textshaper.hpp>
-
+#include <algorithm>
 #include <cassert>
+
+namespace {
+
+double line_penalty(const LineStats &line, double target_width) {
+    const auto delta = abs(line.text_width - target_width);
+    return delta * delta;
+}
+
+double total_penalty(const std::vector<LineStats> &lines, double target_width) {
+    double total = 0;
+    double last_line_penalty = 0;
+    for(const auto &l : lines) {
+        last_line_penalty = line_penalty(l, target_width);
+        total += last_line_penalty;
+    }
+    return total - last_line_penalty;
+}
+
+} // namespace
 
 Splitter::Splitter(const std::vector<HyphenatedWord> &words_, double paragraph_width_mm)
     : words{words_}, target_width{paragraph_width_mm} {}
@@ -13,7 +32,7 @@ std::vector<std::string> Splitter::split_lines() {
     best_split.clear();
     if(false) {
         best_split = simple_split(shaper);
-        best_penalty = total_penalty(best_split);
+        best_penalty = total_penalty(best_split, target_width);
         return stats_to_lines(best_split);
     } else {
         return global_split(shaper);
@@ -29,7 +48,7 @@ std::vector<LineStats> Splitter::simple_split(TextShaper &shaper) {
         lines.emplace_back(line_end);
         current_split = line_end.end_split;
     }
-    const auto total = total_penalty(lines);
+    const auto total = total_penalty(lines, target_width);
     printf("Total penalty: %.1f\n", total);
     return lines;
 }
@@ -49,6 +68,7 @@ std::vector<std::string> Splitter::global_split(const TextShaper &shaper) {
     std::vector<TextLocation> splits;
     size_t current_split = 0;
     std::vector<LineStats> line_stats;
+
     global_split_recursive(shaper, line_stats, current_split);
     printf("Total penalty: %.2f\n", best_penalty);
     return stats_to_lines(best_split);
@@ -57,11 +77,14 @@ std::vector<std::string> Splitter::global_split(const TextShaper &shaper) {
 void Splitter::global_split_recursive(const TextShaper &shaper,
                                       std::vector<LineStats> &line_stats,
                                       size_t current_split) {
+    if(state_cache.abandon_search(line_stats, target_width)) {
+        return;
+    }
     auto line_end_choices = get_line_end_choices(current_split, shaper);
     if(line_end_choices.front().end_split == split_points.size() - 1) {
         // Text exhausted.
         line_stats.emplace_back(line_end_choices.front());
-        const auto current_penalty = total_penalty(line_stats);
+        const auto current_penalty = total_penalty(line_stats, target_width);
         // printf("Total penalty: %.1f\n", current_penalty);
         if(current_penalty < best_penalty) {
             best_penalty = current_penalty;
@@ -101,6 +124,10 @@ void Splitter::precompute() {
         split_locations.emplace_back(point_to_location(i));
     }
     assert(split_points.size() == split_locations.size());
+    state_cache.clear();
+    for(size_t i = 0; i < split_points.size(); ++i) {
+        state_cache.best_to.emplace_back(std::vector<UpTo>{});
+    }
 }
 
 std::string Splitter::build_line(size_t from_split_ind, size_t to_split_ind) const {
@@ -203,17 +230,19 @@ std::vector<LineStats> Splitter::get_line_end_choices(size_t start_split,
     return potentials;
 }
 
-double Splitter::total_penalty(const std::vector<LineStats> &lines) const {
-    double total = 0;
-    double last_line_penalty = 0;
-    for(const auto &l : lines) {
-        last_line_penalty = line_penalty(l);
-        total += last_line_penalty;
+bool SplitStates::abandon_search(const std::vector<LineStats> &new_splits,
+                                 const double target_width) {
+    const double new_penalty = total_penalty(new_splits, target_width);
+    const auto current_index = new_splits.size();
+    auto &current_slot = best_to[current_index];
+    if(current_slot.size() >= cache_size && current_slot.back().penalty < new_penalty) {
+        return true;
     }
-    return total - last_line_penalty;
-}
-
-double Splitter::line_penalty(const LineStats &line) const {
-    const auto delta = abs(line.text_width - target_width);
-    return delta * delta;
+    UpTo new_value{new_penalty, new_splits};
+    auto insertion_point = std::lower_bound(current_slot.begin(), current_slot.end(), new_value);
+    current_slot.insert(insertion_point, std::move(new_value));
+    while(current_slot.size() > cache_size) {
+        current_slot.pop_back();
+    }
+    return false;
 }
