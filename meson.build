@@ -14,6 +14,7 @@ executable('chapterizer',
     'wordhyphenator.cpp',
     'splitter.cpp',
     'textshaper.cpp',
+    'pdfrenderer.cpp',
     dependencies: [hyphen_dep, pangocairo_dep])
 
 executable('fttest', 'fttest.cpp', dependencies: [ft_dep, cairo_dep])

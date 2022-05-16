@@ -1,5 +1,6 @@
 #include <wordhyphenator.hpp>
 #include <splitter.hpp>
+#include <pdfrenderer.hpp>
 #include <cstdio>
 #include <cassert>
 #include <sstream>
@@ -222,6 +223,8 @@ template<typename T1> void full_test(const T1 &hyphenated_words) {
     for(const auto &line : lines) {
         printf("%s\n", line.c_str());
     }
+    PdfRenderer r("texttest.pdf");
+    r.render(lines);
 }
 
 int main() {
