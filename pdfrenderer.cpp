@@ -59,8 +59,8 @@ PdfRenderer::~PdfRenderer() {
 
 void PdfRenderer::render(const std::vector<std::string> &lines) {
     draw_grid();
-    const double line_height = 11.0;
-    const double target_width_pt = mm2pt(50.0);
+    const double line_height = 12.0;
+    const double target_width_pt = mm2pt(60.0);
     cairo_set_source_rgb(cr, 0, 0, 0);
     for(size_t i = 0; i < lines.size(); ++i) {
         if(i < lines.size() - 1) {
@@ -68,13 +68,13 @@ void PdfRenderer::render(const std::vector<std::string> &lines) {
         } else {
             render_line_as_is(lines[i].c_str(), mm2pt(20), mm2pt(20) + i * line_height);
         }
-        render_line_as_is(lines[i].c_str(), mm2pt(80), mm2pt(20.0) + i * line_height);
+        render_line_as_is(lines[i].c_str(), mm2pt(90), mm2pt(20.0) + i * line_height);
     }
     cairo_set_source_rgb(cr, 0, 0, 1.0);
     cairo_set_line_width(cr, 0.5);
     const double box_height = line_height * lines.size();
     draw_box(mm2pt(20), mm2pt(20), target_width_pt, box_height);
-    draw_box(mm2pt(80), mm2pt(20), target_width_pt, box_height);
+    draw_box(mm2pt(90), mm2pt(20), target_width_pt, box_height);
 
     temp();
 }
@@ -134,7 +134,7 @@ void PdfRenderer::temp() {
 void PdfRenderer::render_line(const std::string &line_text, double x, double y) {
     assert(line_text.find('\n') == std::string::npos);
     const auto words = hack_split(line_text);
-    const double target_width_pt = mm2pt(50.0);
+    const double target_width_pt = mm2pt(60.0);
     double text_width_mm = hack.text_width(line_text.c_str());
     const double text_width_pt = mm2pt(text_width_mm);
     const double num_spaces = std::count(line_text.begin(), line_text.end(), ' ');
