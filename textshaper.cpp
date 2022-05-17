@@ -1,4 +1,5 @@
 #include "textshaper.hpp"
+#include <utils.hpp>
 
 #include <cairo-pdf.h>
 #include <cassert>
@@ -29,12 +30,10 @@ double TextShaper::text_width(const char *utf8_text) const {
         return f->second;
     }
     pango_layout_set_text(layout, utf8_text, -1);
-    auto liter = pango_layout_get_iter(layout);
     PangoRectangle ink_rect, logical_rect;
-    pango_layout_iter_get_line_extents(liter, &ink_rect, &logical_rect);
-    pango_layout_iter_free(liter);
+    pango_layout_get_extents(layout, &ink_rect, &logical_rect);
     // printf("Text width is %.2f mm\n", double(logical_rect.width) / PANGO_SCALE / 595 * 220);
-    const double w_mm = double(logical_rect.width) / PANGO_SCALE / 595 * 220;
+    const double w_mm = pt2mm(double(logical_rect.width) / PANGO_SCALE);
     widths[utf8_text] = w_mm;
     return w_mm;
 }
