@@ -139,35 +139,59 @@ std::string ChapterBuilder::build_line(size_t from_split_ind, size_t to_split_in
     }
     const auto &from_split = split_points[from_split_ind];
     const auto &to_split = split_points[to_split_ind];
-    const auto start_loc = split_locations[from_split_ind];
-    const auto end_loc = split_locations[to_split_ind];
+    const auto from_loc = split_locations[from_split_ind];
+    const auto to_loc = split_locations[to_split_ind];
+
+    // A single word spans the entire line.
+    const bool pathological_single_word = from_loc.word_index == to_loc.word_index;
+    if(pathological_single_word) {
+        const auto &bad_word = words[from_loc.word_index].word;
+        line = bad_word.substr(from_loc.offset, to_loc.offset - from_loc.offset + 1);
+        if(std::holds_alternative<WithinWordSplit>(to_split)) {
+            const auto &source_loc = std::get<WithinWordSplit>(to_split);
+            if(words[source_loc.word_index].hyphen_points[source_loc.hyphen_index].type ==
+               SplitType::Regular) {
+                line += '-';
+            }
+        }
+        return line;
+    }
 
     // First word.
     if(std::holds_alternative<BetweenWordSplit>(from_split)) {
-        line = words[start_loc.word_index].word;
+        line = words[from_loc.word_index].word;
     } else {
-        const auto &word_to_split = words[start_loc.word_index];
+        const auto &word_to_split = words[from_loc.word_index];
         const auto sv = std::string_view(word_to_split.word);
-        line = sv.substr(start_loc.offset + 1);
+        line = sv.substr(from_loc.offset + 1);
     }
-    size_t current_word_index = start_loc.word_index + 1;
 
-    // Intermediate words.
-    while(current_word_index < end_loc.word_index && current_word_index < words.size()) {
-        line += ' ';
-        line += words[current_word_index].word;
-        ++current_word_index;
+    if(from_loc.word_index == to_loc.word_index) {
+        // Pathological case, one word spans the entire line.
+    } else {
+        assert(to_loc.word_index > from_loc.word_index);
+        size_t current_word_index = from_loc.word_index + 1;
+        // Intermediate words.
+        while(current_word_index < to_loc.word_index && current_word_index < words.size()) {
+            line += ' ';
+            line += words[current_word_index].word;
+            ++current_word_index;
+        }
     }
 
     // Final word.
     if(std::holds_alternative<BetweenWordSplit>(to_split)) {
         // Do nothing, I guess?
     } else {
+        const auto &source_loc = std::get<WithinWordSplit>(to_split);
         line += ' ';
-        const auto &word_to_split = words[end_loc.word_index];
+        const auto &word_to_split = words[to_loc.word_index];
         const auto sv = std::string_view(word_to_split.word);
-        line += sv.substr(0, end_loc.offset + 1);
-        line += '-';
+        line += sv.substr(0, to_loc.offset + 1);
+        if(words[source_loc.word_index].hyphen_points[source_loc.hyphen_index].type ==
+           SplitType::Regular) {
+            line += '-';
+        }
     }
 
     return line;

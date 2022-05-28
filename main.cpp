@@ -10,7 +10,7 @@
 
 #if 0
 const char raw_text[] =
-    R"(From the corner of the divan of Persian saddle-bags on which he was lying, smoking, as
+    R"(xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx saddle-bags on which he was lying, smoking, as
 was his custom, innumerable cigarettes, Lord Henry Wotton could just catch the gleam of
 the honey-sweet and honey-coloured blossoms of a laburnum, whose tremulous branches
 seemed hardly able to bear the burden of a beauty so flamelike as theirs.)";
@@ -188,7 +188,9 @@ std::vector<HyphenatedWord> do_hyphenstuff(const std::vector<std::string> &plain
 
 void hyphentest() {
     WordHyphenator wp;
-    std::string test_word{"factory-airplane-long-sentence"};
+    // clang-format off
+    std::string test_word{"xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx-xxx"};
+    // clang-format-on
     const auto result = wp.hyphenate(test_word);
     printf("The hyphenated form is ");
     size_t hyphenloc = 0;
@@ -225,12 +227,16 @@ void monospacetest(const T1 &plain_words, const T2 &hyphenated_words) {
 #include <textstats.hpp>
 static TextStats hack;
 template<typename T1> void full_test(const T1 &hyphenated_words) {
-    const double paragraph_width = 60.0;
+    const double paragraph_width = 70.0;
     ChapterBuilder spl{hyphenated_words, paragraph_width};
     const auto lines = spl.split_lines();
 
     for(const auto &line : lines) {
-        printf("%40s %.2f\n", line.c_str(), hack.text_width(line.c_str()));
+        printf("%s", line.c_str());
+        for(size_t i = line.length(); i < 70; ++i) {
+            printf(" ");
+        }
+        printf("%.2f\n", hack.text_width(line.c_str()) - paragraph_width);
     }
 
     PdfRenderer r("texttest.pdf");
@@ -239,7 +245,7 @@ template<typename T1> void full_test(const T1 &hyphenated_words) {
 
 int main() {
     setlocale(LC_ALL, "");
-    hyphentest();
+    //hyphentest();
     std::string text{raw_text};
 
     auto plain_words = split(raw_text);

@@ -42,6 +42,29 @@ WordHyphenator::WordHyphenator() {
 
 WordHyphenator::~WordHyphenator() { hnj_hyphen_free(dict); }
 
+HyphenatedWord WordHyphenator::build_hyphenation_data(const std::string &word,
+                                                      const std::vector<char> &hyphens,
+                                                      size_t prefix_length) const {
+    HyphenatedWord result;
+    result.word = word;
+    size_t previous_point = 0;
+    for(size_t i = 0; i < word.size(); ++i) {
+        if(hyphens[i] & 1 || i == word.size() - 1) {
+            auto dash_point = word.find('-', previous_point);
+            while(dash_point != std::string::npos) {
+                result.hyphen_points.emplace_back(
+                    HyphenPoint{dash_point + prefix_length, SplitType::NoHyphen});
+                dash_point = word.find('-', dash_point + 1);
+            }
+            previous_point = dash_point;
+        }
+        if(hyphens[i] & 1) {
+            result.hyphen_points.emplace_back(HyphenPoint{i + prefix_length, SplitType::Regular});
+        }
+    }
+    return result;
+}
+
 HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
     assert(word.find(' ') == std::string::npos);
     std::vector<char> output(word.size() * 2 + 1, '\0');
@@ -59,22 +82,7 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
         dict, lw.c_str(), (int)lw.size(), hyphens.data(), output.data(), &rep, &pos, &cut);
     assert(rc == 0);
 
-    HyphenatedWord result;
-    result.word = word;
-    size_t previous_point = 0;
-    for(size_t i = 0; i < word.size(); ++i) {
-        if(hyphens[i] & 1) {
-            auto dash_point = word.find('-', previous_point);
-            while(dash_point != std::string::npos && dash_point < i) {
-                result.hyphen_points.emplace_back(
-                    HyphenPoint{dash_point + trips.prefix.length(), SplitType::NoHyphen});
-                dash_point = word.find('-', dash_point + 1);
-            }
-            result.hyphen_points.emplace_back(
-                HyphenPoint{i + trips.prefix.length(), SplitType::Regular});
-            previous_point = dash_point;
-        }
-    }
+    auto result = build_hyphenation_data(word, hyphens, trips.prefix.length());
 
     free(rep);
     free(pos);

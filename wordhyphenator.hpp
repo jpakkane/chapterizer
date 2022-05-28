@@ -28,5 +28,8 @@ public:
     HyphenatedWord hyphenate(const std::string &word) const;
 
 private:
+    HyphenatedWord build_hyphenation_data(const std::string &word,
+                                          const std::vector<char> &hyphens,
+                                          size_t prefix_length) const;
     HyphenDict *dict;
 };
