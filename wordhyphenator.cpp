@@ -50,8 +50,8 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
     int *cut = nullptr;
     std::vector<char> hyphens(word.size() + 5, (char)-1);
     // The hyphenation function only deals with lower case single words.
-    // Attached punctuation, quotes, capital letters, hyphens within words break it.
-    // Among other things.
+    // Attached punctuation, quotes, capital letters etc break it.
+    // For words like spatio-temporal it splits the individual words but not the hyphen.
     const auto trips = tripartite(word);
     const auto lw = lowerword(trips.core);
     // printf("X %s\n", lw.c_str());
@@ -61,10 +61,18 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
 
     HyphenatedWord result;
     result.word = word;
+    size_t previous_point = 0;
     for(size_t i = 0; i < word.size(); ++i) {
         if(hyphens[i] & 1) {
+            auto dash_point = word.find('-', previous_point);
+            while(dash_point != std::string::npos && dash_point < i) {
+                result.hyphen_points.emplace_back(
+                    HyphenPoint{dash_point + trips.prefix.length(), SplitType::NoHyphen});
+                dash_point = word.find('-', dash_point + 1);
+            }
             result.hyphen_points.emplace_back(
                 HyphenPoint{i + trips.prefix.length(), SplitType::Regular});
+            previous_point = dash_point;
         }
     }
 

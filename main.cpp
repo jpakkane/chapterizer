@@ -188,14 +188,18 @@ std::vector<HyphenatedWord> do_hyphenstuff(const std::vector<std::string> &plain
 
 void hyphentest() {
     WordHyphenator wp;
-    std::string test_word{"shouldering"};
+    std::string test_word{"factory-airplane-long-sentence"};
     const auto result = wp.hyphenate(test_word);
     printf("The hyphenated form is ");
     size_t hyphenloc = 0;
     for(size_t i = 0; i < result.word.length(); ++i) {
         printf("%c", result.word[i]);
         if(hyphenloc < result.hyphen_points.size() && result.hyphen_points[hyphenloc].loc == i) {
-            printf("-");
+            if(result.hyphen_points[hyphenloc].type == SplitType::NoHyphen) {
+                printf("¤");
+            } else {
+                printf("-");
+            }
             ++hyphenloc;
         }
     }
@@ -217,6 +221,7 @@ void monospacetest(const T1 &plain_words, const T2 &hyphenated_words) {
     const auto hyph_lines = hyphenation_split(hyphenated_words, target_width);
     print_output(hyph_lines, target_width);
 }
+
 #include <textstats.hpp>
 static TextStats hack;
 template<typename T1> void full_test(const T1 &hyphenated_words) {
@@ -234,7 +239,7 @@ template<typename T1> void full_test(const T1 &hyphenated_words) {
 
 int main() {
     setlocale(LC_ALL, "");
-    // hyphentest();
+    hyphentest();
     std::string text{raw_text};
 
     auto plain_words = split(raw_text);
