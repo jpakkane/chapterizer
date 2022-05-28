@@ -1,10 +1,10 @@
-#include "textshaper.hpp"
+#include "textstats.hpp"
 #include <utils.hpp>
 
 #include <cairo-pdf.h>
 #include <cassert>
 
-TextShaper::TextShaper() {
+TextStats::TextStats() {
     surface = cairo_pdf_surface_create("/tmp/dummy.pdf", 595, 842);
     cr = cairo_create(surface);
     assert(cr);
@@ -17,14 +17,14 @@ TextShaper::TextShaper() {
     pango_layout_set_text(layout, "I am Bender, please insert girder.", -1);
 }
 
-TextShaper::~TextShaper() {
+TextStats::~TextStats() {
     pango_font_description_free(desc);
     g_object_unref(G_OBJECT(layout));
     cairo_surface_destroy(surface);
     cairo_destroy(cr);
 }
 
-double TextShaper::text_width(const char *utf8_text) const {
+double TextStats::text_width(const char *utf8_text) const {
     auto f = widths.find(utf8_text);
     if(f != widths.end()) {
         return f->second;

@@ -4,12 +4,10 @@
 #include <string>
 #include <unordered_map>
 
-// Bad name, should be something like "TextStatisticsCalculator".
-
-class TextShaper {
+class TextStats {
 public:
-    TextShaper();
-    ~TextShaper();
+    TextStats();
+    ~TextStats();
 
     double text_width(const char *utf8_text) const;
 

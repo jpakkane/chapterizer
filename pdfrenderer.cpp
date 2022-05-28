@@ -4,10 +4,10 @@
 #include <cairo-pdf.h>
 #include <cassert>
 
-#include <textshaper.hpp>
+#include <textstats.hpp>
 #include <algorithm>
 
-static TextShaper hack;
+static TextStats hack;
 #include <sstream>
 
 namespace {

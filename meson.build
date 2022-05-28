@@ -13,7 +13,7 @@ executable('chapterizer',
     'main.cpp',
     'wordhyphenator.cpp',
     'splitter.cpp',
-    'textshaper.cpp',
+    'textstats.cpp',
     'pdfrenderer.cpp',
     'utils.cpp',
     dependencies: [hyphen_dep, pangocairo_dep])

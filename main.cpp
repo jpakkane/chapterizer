@@ -215,8 +215,8 @@ void monospacetest(const T1 &plain_words, const T2 &hyphenated_words) {
     const auto hyph_lines = hyphenation_split(hyphenated_words, target_width);
     print_output(hyph_lines, target_width);
 }
-#include <textshaper.hpp>
-static TextShaper hack;
+#include <textstats.hpp>
+static TextStats hack;
 template<typename T1> void full_test(const T1 &hyphenated_words) {
     const double paragraph_width = 60.0;
     Splitter spl{hyphenated_words, paragraph_width};

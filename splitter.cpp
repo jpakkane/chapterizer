@@ -1,5 +1,5 @@
 #include "splitter.hpp"
-#include <textshaper.hpp>
+#include <textstats.hpp>
 #include <algorithm>
 #include <cassert>
 
@@ -27,7 +27,7 @@ Splitter::Splitter(const std::vector<HyphenatedWord> &words_, double paragraph_w
 
 std::vector<std::string> Splitter::split_lines() {
     precompute();
-    TextShaper shaper;
+    TextStats shaper;
     best_penalty = 1e100;
     best_split.clear();
     if(false) {
@@ -39,7 +39,7 @@ std::vector<std::string> Splitter::split_lines() {
     }
 }
 
-std::vector<LineStats> Splitter::simple_split(TextShaper &shaper) {
+std::vector<LineStats> Splitter::simple_split(TextStats &shaper) {
     std::vector<LineStats> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
@@ -63,7 +63,7 @@ std::vector<std::string> Splitter::stats_to_lines(const std::vector<LineStats> &
     return lines;
 }
 
-std::vector<std::string> Splitter::global_split(const TextShaper &shaper) {
+std::vector<std::string> Splitter::global_split(const TextStats &shaper) {
     std::vector<std::string> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
@@ -74,7 +74,7 @@ std::vector<std::string> Splitter::global_split(const TextShaper &shaper) {
     return stats_to_lines(best_split);
 }
 
-void Splitter::global_split_recursive(const TextShaper &shaper,
+void Splitter::global_split_recursive(const TextStats &shaper,
                                       std::vector<LineStats> &line_stats,
                                       size_t current_split) {
     if(state_cache.abandon_search(line_stats, target_width)) {
@@ -184,7 +184,7 @@ TextLocation Splitter::point_to_location(const SplitPoint &p) const {
     }
 }
 
-LineStats Splitter::get_line_end(size_t start_split, const TextShaper &shaper) const {
+LineStats Splitter::get_line_end(size_t start_split, const TextStats &shaper) const {
     assert(start_split < split_points.size() - 1);
     size_t trial = start_split + 2;
     double previous_width = -100.0;
@@ -210,7 +210,7 @@ LineStats Splitter::get_line_end(size_t start_split, const TextShaper &shaper) c
 
 // Sorted by decreasing fitness.
 std::vector<LineStats> Splitter::get_line_end_choices(size_t start_split,
-                                                      const TextShaper &shaper) const {
+                                                      const TextStats &shaper) const {
     std::vector<LineStats> potentials;
     potentials.reserve(5);
     auto tightest_split = get_line_end(start_split, shaper);
