@@ -64,9 +64,9 @@ struct SplitStates {
 
 typedef std::variant<BetweenWordSplit, WithinWordSplit> SplitPoint;
 
-class Splitter {
+class ChapterBuilder {
 public:
-    Splitter(const std::vector<HyphenatedWord> &words, double paragraph_width_mm);
+    ChapterBuilder(const std::vector<HyphenatedWord> &words, double paragraph_width_mm);
 
     std::vector<std::string> split_lines();
 

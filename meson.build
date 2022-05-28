@@ -12,7 +12,7 @@ add_project_arguments('-Wshadow', language: 'cpp')
 executable('chapterizer',
     'main.cpp',
     'wordhyphenator.cpp',
-    'splitter.cpp',
+    'chapterbuilder.cpp',
     'textstats.cpp',
     'pdfrenderer.cpp',
     'utils.cpp',

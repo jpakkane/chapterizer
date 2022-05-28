@@ -1,5 +1,5 @@
 #include <wordhyphenator.hpp>
-#include <splitter.hpp>
+#include <chapterbuilder.hpp>
 #include <pdfrenderer.hpp>
 #include <cstdio>
 #include <cassert>
@@ -219,7 +219,7 @@ void monospacetest(const T1 &plain_words, const T2 &hyphenated_words) {
 static TextStats hack;
 template<typename T1> void full_test(const T1 &hyphenated_words) {
     const double paragraph_width = 60.0;
-    Splitter spl{hyphenated_words, paragraph_width};
+    ChapterBuilder spl{hyphenated_words, paragraph_width};
     const auto lines = spl.split_lines();
 
     for(const auto &line : lines) {

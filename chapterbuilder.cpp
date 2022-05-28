@@ -1,4 +1,4 @@
-#include "splitter.hpp"
+#include "chapterbuilder.hpp"
 #include <textstats.hpp>
 #include <algorithm>
 #include <cassert>
@@ -22,10 +22,10 @@ double total_penalty(const std::vector<LineStats> &lines, double target_width) {
 
 } // namespace
 
-Splitter::Splitter(const std::vector<HyphenatedWord> &words_, double paragraph_width_mm)
+ChapterBuilder::ChapterBuilder(const std::vector<HyphenatedWord> &words_, double paragraph_width_mm)
     : words{words_}, target_width{paragraph_width_mm} {}
 
-std::vector<std::string> Splitter::split_lines() {
+std::vector<std::string> ChapterBuilder::split_lines() {
     precompute();
     TextStats shaper;
     best_penalty = 1e100;
@@ -39,7 +39,7 @@ std::vector<std::string> Splitter::split_lines() {
     }
 }
 
-std::vector<LineStats> Splitter::simple_split(TextStats &shaper) {
+std::vector<LineStats> ChapterBuilder::simple_split(TextStats &shaper) {
     std::vector<LineStats> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
@@ -53,7 +53,7 @@ std::vector<LineStats> Splitter::simple_split(TextStats &shaper) {
     return lines;
 }
 
-std::vector<std::string> Splitter::stats_to_lines(const std::vector<LineStats> &linestats) const {
+std::vector<std::string> ChapterBuilder::stats_to_lines(const std::vector<LineStats> &linestats) const {
     std::vector<std::string> lines;
     lines.reserve(linestats.size());
     lines.emplace_back(build_line(0, linestats[0].end_split));
@@ -63,7 +63,7 @@ std::vector<std::string> Splitter::stats_to_lines(const std::vector<LineStats> &
     return lines;
 }
 
-std::vector<std::string> Splitter::global_split(const TextStats &shaper) {
+std::vector<std::string> ChapterBuilder::global_split(const TextStats &shaper) {
     std::vector<std::string> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
@@ -74,7 +74,7 @@ std::vector<std::string> Splitter::global_split(const TextStats &shaper) {
     return stats_to_lines(best_split);
 }
 
-void Splitter::global_split_recursive(const TextStats &shaper,
+void ChapterBuilder::global_split_recursive(const TextStats &shaper,
                                       std::vector<LineStats> &line_stats,
                                       size_t current_split) {
     if(state_cache.abandon_search(line_stats, target_width)) {
@@ -104,7 +104,7 @@ void Splitter::global_split_recursive(const TextStats &shaper,
     // return lines;
 }
 
-void Splitter::precompute() {
+void ChapterBuilder::precompute() {
     split_points.clear();
     split_points.reserve(words.size() * 3);
     for(size_t word_index = 0; word_index < words.size(); ++word_index) {
@@ -130,7 +130,7 @@ void Splitter::precompute() {
     }
 }
 
-std::string Splitter::build_line(size_t from_split_ind, size_t to_split_ind) const {
+std::string ChapterBuilder::build_line(size_t from_split_ind, size_t to_split_ind) const {
     assert(to_split_ind >= from_split_ind);
     std::string line;
     if(to_split_ind == from_split_ind) {
@@ -172,7 +172,7 @@ std::string Splitter::build_line(size_t from_split_ind, size_t to_split_ind) con
     return line;
 }
 
-TextLocation Splitter::point_to_location(const SplitPoint &p) const {
+TextLocation ChapterBuilder::point_to_location(const SplitPoint &p) const {
     if(std::holds_alternative<BetweenWordSplit>(p)) {
         const auto &r = std::get<BetweenWordSplit>(p);
         return TextLocation{r.word_index, 0};
@@ -184,7 +184,7 @@ TextLocation Splitter::point_to_location(const SplitPoint &p) const {
     }
 }
 
-LineStats Splitter::get_line_end(size_t start_split, const TextStats &shaper) const {
+LineStats ChapterBuilder::get_line_end(size_t start_split, const TextStats &shaper) const {
     assert(start_split < split_points.size() - 1);
     size_t trial = start_split + 2;
     double previous_width = -100.0;
@@ -209,7 +209,7 @@ LineStats Splitter::get_line_end(size_t start_split, const TextStats &shaper) co
 }
 
 // Sorted by decreasing fitness.
-std::vector<LineStats> Splitter::get_line_end_choices(size_t start_split,
+std::vector<LineStats> ChapterBuilder::get_line_end_choices(size_t start_split,
                                                       const TextStats &shaper) const {
     std::vector<LineStats> potentials;
     potentials.reserve(5);
