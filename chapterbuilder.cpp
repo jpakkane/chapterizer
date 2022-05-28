@@ -53,7 +53,8 @@ std::vector<LineStats> ChapterBuilder::simple_split(TextStats &shaper) {
     return lines;
 }
 
-std::vector<std::string> ChapterBuilder::stats_to_lines(const std::vector<LineStats> &linestats) const {
+std::vector<std::string>
+ChapterBuilder::stats_to_lines(const std::vector<LineStats> &linestats) const {
     std::vector<std::string> lines;
     lines.reserve(linestats.size());
     lines.emplace_back(build_line(0, linestats[0].end_split));
@@ -75,8 +76,8 @@ std::vector<std::string> ChapterBuilder::global_split(const TextStats &shaper) {
 }
 
 void ChapterBuilder::global_split_recursive(const TextStats &shaper,
-                                      std::vector<LineStats> &line_stats,
-                                      size_t current_split) {
+                                            std::vector<LineStats> &line_stats,
+                                            size_t current_split) {
     if(state_cache.abandon_search(line_stats, target_width)) {
         return;
     }
@@ -109,7 +110,7 @@ void ChapterBuilder::precompute() {
     split_points.reserve(words.size() * 3);
     for(size_t word_index = 0; word_index < words.size(); ++word_index) {
         split_points.emplace_back(BetweenWordSplit{word_index});
-        for(size_t hyphen_index = 0; hyphen_index < words[word_index].hyphens.size();
+        for(size_t hyphen_index = 0; hyphen_index < words[word_index].hyphen_points.size();
             ++hyphen_index) {
             split_points.emplace_back(WithinWordSplit{word_index, hyphen_index});
         }
@@ -178,7 +179,7 @@ TextLocation ChapterBuilder::point_to_location(const SplitPoint &p) const {
         return TextLocation{r.word_index, 0};
     } else if(std::holds_alternative<WithinWordSplit>(p)) {
         const auto &r = std::get<WithinWordSplit>(p);
-        return TextLocation{r.word_index, words[r.word_index].hyphens[r.hyphen_index]};
+        return TextLocation{r.word_index, words[r.word_index].hyphen_points[r.hyphen_index].loc};
     } else {
         assert(false);
     }
@@ -210,7 +211,7 @@ LineStats ChapterBuilder::get_line_end(size_t start_split, const TextStats &shap
 
 // Sorted by decreasing fitness.
 std::vector<LineStats> ChapterBuilder::get_line_end_choices(size_t start_split,
-                                                      const TextStats &shaper) const {
+                                                            const TextStats &shaper) const {
     std::vector<LineStats> potentials;
     potentials.reserve(5);
     auto tightest_split = get_line_end(start_split, shaper);

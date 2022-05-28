@@ -63,7 +63,8 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
     result.word = word;
     for(size_t i = 0; i < word.size(); ++i) {
         if(hyphens[i] & 1) {
-            result.hyphens.push_back(i + trips.prefix.length());
+            result.hyphen_points.emplace_back(
+                HyphenPoint{i + trips.prefix.length(), SplitType::Regular});
         }
     }
 

@@ -5,8 +5,18 @@
 #include <string>
 #include <vector>
 
+enum class SplitType : int {
+    Regular,
+    NoHyphen,
+};
+
+struct HyphenPoint {
+    size_t loc;
+    SplitType type;
+};
+
 struct HyphenatedWord {
-    std::vector<size_t> hyphens;
+    std::vector<HyphenPoint> hyphen_points;
     std::string word;
 };
 

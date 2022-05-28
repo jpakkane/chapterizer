@@ -115,16 +115,18 @@ size_t detect_optimal_split_point(const HyphenatedWord &word,
                                   const int line_width,
                                   const int target_width) {
     const int hyphen_width = 1;
-    auto loc = std::find_if(
-        word.hyphens.begin(), word.hyphens.end(), [&line_width, &target_width](size_t hyph_index) {
-            return int(line_width + hyph_index + hyphen_width) > target_width;
-        });
-    if(loc == word.hyphens.end()) {
-        return word.hyphens.back();
+    auto trial_point =
+        std::find_if(word.hyphen_points.begin(),
+                     word.hyphen_points.end(),
+                     [&line_width, &target_width](const HyphenPoint &hyph) {
+                         return int(line_width + hyph.loc + hyphen_width) > target_width;
+                     });
+    if(trial_point == word.hyphen_points.end()) {
+        return word.hyphen_points.back().loc;
     }
     // Check if the split point before is better than the current one.
     // I.e. if "overshoot" is better than "undershoot".
-    return *loc;
+    return trial_point->loc;
 }
 
 std::vector<std::string> hyphenation_split(const std::vector<HyphenatedWord> &words,
@@ -142,8 +144,8 @@ std::vector<std::string> hyphenation_split(const std::vector<HyphenatedWord> &wo
         const auto appended_w = int(current_w + space_width + hw.word.length());
 
         if(appended_w >= (int)target_width) {
-            if(hw.hyphens.empty() ||
-               (current_w + space_width + hw.hyphens[0] + hyphen_width >= target_width)) {
+            if(hw.hyphen_points.empty() ||
+               (current_w + space_width + hw.hyphen_points[0].loc + hyphen_width >= target_width)) {
                 // Even the first hyphenation split overshoots.
                 lines.emplace_back(std::move(current_line));
                 current_line = hw.word;
@@ -192,7 +194,7 @@ void hyphentest() {
     size_t hyphenloc = 0;
     for(size_t i = 0; i < result.word.length(); ++i) {
         printf("%c", result.word[i]);
-        if(hyphenloc < result.hyphens.size() && result.hyphens[hyphenloc] == i) {
+        if(hyphenloc < result.hyphen_points.size() && result.hyphen_points[hyphenloc].loc == i) {
             printf("-");
             ++hyphenloc;
         }
