@@ -11,7 +11,7 @@ public:
     explicit PdfRenderer(const char *ofname);
     ~PdfRenderer();
 
-    void render(const std::vector<std::string> &lines);
+    void render(const std::vector<std::string> &lines, const double target_width_mm);
 
 private:
     void temp();

@@ -97,7 +97,7 @@ void ChapterBuilder::global_split_recursive(const TextStats &shaper,
             line_stats.emplace_back(line_choice);
             current_split = line_choice.end_split;
             const auto sanity_check = line_stats.size();
-            global_split_recursive(shaper, line_stats, line_choice.end_split);
+            global_split_recursive(shaper, line_stats, current_split);
             assert(sanity_check == line_stats.size());
             line_stats.pop_back();
         }
@@ -240,18 +240,29 @@ std::vector<LineStats> ChapterBuilder::get_line_end_choices(size_t start_split,
     potentials.reserve(5);
     auto tightest_split = get_line_end(start_split, shaper);
     potentials.push_back(tightest_split);
-    if(tightest_split.end_split > start_split + 2) {
-        const auto trial_split = tightest_split.end_split - 1;
+
+    // Lambdas, yo!
+    auto add_point = [&](size_t split_point) {
+        const auto trial_split = split_point;
         const auto trial_line = build_line(start_split, trial_split);
         const auto trial_width = shaper.text_width(trial_line);
         potentials.emplace_back(LineStats{trial_split, trial_width});
+    };
+
+    if(tightest_split.end_split > start_split + 2) {
+        add_point(tightest_split.end_split - 1);
     }
     if(tightest_split.end_split + 2 < split_points.size()) {
-        const auto trial_split = tightest_split.end_split + 1;
-        const auto trial_line = build_line(start_split, trial_split);
-        const auto trial_width = shaper.text_width(trial_line);
-        potentials.emplace_back(LineStats{trial_split, trial_width});
+        add_point(tightest_split.end_split + 1);
     }
+
+    if(tightest_split.end_split > start_split + 3) {
+        add_point(tightest_split.end_split - 2);
+    }
+    if(tightest_split.end_split + 3 < split_points.size()) {
+        add_point(tightest_split.end_split + 2);
+    }
+
     return potentials;
 }
 

@@ -54,7 +54,7 @@ struct UpTo {
 };
 
 struct SplitStates {
-    size_t cache_size = 4;
+    size_t cache_size = 12;
     std::vector<std::vector<UpTo>> best_to;
 
     void clear() { best_to.clear(); }

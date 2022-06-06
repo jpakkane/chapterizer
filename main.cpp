@@ -227,7 +227,7 @@ void monospacetest(const T1 &plain_words, const T2 &hyphenated_words) {
 #include <textstats.hpp>
 static TextStats hack;
 template<typename T1> void full_test(const T1 &hyphenated_words) {
-    const double paragraph_width = 70.0;
+    const double paragraph_width = 60.0;
     ChapterBuilder spl{hyphenated_words, paragraph_width};
     const auto lines = spl.split_lines();
 
@@ -240,7 +240,7 @@ template<typename T1> void full_test(const T1 &hyphenated_words) {
     }
 
     PdfRenderer r("texttest.pdf");
-    r.render(lines);
+    r.render(lines, paragraph_width);
 }
 
 int main() {

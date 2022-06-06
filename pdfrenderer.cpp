@@ -57,24 +57,31 @@ PdfRenderer::~PdfRenderer() {
     cairo_surface_destroy(surf);
 }
 
-void PdfRenderer::render(const std::vector<std::string> &lines) {
+void PdfRenderer::render(const std::vector<std::string> &lines, const double target_width_mm) {
     draw_grid();
     const double line_height = 12.0;
-    const double target_width_pt = mm2pt(60.0);
+    const double target_width_pt = mm2pt(target_width_mm);
     cairo_set_source_rgb(cr, 0, 0, 0);
+    const double left_box_origin_x = mm2pt(20);
+    const double left_box_origin_y = mm2pt(20);
+    const double right_box_origin_x = mm2pt(20 + 10 + target_width_mm);
+    const double right_box_origin_y = mm2pt(20);
+
     for(size_t i = 0; i < lines.size(); ++i) {
         if(i < lines.size() - 1) {
-            render_line(lines[i], mm2pt(20), mm2pt(20) + i * line_height);
+            render_line(lines[i], left_box_origin_x, left_box_origin_y + i * line_height);
         } else {
-            render_line_as_is(lines[i].c_str(), mm2pt(20), mm2pt(20) + i * line_height);
+            render_line_as_is(
+                lines[i].c_str(), left_box_origin_x, left_box_origin_y + i * line_height);
         }
-        render_line_as_is(lines[i].c_str(), mm2pt(90), mm2pt(20.0) + i * line_height);
+        render_line_as_is(
+            lines[i].c_str(), right_box_origin_x, right_box_origin_y + i * line_height);
     }
     cairo_set_source_rgb(cr, 0, 0, 1.0);
     cairo_set_line_width(cr, 0.5);
     const double box_height = line_height * lines.size();
-    draw_box(mm2pt(20), mm2pt(20), target_width_pt, box_height);
-    draw_box(mm2pt(90), mm2pt(20), target_width_pt, box_height);
+    draw_box(left_box_origin_x, left_box_origin_y, target_width_pt, box_height);
+    draw_box(right_box_origin_x, right_box_origin_y, target_width_pt, box_height);
 
     temp();
 }
