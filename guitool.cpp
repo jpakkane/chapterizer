@@ -2,6 +2,10 @@
 #include <vector>
 #include <string>
 
+namespace {
+
+void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data);
+
 enum { TEXT_COLUMN, DELTA_COLUMN, PENALTY_COLUMN, N_COLUMNS };
 
 struct App {
@@ -9,11 +13,12 @@ struct App {
     GtkApplication *app;
     GtkWindow *win;
     GtkTextView *textview;
-    GtkTextBuffer *buf;
     GtkTreeView *statview;
     GtkTreeStore *store;
     GtkLabel *status;
     GtkDrawingArea *draw;
+
+    GtkTextBuffer *buf() { return gtk_text_view_get_buffer(textview); }
 };
 
 /*
@@ -24,6 +29,9 @@ static void quitfunc(GtkButton *, gpointer user_data) {
 */
 
 std::vector<std::string> split_to_lines(const char *text) {
+    if(!text) {
+        return {};
+    }
     size_t i = 0;
     std::string_view v(text);
     std::vector<std::string> lines;
@@ -39,18 +47,23 @@ std::vector<std::string> split_to_lines(const char *text) {
     return lines;
 }
 
+std::vector<std::string> get_entry_widget_text(App *app) {
+    GtkTextIter start;
+    GtkTextIter end;
+    gtk_text_buffer_get_bounds(app->buf(), &start, &end);
+    char *text = gtk_text_buffer_get_text(app->buf(), &start, &end, 0);
+    auto r = split_to_lines(text);
+    g_free(text);
+    return r;
+}
+
 void text_changed(GtkTextBuffer *, gpointer data) {
     auto app = static_cast<App *>(data);
     gtk_tree_store_clear(app->store);
-    GtkTextIter start;
-    GtkTextIter end;
-    gtk_text_buffer_get_bounds(app->buf, &start, &end);
-    char *text = gtk_text_buffer_get_text(app->buf, &start, &end, 0);
-    const auto lines = split_to_lines(text);
-    g_free(text);
     GtkTreeIter iter;
     size_t i = 0;
     int total_penalty = 0;
+    auto lines = get_entry_widget_text(app);
     for(const auto &l : lines) {
         const int BUFSIZE = 128;
         char deltabuf[BUFSIZE];
@@ -83,16 +96,18 @@ void text_changed(GtkTextBuffer *, gpointer data) {
     char buf[BIGBUF];
     snprintf(buf, BIGBUF, "Total penalty is %d.", total_penalty);
     gtk_label_set_text(app->status, buf);
+    gtk_widget_queue_draw(GTK_WIDGET(app->draw));
 }
 
 void connect_stuffs(App *app) {
-    g_signal_connect(app->buf, "changed", G_CALLBACK(text_changed), static_cast<gpointer>(app));
+    g_signal_connect(app->buf(), "changed", G_CALLBACK(text_changed), static_cast<gpointer>(app));
 }
 
-static void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data) {
+void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data) {
     App *a = static_cast<App *>(data);
     GdkRGBA color;
 
+    auto text = get_entry_widget_text(a);
     color.red = color.green = color.blue = 1.0f;
     color.alpha = 1.0f;
     gdk_cairo_set_source_rgba(cr, &color);
@@ -108,9 +123,18 @@ static void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int heig
     gdk_cairo_set_source_rgba(cr, &color);
 
     cairo_stroke(cr);
+
+    color.blue = 0;
+    gdk_cairo_set_source_rgba(cr, &color);
+    if(!text.empty())
+        cairo_select_font_face(cr, "gentium", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+    for(size_t i = 0; i < text.size(); ++i) {
+        cairo_move_to(cr, xoff, yoff + 10 * (i + 1));
+        cairo_show_text(cr, text[i].c_str());
+    }
 }
 
-static void activate(GtkApplication *, gpointer user_data) {
+void activate(GtkApplication *, gpointer user_data) {
     auto *app = static_cast<App *>(user_data);
     app->win = GTK_WINDOW(gtk_application_window_new(app->app));
     gtk_window_set_title(app->win, "Chapterizer devtool");
@@ -133,13 +157,12 @@ static void activate(GtkApplication *, gpointer user_data) {
 
     app->textview = GTK_TEXT_VIEW(gtk_text_view_new());
     gtk_text_view_set_monospace(app->textview, 1);
-    app->buf = gtk_text_view_get_buffer(app->textview);
     app->status = GTK_LABEL(gtk_label_new("Total error is ?."));
 
     app->draw = GTK_DRAWING_AREA(gtk_drawing_area_new());
     gtk_drawing_area_set_content_height(app->draw, 600);
     gtk_drawing_area_set_content_width(app->draw, 300);
-    gtk_drawing_area_set_draw_func(app->draw, draw_function, &app, nullptr);
+    gtk_drawing_area_set_draw_func(app->draw, draw_function, app, nullptr);
 
     gtk_widget_set_vexpand(GTK_WIDGET(app->textview), 1);
     gtk_widget_set_vexpand(GTK_WIDGET(app->statview), 1);
@@ -151,13 +174,15 @@ static void activate(GtkApplication *, gpointer user_data) {
     gtk_grid_attach(grid, GTK_WIDGET(app->textview), 0, 0, 1, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->draw), 1, 0, 1, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->statview), 2, 0, 1, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 1, 2, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 1, 3, 1);
 
+    gtk_text_buffer_set_text(app->buf(), "Yes, this is dog.", -1);
     connect_stuffs(app);
-    gtk_text_buffer_set_text(app->buf, "Yes, this is dog.", -1);
     gtk_window_set_child(app->win, GTK_WIDGET(grid));
     gtk_window_present(GTK_WINDOW(app->win));
 }
+
+} // namespace
 
 int main(int argc, char **argv) {
     App app;
