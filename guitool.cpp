@@ -44,6 +44,8 @@ struct App {
     GtkTreeStore *store;
     GtkLabel *status;
     GtkDrawingArea *draw;
+    GtkSpinButton *zoom;
+    GtkComboBoxText *fonts;
 
     GtkTextBuffer *buf() { return gtk_text_view_get_buffer(textview); }
 };
@@ -126,16 +128,30 @@ void text_changed(GtkTextBuffer *, gpointer data) {
     gtk_widget_queue_draw(GTK_WIDGET(app->draw));
 }
 
+void zoom_changed(GtkSpinButton *, gpointer data) {
+    auto app = static_cast<App *>(data);
+    gtk_widget_queue_draw(GTK_WIDGET(app->draw));
+}
+
+void font_changed(GtkComboBox *, gpointer data) {
+    auto app = static_cast<App *>(data);
+    gtk_widget_queue_draw(GTK_WIDGET(app->draw));
+}
+
 void connect_stuffs(App *app) {
     g_signal_connect(app->buf(), "changed", G_CALLBACK(text_changed), static_cast<gpointer>(app));
+    g_signal_connect(
+        app->zoom, "value-changed", G_CALLBACK(zoom_changed), static_cast<gpointer>(app));
+    g_signal_connect(app->fonts, "changed", G_CALLBACK(font_changed), static_cast<gpointer>(app));
 }
 
 void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointer data) {
     App *a = static_cast<App *>(data);
     GdkRGBA color;
-    const int line_height = 10;
+    const int line_height = 11;
     auto *layout = pango_cairo_create_layout(cr);
-    PangoFontDescription *desc = pango_font_description_from_string("Gentium");
+    PangoFontDescription *desc =
+        pango_font_description_from_string(gtk_combo_box_text_get_active_text(a->fonts));
     pango_font_description_set_absolute_size(desc, 10 * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
@@ -147,20 +163,26 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     cairo_rectangle(cr, 0, 0, width, height);
     cairo_fill(cr);
 
+    const double zoom_ratio = gtk_spin_button_get_value(a->zoom);
+    cairo_scale(cr, zoom_ratio, zoom_ratio);
     const double xoff = 10;
     const double yoff = 10;
     const double parwid = 60 / 25.4 * 72;
     const double parhei = text.size() * line_height;
+    cairo_set_line_width(cr, 1.0 / zoom_ratio);
     cairo_rectangle(cr, xoff, yoff, parwid, parhei);
     color.red = color.green = 0.0;
     gdk_cairo_set_source_rgba(cr, &color);
-
     cairo_stroke(cr);
+    cairo_set_line_width(cr, 1.0);
 
     color.blue = 0;
     gdk_cairo_set_source_rgba(cr, &color);
     if(!text.empty())
-        cairo_select_font_face(cr, "gentium", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+        cairo_select_font_face(cr,
+                               gtk_combo_box_text_get_active_text(a->fonts),
+                               CAIRO_FONT_SLANT_NORMAL,
+                               CAIRO_FONT_WEIGHT_NORMAL);
     for(size_t i = 0; i < text.size(); ++i) {
         cairo_move_to(cr, xoff, yoff + line_height * i);
         pango_layout_set_text(layout, text[i].c_str(), -1);
@@ -200,6 +222,13 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_drawing_area_set_content_width(app->draw, 300);
     gtk_drawing_area_set_draw_func(app->draw, draw_function, app, nullptr);
 
+    app->zoom = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(1.0, 2.0, 0.1));
+    app->fonts = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
+    gtk_combo_box_text_append_text(app->fonts, "Gentium");
+    gtk_combo_box_text_append_text(app->fonts, "P052");
+    gtk_combo_box_text_append_text(app->fonts, "Liberation Serif");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(app->fonts), 0);
+
     gtk_widget_set_vexpand(GTK_WIDGET(app->textview), 1);
     gtk_widget_set_vexpand(GTK_WIDGET(app->statview), 1);
     gtk_widget_set_hexpand(GTK_WIDGET(app->textview), 1);
@@ -210,7 +239,9 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_grid_attach(grid, GTK_WIDGET(app->textview), 0, 0, 1, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->draw), 1, 0, 1, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->statview), 2, 0, 1, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 1, 3, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->zoom), 0, 1, 3, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->fonts), 0, 2, 3, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 3, 3, 1);
 
     connect_stuffs(app);
     gtk_window_set_child(app->win, GTK_WIDGET(grid));
