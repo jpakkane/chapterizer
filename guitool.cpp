@@ -130,10 +130,15 @@ void connect_stuffs(App *app) {
     g_signal_connect(app->buf(), "changed", G_CALLBACK(text_changed), static_cast<gpointer>(app));
 }
 
-void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data) {
+void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointer data) {
     App *a = static_cast<App *>(data);
     GdkRGBA color;
     const int line_height = 10;
+    auto *layout = pango_cairo_create_layout(cr);
+    PangoFontDescription *desc = pango_font_description_from_string("Gentium");
+    pango_font_description_set_absolute_size(desc, 10 * PANGO_SCALE);
+    pango_layout_set_font_description(layout, desc);
+    pango_font_description_free(desc);
 
     auto text = get_entry_widget_text(a);
     color.red = color.green = color.blue = 1.0f;
@@ -157,9 +162,12 @@ void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpo
     if(!text.empty())
         cairo_select_font_face(cr, "gentium", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     for(size_t i = 0; i < text.size(); ++i) {
-        cairo_move_to(cr, xoff, yoff + line_height * (i + 1));
-        cairo_show_text(cr, text[i].c_str());
+        cairo_move_to(cr, xoff, yoff + line_height * i);
+        pango_layout_set_text(layout, text[i].c_str(), -1);
+        pango_cairo_update_layout(cr, layout);
+        pango_cairo_show_layout(cr, layout);
     }
+    g_object_unref(G_OBJECT(layout));
 }
 
 void activate(GtkApplication *, gpointer user_data) {
@@ -204,10 +212,10 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_grid_attach(grid, GTK_WIDGET(app->statview), 2, 0, 1, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 1, 3, 1);
 
-    gtk_text_buffer_set_text(app->buf(), preformatted_text, -1);
     connect_stuffs(app);
     gtk_window_set_child(app->win, GTK_WIDGET(grid));
     gtk_window_present(GTK_WINDOW(app->win));
+    gtk_text_buffer_set_text(app->buf(), preformatted_text, -1);
 }
 
 } // namespace
