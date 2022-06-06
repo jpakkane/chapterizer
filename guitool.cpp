@@ -4,6 +4,33 @@
 
 namespace {
 
+const char preformatted_text[] =
+    R"(From the corner of the divan of Persian
+saddle-bags on which he was lying, smok-
+ing, as was his custom, innumerable ciga-
+rettes, Lord Henry Wotton could just
+catch the gleam of the honey-sweet and
+honey-coloured blossoms of a laburnum,
+whose tremulous branches seemed hardly
+able to bear the burden of a beauty so
+flamelike as theirs; and now and then the
+fantastic shadows of birds in flight flitted
+across the long tussore-silk curtains that
+were stretched in front of the huge win-
+dow, producing a kind of momentary Ja-
+panese effect, and making him think of
+those pallid, jade-faced painters of Tokyo
+who, through the medium of an art that is
+necessarily immobile, seek to convey the
+sense of swiftness and motion. The sullen
+murmur of the bees shouldering their way
+through the long unmown grass, or cir-
+cling with monotonous insistence round
+the dusty gilt horns of the straggling wood-
+bine, seemed to make the stillness more
+oppressive. The dim roar of London was
+like the bourdon note of a distant organ.)";
+
 void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data);
 
 enum { TEXT_COLUMN, DELTA_COLUMN, PENALTY_COLUMN, N_COLUMNS };
@@ -106,6 +133,7 @@ void connect_stuffs(App *app) {
 void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data) {
     App *a = static_cast<App *>(data);
     GdkRGBA color;
+    const int line_height = 10;
 
     auto text = get_entry_widget_text(a);
     color.red = color.green = color.blue = 1.0f;
@@ -116,8 +144,8 @@ void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpo
 
     const double xoff = 10;
     const double yoff = 10;
-    const double parwid = 50 / 25.4 * 72;
-    const double parhei = 200;
+    const double parwid = 60 / 25.4 * 72;
+    const double parhei = text.size() * line_height;
     cairo_rectangle(cr, xoff, yoff, parwid, parhei);
     color.red = color.green = 0.0;
     gdk_cairo_set_source_rgba(cr, &color);
@@ -129,7 +157,7 @@ void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpo
     if(!text.empty())
         cairo_select_font_face(cr, "gentium", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     for(size_t i = 0; i < text.size(); ++i) {
-        cairo_move_to(cr, xoff, yoff + 10 * (i + 1));
+        cairo_move_to(cr, xoff, yoff + line_height * (i + 1));
         cairo_show_text(cr, text[i].c_str());
     }
 }
@@ -176,7 +204,7 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_grid_attach(grid, GTK_WIDGET(app->statview), 2, 0, 1, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 1, 3, 1);
 
-    gtk_text_buffer_set_text(app->buf(), "Yes, this is dog.", -1);
+    gtk_text_buffer_set_text(app->buf(), preformatted_text, -1);
     connect_stuffs(app);
     gtk_window_set_child(app->win, GTK_WIDGET(grid));
     gtk_window_present(GTK_WINDOW(app->win));
