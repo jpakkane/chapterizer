@@ -13,7 +13,9 @@ struct App {
     GtkTreeView *statview;
     GtkTreeStore *store;
     GtkLabel *status;
+    GtkDrawingArea *draw;
 };
+
 /*
 static void quitfunc(GtkButton *, gpointer user_data) {
     auto *app = static_cast<App *>(user_data);
@@ -87,6 +89,27 @@ void connect_stuffs(App *app) {
     g_signal_connect(app->buf, "changed", G_CALLBACK(text_changed), static_cast<gpointer>(app));
 }
 
+static void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data) {
+    App *a = static_cast<App *>(data);
+    GdkRGBA color;
+
+    color.red = color.green = color.blue = 1.0f;
+    color.alpha = 1.0f;
+    gdk_cairo_set_source_rgba(cr, &color);
+    cairo_rectangle(cr, 0, 0, width, height);
+    cairo_fill(cr);
+
+    const double xoff = 10;
+    const double yoff = 10;
+    const double parwid = 50 / 25.4 * 72;
+    const double parhei = 200;
+    cairo_rectangle(cr, xoff, yoff, parwid, parhei);
+    color.red = color.green = 0.0;
+    gdk_cairo_set_source_rgba(cr, &color);
+
+    cairo_stroke(cr);
+}
+
 static void activate(GtkApplication *, gpointer user_data) {
     auto *app = static_cast<App *>(user_data);
     app->win = GTK_WINDOW(gtk_application_window_new(app->app));
@@ -113,13 +136,21 @@ static void activate(GtkApplication *, gpointer user_data) {
     app->buf = gtk_text_view_get_buffer(app->textview);
     app->status = GTK_LABEL(gtk_label_new("Total error is ?."));
 
+    app->draw = GTK_DRAWING_AREA(gtk_drawing_area_new());
+    gtk_drawing_area_set_content_height(app->draw, 600);
+    gtk_drawing_area_set_content_width(app->draw, 300);
+    gtk_drawing_area_set_draw_func(app->draw, draw_function, &app, nullptr);
+
     gtk_widget_set_vexpand(GTK_WIDGET(app->textview), 1);
     gtk_widget_set_vexpand(GTK_WIDGET(app->statview), 1);
     gtk_widget_set_hexpand(GTK_WIDGET(app->textview), 1);
     // gtk_widget_set_hexpand(GTK_WIDGET(app->statview), 1);
+    gtk_widget_set_vexpand(GTK_WIDGET(app->draw), 1);
+    gtk_widget_set_hexpand(GTK_WIDGET(app->draw), 1);
 
     gtk_grid_attach(grid, GTK_WIDGET(app->textview), 0, 0, 1, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->statview), 1, 0, 1, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->draw), 1, 0, 1, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->statview), 2, 0, 1, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 1, 2, 1);
 
     connect_stuffs(app);
