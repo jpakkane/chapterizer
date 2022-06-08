@@ -222,26 +222,35 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_drawing_area_set_content_width(app->draw, 300);
     gtk_drawing_area_set_draw_func(app->draw, draw_function, app, nullptr);
 
-    app->zoom = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(1.0, 2.0, 0.1));
+    app->zoom = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(1.0, 4.0, 0.1));
     app->fonts = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
     gtk_combo_box_text_append_text(app->fonts, "Gentium");
     gtk_combo_box_text_append_text(app->fonts, "P052");
     gtk_combo_box_text_append_text(app->fonts, "Liberation Serif");
     gtk_combo_box_set_active(GTK_COMBO_BOX(app->fonts), 0);
 
-    gtk_widget_set_vexpand(GTK_WIDGET(app->textview), 1);
-    gtk_widget_set_vexpand(GTK_WIDGET(app->statview), 1);
-    gtk_widget_set_hexpand(GTK_WIDGET(app->textview), 1);
-    // gtk_widget_set_hexpand(GTK_WIDGET(app->statview), 1);
-    gtk_widget_set_vexpand(GTK_WIDGET(app->draw), 1);
-    gtk_widget_set_hexpand(GTK_WIDGET(app->draw), 1);
+    auto *text_scroll = gtk_scrolled_window_new();
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(text_scroll), GTK_WIDGET(app->textview));
+    gtk_scrolled_window_set_policy(
+        GTK_SCROLLED_WINDOW(text_scroll), GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
+    gtk_widget_set_size_request(text_scroll, 400, 600);
+    auto *draw_scroll = gtk_scrolled_window_new();
+    gtk_scrolled_window_set_policy(
+        GTK_SCROLLED_WINDOW(draw_scroll), GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(draw_scroll), GTK_WIDGET(app->draw));
+    gtk_widget_set_vexpand(draw_scroll, 1);
+    gtk_widget_set_hexpand(draw_scroll, 1);
+    gtk_widget_set_size_request(draw_scroll, 400, 600);
 
-    gtk_grid_attach(grid, GTK_WIDGET(app->textview), 0, 0, 1, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->draw), 1, 0, 1, 1);
+    gtk_grid_attach(grid, text_scroll, 0, 0, 1, 1);
+    gtk_grid_attach(grid, draw_scroll, 1, 0, 1, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->statview), 2, 0, 1, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->zoom), 0, 1, 3, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->fonts), 0, 2, 3, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 3, 3, 1);
+
+    gtk_widget_set_vexpand(GTK_WIDGET(grid), 1);
+    gtk_widget_set_hexpand(GTK_WIDGET(grid), 1);
 
     connect_stuffs(app);
     gtk_window_set_child(app->win, GTK_WIDGET(grid));
