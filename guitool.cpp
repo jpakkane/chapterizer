@@ -48,6 +48,8 @@ struct App {
     GtkDrawingArea *draw;
     GtkSpinButton *zoom;
     GtkComboBoxText *fonts;
+    GtkSpinButton *ptsize;
+    GtkSpinButton *row_height;
 
     GtkTextBuffer *buf() { return gtk_text_view_get_buffer(textview); }
 };
@@ -142,21 +144,37 @@ void font_changed(GtkComboBox *, gpointer data) {
     gtk_widget_queue_draw(GTK_WIDGET(app->draw));
 }
 
+void font_size_changed(GtkSpinButton *new_size, gpointer data) {
+    auto app = static_cast<App *>(data);
+    // gtk_widget_queue_draw(GTK_WIDGET(app->draw));
+    gtk_spin_button_set_value(app->row_height, 1.1 * gtk_spin_button_get_value(new_size));
+}
+
+void row_height_changed(GtkSpinButton *, gpointer data) {
+    auto app = static_cast<App *>(data);
+    gtk_widget_queue_draw(GTK_WIDGET(app->draw));
+}
+
 void connect_stuffs(App *app) {
     g_signal_connect(app->buf(), "changed", G_CALLBACK(text_changed), static_cast<gpointer>(app));
     g_signal_connect(
         app->zoom, "value-changed", G_CALLBACK(zoom_changed), static_cast<gpointer>(app));
     g_signal_connect(app->fonts, "changed", G_CALLBACK(font_changed), static_cast<gpointer>(app));
+    g_signal_connect(
+        app->ptsize, "changed", G_CALLBACK(font_size_changed), static_cast<gpointer>(app));
+    g_signal_connect(
+        app->row_height, "changed", G_CALLBACK(row_height_changed), static_cast<gpointer>(app));
 }
 
 void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointer data) {
     App *a = static_cast<App *>(data);
     GdkRGBA color;
-    const int line_height = 11;
+    const double point_size = gtk_spin_button_get_value(a->ptsize);
+    const double line_height = gtk_spin_button_get_value(a->row_height);
     auto *layout = pango_cairo_create_layout(cr);
     PangoFontDescription *desc =
         pango_font_description_from_string(gtk_combo_box_text_get_active_text(a->fonts));
-    pango_font_description_set_absolute_size(desc, 10 * PANGO_SCALE);
+    pango_font_description_set_absolute_size(desc, point_size * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
@@ -198,7 +216,6 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
 
 void populate_fontlist(App *app) {
     int active_id = 0;
-    app->zoom = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(1.0, 4.0, 0.1));
     app->fonts = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
     int i = 0;
     for(const auto &f : get_fontnames_smart()) {
@@ -244,6 +261,11 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_drawing_area_set_content_width(app->draw, 300);
     gtk_drawing_area_set_draw_func(app->draw, draw_function, app, nullptr);
 
+    app->zoom = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(1.0, 4.0, 0.1));
+    app->ptsize = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(6.0, 18.0, 0.5));
+    app->row_height = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(4.0, 20, 0.1));
+    gtk_spin_button_set_value(app->ptsize, 10.0);
+    gtk_spin_button_set_value(app->row_height, 12.0);
     populate_fontlist(app);
 
     auto *text_scroll = gtk_scrolled_window_new();
@@ -263,8 +285,10 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_grid_attach(grid, draw_scroll, 1, 0, 1, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->statview), 2, 0, 1, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->zoom), 0, 1, 3, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->fonts), 0, 2, 3, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 3, 3, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->ptsize), 0, 2, 3, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->row_height), 0, 3, 3, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->fonts), 0, 4, 3, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 5, 3, 1);
 
     gtk_widget_set_vexpand(GTK_WIDGET(grid), 1);
     gtk_widget_set_hexpand(GTK_WIDGET(grid), 1);
