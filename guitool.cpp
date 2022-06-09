@@ -38,7 +38,6 @@ void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpo
 enum { LINENUM_COLUMN, TEXT_COLUMN, DELTA_COLUMN, PENALTY_COLUMN, N_COLUMNS };
 
 struct App {
-    int target_width = 66;
     GtkApplication *app;
     GtkWindow *win;
     GtkTextView *textview;
@@ -50,6 +49,7 @@ struct App {
     GtkComboBoxText *fonts;
     GtkSpinButton *ptsize;
     GtkSpinButton *row_height;
+    GtkSpinButton *chapter_width;
 
     GtkTextBuffer *buf() { return gtk_text_view_get_buffer(textview); }
 };
@@ -95,6 +95,7 @@ void text_changed(GtkTextBuffer *, gpointer data) {
     gtk_tree_store_clear(app->store);
     GtkTreeIter iter;
     size_t i = 0;
+    const double target_width = gtk_spin_button_get_value(app->chapter_width);
     int total_penalty = 0;
     auto lines = get_entry_widget_text(app);
     for(const auto &l : lines) {
@@ -102,13 +103,12 @@ void text_changed(GtkTextBuffer *, gpointer data) {
         char deltabuf[BUFSIZE];
         char penaltybuf[BUFSIZE];
         gtk_tree_store_append(app->store, &iter, nullptr);
-        int delta = int(l.length()) - app->target_width;
+        int delta = int(l.length()) - target_width;
         int penalty;
         if(lines.size() - 1 == i) {
-            penalty =
-                int(l.length()) <= app->target_width ? 0 : int(l.length()) - app->target_width;
+            penalty = int(l.length()) <= target_width ? 0 : int(l.length()) - target_width;
         } else {
-            penalty = int(l.length()) - app->target_width;
+            penalty = int(l.length()) - target_width;
         }
         penalty = penalty * penalty;
         total_penalty += penalty;
@@ -155,6 +155,11 @@ void row_height_changed(GtkSpinButton *, gpointer data) {
     gtk_widget_queue_draw(GTK_WIDGET(app->draw));
 }
 
+void chapter_width_changed(GtkSpinButton *, gpointer data) {
+    auto app = static_cast<App *>(data);
+    gtk_widget_queue_draw(GTK_WIDGET(app->draw));
+}
+
 void connect_stuffs(App *app) {
     g_signal_connect(app->buf(), "changed", G_CALLBACK(text_changed), static_cast<gpointer>(app));
     g_signal_connect(
@@ -164,6 +169,10 @@ void connect_stuffs(App *app) {
         app->ptsize, "changed", G_CALLBACK(font_size_changed), static_cast<gpointer>(app));
     g_signal_connect(
         app->row_height, "changed", G_CALLBACK(row_height_changed), static_cast<gpointer>(app));
+    g_signal_connect(app->chapter_width,
+                     "changed",
+                     G_CALLBACK(chapter_width_changed),
+                     static_cast<gpointer>(app));
 }
 
 void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointer data) {
@@ -189,7 +198,7 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     cairo_scale(cr, zoom_ratio, zoom_ratio);
     const double xoff = 10;
     const double yoff = 10;
-    const double parwid = 60 / 25.4 * 72;
+    const double parwid = gtk_spin_button_get_value(a->chapter_width) / 25.4 * 72;
     const double parhei = text.size() * line_height;
     cairo_set_line_width(cr, 1.0 / zoom_ratio);
     cairo_rectangle(cr, xoff, yoff, parwid, parhei);
@@ -264,8 +273,10 @@ void activate(GtkApplication *, gpointer user_data) {
     app->zoom = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(1.0, 4.0, 0.1));
     app->ptsize = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(6.0, 18.0, 0.5));
     app->row_height = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(4.0, 20, 0.1));
+    app->chapter_width = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(30, 100, 1));
     gtk_spin_button_set_value(app->ptsize, 10.0);
     gtk_spin_button_set_value(app->row_height, 12.0);
+    gtk_spin_button_set_value(app->chapter_width, 66);
     populate_fontlist(app);
 
     auto *text_scroll = gtk_scrolled_window_new();
@@ -287,8 +298,9 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_grid_attach(grid, GTK_WIDGET(app->zoom), 0, 1, 3, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->ptsize), 0, 2, 3, 1);
     gtk_grid_attach(grid, GTK_WIDGET(app->row_height), 0, 3, 3, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->fonts), 0, 4, 3, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 5, 3, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->chapter_width), 0, 4, 3, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->fonts), 0, 5, 3, 1);
+    gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 6, 3, 1);
 
     gtk_widget_set_vexpand(GTK_WIDGET(grid), 1);
     gtk_widget_set_hexpand(GTK_WIDGET(grid), 1);
