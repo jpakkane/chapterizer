@@ -33,7 +33,7 @@ like the bourdon note of a distant organ.)";
 
 void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data);
 
-enum { TEXT_COLUMN, DELTA_COLUMN, PENALTY_COLUMN, N_COLUMNS };
+enum { LINENUM_COLUMN, TEXT_COLUMN, DELTA_COLUMN, PENALTY_COLUMN, N_COLUMNS };
 
 struct App {
     int target_width = 66;
@@ -112,6 +112,8 @@ void text_changed(GtkTextBuffer *, gpointer data) {
         snprintf(penaltybuf, BUFSIZE, "%d", penalty);
         gtk_tree_store_set(app->store,
                            &iter,
+                           LINENUM_COLUMN,
+                           int(i) + 1,
                            TEXT_COLUMN,
                            l.c_str(),
                            DELTA_COLUMN,
@@ -199,10 +201,13 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_window_set_default_size(app->win, 800, 480);
     GtkGrid *grid = GTK_GRID(gtk_grid_new());
     app->store = gtk_tree_store_new(
-        N_COLUMNS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING); // Should be int but...
+        N_COLUMNS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING); // Should be int but...
     app->statview = GTK_TREE_VIEW(gtk_tree_view_new_with_model(GTK_TREE_MODEL(app->store)));
     GtkCellRenderer *r;
     GtkTreeViewColumn *c;
+    r = gtk_cell_renderer_text_new();
+    c = gtk_tree_view_column_new_with_attributes("Line number", r, "text", LINENUM_COLUMN, nullptr);
+    gtk_tree_view_append_column(app->statview, c);
     r = gtk_cell_renderer_text_new();
     c = gtk_tree_view_column_new_with_attributes("Text", r, "text", TEXT_COLUMN, nullptr);
     gtk_tree_view_append_column(app->statview, c);
