@@ -1,6 +1,8 @@
 #include <gtk/gtk.h>
 #include <vector>
 #include <string>
+#include <fontconfig/fontconfig.h>
+#include <fchelpers.hpp>
 
 namespace {
 
@@ -194,6 +196,21 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     g_object_unref(G_OBJECT(layout));
 }
 
+void populate_fontlist(App *app) {
+    int active_id = 0;
+    app->zoom = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(1.0, 4.0, 0.1));
+    app->fonts = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
+    int i = 0;
+    for(const auto &f : get_fontnames_smart()) {
+        if(f == "Gentium") {
+            active_id = i;
+        }
+        gtk_combo_box_text_append_text(app->fonts, f.c_str());
+        ++i;
+    }
+    gtk_combo_box_set_active(GTK_COMBO_BOX(app->fonts), active_id);
+}
+
 void activate(GtkApplication *, gpointer user_data) {
     auto *app = static_cast<App *>(user_data);
     app->win = GTK_WINDOW(gtk_application_window_new(app->app));
@@ -227,12 +244,7 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_drawing_area_set_content_width(app->draw, 300);
     gtk_drawing_area_set_draw_func(app->draw, draw_function, app, nullptr);
 
-    app->zoom = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(1.0, 4.0, 0.1));
-    app->fonts = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
-    gtk_combo_box_text_append_text(app->fonts, "Gentium");
-    gtk_combo_box_text_append_text(app->fonts, "P052");
-    gtk_combo_box_text_append_text(app->fonts, "Liberation Serif");
-    gtk_combo_box_set_active(GTK_COMBO_BOX(app->fonts), 0);
+    populate_fontlist(app);
 
     auto *text_scroll = gtk_scrolled_window_new();
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(text_scroll), GTK_WIDGET(app->textview));
@@ -267,10 +279,11 @@ void activate(GtkApplication *, gpointer user_data) {
 
 int main(int argc, char **argv) {
     App app;
-
+    FcInit();
     app.app = gtk_application_new("io.github.jpakkane.chapterizer", G_APPLICATION_FLAGS_NONE);
     g_signal_connect(app.app, "activate", G_CALLBACK(activate), static_cast<gpointer>(&app));
     int status = g_application_run(G_APPLICATION(app.app), argc, argv);
     g_object_unref(app.app);
+    // FcFini();
     return status;
 }

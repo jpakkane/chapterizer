@@ -6,6 +6,7 @@ ft_dep = dependency('freetype2')
 cairo_dep = dependency('cairo')
 pangocairo_dep = dependency('pangocairo')
 gtk4_dep = dependency('gtk4', required: false, method: 'pkg-config')
+fc_dep = dependency('fontconfig')
 
 add_project_arguments('-Wshadow', language: 'cpp')
 
@@ -23,5 +24,7 @@ executable('fttest', 'fttest.cpp', dependencies: [ft_dep, cairo_dep])
 executable('pangotest', 'pangotest.cpp', dependencies: pangocairo_dep)
 
 if gtk4_dep.found()
-  executable('guitool', 'guitool.cpp', dependencies: gtk4_dep)
+    executable('guitool', 'guitool.cpp',
+      'fchelpers.cpp',
+      dependencies: [gtk4_dep, fc_dep])
 endif
