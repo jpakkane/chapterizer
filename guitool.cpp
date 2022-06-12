@@ -1,4 +1,5 @@
 #include <utils.hpp>
+#include <chapterbuilder.hpp>
 #include <gtk/gtk.h>
 #include <vector>
 #include <string>
@@ -80,31 +81,29 @@ void text_changed(GtkTextBuffer *, gpointer data) {
     gtk_tree_store_clear(app->store);
     GtkTreeIter iter;
     size_t i = 0;
-    const double target_width = gtk_spin_button_get_value(app->chapter_width);
     int total_penalty = 0;
     auto lines = get_entry_widget_text(app);
-    for(const auto &l : lines) {
+    ChapterParameters par;
+    auto *tmp = gtk_combo_box_text_get_active_text(app->fonts);
+    par.font = tmp;
+    g_free(tmp);
+    par.fontsize = gtk_spin_button_get_value(app->ptsize);
+    par.paragraph_width_mm = gtk_spin_button_get_value(app->chapter_width);
+    auto line_stats = compute_stats(lines, par);
+    for(const auto &stats : line_stats) {
         const int BUFSIZE = 128;
         char deltabuf[BUFSIZE];
         char penaltybuf[BUFSIZE];
         gtk_tree_store_append(app->store, &iter, nullptr);
-        int delta = int(l.length()) - target_width;
-        int penalty;
-        if(lines.size() - 1 == i) {
-            penalty = int(l.length()) <= target_width ? 0 : int(l.length()) - target_width;
-        } else {
-            penalty = int(l.length()) - target_width;
-        }
-        penalty = penalty * penalty;
-        total_penalty += penalty;
-        snprintf(deltabuf, BUFSIZE, "%d", delta);
-        snprintf(penaltybuf, BUFSIZE, "%d", penalty);
+        total_penalty += stats.penalty;
+        snprintf(deltabuf, BUFSIZE, "%f", stats.delta);
+        snprintf(penaltybuf, BUFSIZE, "%f", stats.penalty);
         gtk_tree_store_set(app->store,
                            &iter,
                            LINENUM_COLUMN,
                            int(i) + 1,
                            TEXT_COLUMN,
-                           l.c_str(),
+                           lines[i].c_str(),
                            DELTA_COLUMN,
                            deltabuf,
                            PENALTY_COLUMN,
