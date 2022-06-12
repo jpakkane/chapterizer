@@ -8,30 +8,29 @@ namespace {
 
 const char preformatted_text[] =
     R"(From the corner of the divan of Persian
-saddle-bags on which he was lying, smok-
-ing, as was his custom, innumerable ciga-
-rettes, Lord Henry Wotton could just
-catch the gleam of the honey-sweet and
-honey-coloured blossoms of a laburnum,
-whose tremulous branches seemed hardly
-able to bear the burden of a beauty so
-flamelike as theirs; and now and then the
-fantastic shadows of birds in flight flitted
-across the long tussore-silk curtains that
-were stretched in front of the huge win-
-dow, producing a kind of momentary Ja-
-panese effect, and making him think of
-those pallid, jade-faced painters of Tokyo
-who, through the medium of an art that is
+saddle-bags on which he was lying, smoking,
+as was his custom, innumerable cigarettes,
+Lord Henry Wotton could just catch the gleam
+of the honey-sweet and honey-coloured
+blossoms of a laburnum, whose tremulous
+branches seemed hardly able to bear the
+burden of a beauty so flamelike as theirs; and
+now and then the fantastic shadows of birds
+in flight flitted across the long tussore-silk
+curtains that were stretched in front of the
+huge window, producing a kind of momentary
+Japanese effect, and making him think of
+those pallid, jade-faced painters of Tokyo who,
+through the medium of an art that is
 necessarily immobile, seek to convey the
 sense of swiftness and motion. The sullen
 murmur of the bees shouldering their way
-through the long unmown grass, or cir-
-cling with monotonous insistence round
-the dusty gilt horns of the straggling wood-
-bine, seemed to make the stillness more
-oppressive. The dim roar of London was
-like the bourdon note of a distant organ.)";
+through the long unmown grass, or circling
+with monotonous insistence round the dusty
+gilt horns of the straggling woodbine, seemed
+to make the stillness more oppressive. The
+dim roar of London was like the bourdon note
+ of a distant organ.)";
 
 void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data);
 
@@ -51,6 +50,8 @@ struct App {
     GtkSpinButton *row_height;
     GtkSpinButton *chapter_width;
     GtkNotebook *note;
+    GtkButton *reset;
+    GtkButton *optimize;
 
     GtkTextBuffer *buf() { return gtk_text_view_get_buffer(textview); }
 };
@@ -161,6 +162,13 @@ void chapter_width_changed(GtkSpinButton *, gpointer data) {
     gtk_widget_queue_draw(GTK_WIDGET(app->draw));
 }
 
+void reset_text_cb(GtkButton *, gpointer data) {
+    auto app = static_cast<App *>(data);
+    gtk_text_buffer_set_text(app->buf(), preformatted_text, -1);
+}
+
+void run_optimization_cb(GtkButton *, gpointer data) { auto app = static_cast<App *>(data); }
+
 void connect_stuffs(App *app) {
     g_signal_connect(app->buf(), "changed", G_CALLBACK(text_changed), static_cast<gpointer>(app));
     g_signal_connect(
@@ -174,6 +182,9 @@ void connect_stuffs(App *app) {
                      "changed",
                      G_CALLBACK(chapter_width_changed),
                      static_cast<gpointer>(app));
+    g_signal_connect(app->reset, "clicked", G_CALLBACK(reset_text_cb), static_cast<gpointer>(app));
+    g_signal_connect(
+        app->optimize, "clicked", G_CALLBACK(run_optimization_cb), static_cast<gpointer>(app));
 }
 
 void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointer data) {
@@ -278,7 +289,7 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_notebook_append_page(app->note, par_scroll, gtk_label_new("Parameters"));
     gtk_widget_set_vexpand(GTK_WIDGET(app->note), 1);
     gtk_widget_set_hexpand(GTK_WIDGET(app->note), 1);
-    gtk_widget_set_size_request(GTK_WIDGET(app->note), 400, 600);
+    gtk_widget_set_size_request(GTK_WIDGET(app->note), 600, 600);
 
     app->textview = GTK_TEXT_VIEW(gtk_text_view_new());
     gtk_text_view_set_monospace(app->textview, 1);
@@ -305,7 +316,7 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(draw_scroll), GTK_WIDGET(app->draw));
     gtk_widget_set_vexpand(draw_scroll, 1);
     gtk_widget_set_hexpand(draw_scroll, 1);
-    gtk_widget_set_size_request(draw_scroll, 400, 600);
+    gtk_widget_set_size_request(draw_scroll, 300, 600);
 
     gtk_grid_attach(main_grid, text_scroll, 0, 0, 1, 1);
     gtk_grid_attach(main_grid, draw_scroll, 1, 0, 1, 1);
@@ -320,6 +331,13 @@ void activate(GtkApplication *, gpointer user_data) {
 
     gtk_widget_set_vexpand(GTK_WIDGET(main_grid), 1);
     gtk_widget_set_hexpand(GTK_WIDGET(main_grid), 1);
+
+    GtkGrid *button_grid = GTK_GRID(gtk_grid_new());
+    app->reset = GTK_BUTTON(gtk_button_new_with_label("Reset text"));
+    app->optimize = GTK_BUTTON(gtk_button_new_with_label("Optimize"));
+    gtk_grid_attach(button_grid, GTK_WIDGET(app->reset), 0, 0, 1, 1);
+    gtk_grid_attach(button_grid, GTK_WIDGET(app->optimize), 1, 0, 1, 1);
+    gtk_grid_attach(main_grid, GTK_WIDGET(button_grid), 0, 1, 1, 3);
 
     connect_stuffs(app);
     gtk_window_set_child(app->win, GTK_WIDGET(main_grid));
