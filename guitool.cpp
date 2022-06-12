@@ -50,6 +50,7 @@ struct App {
     GtkSpinButton *ptsize;
     GtkSpinButton *row_height;
     GtkSpinButton *chapter_width;
+    GtkNotebook *note;
 
     GtkTextBuffer *buf() { return gtk_text_view_get_buffer(textview); }
 };
@@ -237,12 +238,21 @@ void populate_fontlist(App *app) {
     gtk_combo_box_set_active(GTK_COMBO_BOX(app->fonts), active_id);
 }
 
+void add_property(GtkGrid *grid, const char *label_text, GtkWidget *w, int yloc) {
+    GtkWidget *l = gtk_label_new(label_text);
+    gtk_widget_set_halign(l, GTK_ALIGN_START);
+    gtk_grid_attach(grid, l, 0, yloc, 1, 1);
+    gtk_grid_attach(grid, w, 1, yloc, 1, 1);
+}
+
 void activate(GtkApplication *, gpointer user_data) {
     auto *app = static_cast<App *>(user_data);
     app->win = GTK_WINDOW(gtk_application_window_new(app->app));
+    app->note = GTK_NOTEBOOK(gtk_notebook_new());
     gtk_window_set_title(app->win, "Chapterizer devtool");
     gtk_window_set_default_size(app->win, 800, 480);
-    GtkGrid *grid = GTK_GRID(gtk_grid_new());
+    GtkGrid *main_grid = GTK_GRID(gtk_grid_new());
+    GtkGrid *parameter_grid = GTK_GRID(gtk_grid_new());
     app->store = gtk_tree_store_new(
         N_COLUMNS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING); // Should be int but...
     app->statview = GTK_TREE_VIEW(gtk_tree_view_new_with_model(GTK_TREE_MODEL(app->store)));
@@ -260,6 +270,8 @@ void activate(GtkApplication *, gpointer user_data) {
     r = gtk_cell_renderer_text_new();
     c = gtk_tree_view_column_new_with_attributes("Penalty", r, "text", PENALTY_COLUMN, nullptr);
     gtk_tree_view_append_column(app->statview, c);
+    gtk_notebook_append_page(app->note, GTK_WIDGET(app->statview), gtk_label_new("Statistics"));
+    gtk_notebook_append_page(app->note, GTK_WIDGET(parameter_grid), gtk_label_new("Parameters"));
 
     app->textview = GTK_TEXT_VIEW(gtk_text_view_new());
     gtk_text_view_set_monospace(app->textview, 1);
@@ -292,21 +304,22 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_widget_set_hexpand(draw_scroll, 1);
     gtk_widget_set_size_request(draw_scroll, 400, 600);
 
-    gtk_grid_attach(grid, text_scroll, 0, 0, 1, 1);
-    gtk_grid_attach(grid, draw_scroll, 1, 0, 1, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->statview), 2, 0, 1, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->zoom), 0, 1, 3, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->ptsize), 0, 2, 3, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->row_height), 0, 3, 3, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->chapter_width), 0, 4, 3, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->fonts), 0, 5, 3, 1);
-    gtk_grid_attach(grid, GTK_WIDGET(app->status), 0, 6, 3, 1);
+    gtk_grid_attach(main_grid, text_scroll, 0, 0, 1, 1);
+    gtk_grid_attach(main_grid, draw_scroll, 1, 0, 1, 1);
+    gtk_grid_attach(main_grid, GTK_WIDGET(app->note), 2, 0, 1, 1);
 
-    gtk_widget_set_vexpand(GTK_WIDGET(grid), 1);
-    gtk_widget_set_hexpand(GTK_WIDGET(grid), 1);
+    add_property(parameter_grid, "Zoom", GTK_WIDGET(app->zoom), 0);
+    add_property(parameter_grid, "Font size", GTK_WIDGET(app->ptsize), 1);
+    add_property(parameter_grid, "Row height", GTK_WIDGET(app->row_height), 2);
+    add_property(parameter_grid, "Chapter width", GTK_WIDGET(app->chapter_width), 3);
+    add_property(parameter_grid, "Font", GTK_WIDGET(app->fonts), 4);
+    add_property(parameter_grid, "Temphack", GTK_WIDGET(app->status), 5);
+
+    gtk_widget_set_vexpand(GTK_WIDGET(main_grid), 1);
+    gtk_widget_set_hexpand(GTK_WIDGET(main_grid), 1);
 
     connect_stuffs(app);
-    gtk_window_set_child(app->win, GTK_WIDGET(grid));
+    gtk_window_set_child(app->win, GTK_WIDGET(main_grid));
     gtk_window_present(GTK_WINDOW(app->win));
     gtk_text_buffer_set_text(app->buf(), preformatted_text, -1);
 }
