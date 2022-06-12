@@ -55,6 +55,7 @@ struct App {
     GtkButton *store_text;
     GtkButton *reset;
     GtkButton *optimize;
+    GtkToggleButton *justify;
     std::string default_text{preformatted_text};
 
     GtkTextBuffer *buf() { return gtk_text_view_get_buffer(textview); }
@@ -165,6 +166,8 @@ void store_text_cb(GtkButton *, gpointer data) {
 
 void run_optimization_cb(GtkButton *, gpointer data) { auto app = static_cast<App *>(data); }
 
+void justify_toggle_cb(GtkToggleButton *, gpointer data) { auto app = static_cast<App *>(data); }
+
 void connect_stuffs(App *app) {
     g_signal_connect(app->buf(), "changed", G_CALLBACK(text_changed), static_cast<gpointer>(app));
     g_signal_connect(
@@ -183,6 +186,8 @@ void connect_stuffs(App *app) {
         app->optimize, "clicked", G_CALLBACK(run_optimization_cb), static_cast<gpointer>(app));
     g_signal_connect(
         app->store_text, "clicked", G_CALLBACK(store_text_cb), static_cast<gpointer>(app));
+    g_signal_connect(
+        app->justify, "toggled", G_CALLBACK(justify_toggle_cb), static_cast<gpointer>(app));
 }
 
 void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointer data) {
@@ -302,6 +307,7 @@ void activate(GtkApplication *, gpointer user_data) {
     app->ptsize = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(6.0, 18.0, 0.5));
     app->row_height = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(4.0, 20, 0.1));
     app->chapter_width = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(30, 100, 1));
+    app->justify = GTK_TOGGLE_BUTTON(gtk_toggle_button_new_with_label("Justify"));
     gtk_spin_button_set_value(app->ptsize, 10.0);
     gtk_spin_button_set_value(app->row_height, 12.0);
     gtk_spin_button_set_value(app->chapter_width, 66);
@@ -325,7 +331,7 @@ void activate(GtkApplication *, gpointer user_data) {
     add_property(parameter_grid, "Row height", GTK_WIDGET(app->row_height), 2);
     add_property(parameter_grid, "Chapter width (mm)", GTK_WIDGET(app->chapter_width), 3);
     add_property(parameter_grid, "Font", GTK_WIDGET(app->fonts), 4);
-
+    add_property(parameter_grid, "Alignment", GTK_WIDGET(app->justify), 5);
     gtk_widget_set_vexpand(GTK_WIDGET(main_grid), 1);
     gtk_widget_set_hexpand(GTK_WIDGET(main_grid), 1);
 
