@@ -270,8 +270,15 @@ void activate(GtkApplication *, gpointer user_data) {
     r = gtk_cell_renderer_text_new();
     c = gtk_tree_view_column_new_with_attributes("Penalty", r, "text", PENALTY_COLUMN, nullptr);
     gtk_tree_view_append_column(app->statview, c);
-    gtk_notebook_append_page(app->note, GTK_WIDGET(app->statview), gtk_label_new("Statistics"));
-    gtk_notebook_append_page(app->note, GTK_WIDGET(parameter_grid), gtk_label_new("Parameters"));
+    auto *stat_scroll = gtk_scrolled_window_new();
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(stat_scroll), GTK_WIDGET(app->statview));
+    gtk_notebook_append_page(app->note, stat_scroll, gtk_label_new("Statistics"));
+    auto *par_scroll = gtk_scrolled_window_new();
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(par_scroll), GTK_WIDGET(parameter_grid));
+    gtk_notebook_append_page(app->note, par_scroll, gtk_label_new("Parameters"));
+    gtk_widget_set_vexpand(GTK_WIDGET(app->note), 1);
+    gtk_widget_set_hexpand(GTK_WIDGET(app->note), 1);
+    gtk_widget_set_size_request(GTK_WIDGET(app->note), 400, 600);
 
     app->textview = GTK_TEXT_VIEW(gtk_text_view_new());
     gtk_text_view_set_monospace(app->textview, 1);
@@ -293,12 +300,8 @@ void activate(GtkApplication *, gpointer user_data) {
 
     auto *text_scroll = gtk_scrolled_window_new();
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(text_scroll), GTK_WIDGET(app->textview));
-    gtk_scrolled_window_set_policy(
-        GTK_SCROLLED_WINDOW(text_scroll), GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
     gtk_widget_set_size_request(text_scroll, 400, 600);
     auto *draw_scroll = gtk_scrolled_window_new();
-    gtk_scrolled_window_set_policy(
-        GTK_SCROLLED_WINDOW(draw_scroll), GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(draw_scroll), GTK_WIDGET(app->draw));
     gtk_widget_set_vexpand(draw_scroll, 1);
     gtk_widget_set_hexpand(draw_scroll, 1);
