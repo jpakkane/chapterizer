@@ -10,14 +10,21 @@ fc_dep = dependency('fontconfig')
 
 add_project_arguments('-Wshadow', language: 'cpp')
 
-executable('chapterizer',
-    'main.cpp',
+l = static_library('chap',
     'wordhyphenator.cpp',
     'chapterbuilder.cpp',
     'textstats.cpp',
     'pdfrenderer.cpp',
     'utils.cpp',
-    dependencies: [hyphen_dep, pangocairo_dep])
+    'fchelpers.cpp',
+    dependencies: [hyphen_dep, pangocairo_dep, cairo_dep, fc_dep]
+)
+
+executable('chapterizer',
+    'main.cpp',
+    link_with: l,
+    dependencies: [pangocairo_dep],
+)
 
 executable('fttest', 'fttest.cpp', dependencies: [ft_dep, cairo_dep])
 
@@ -25,6 +32,6 @@ executable('pangotest', 'pangotest.cpp', dependencies: pangocairo_dep)
 
 if gtk4_dep.found()
     executable('guitool', 'guitool.cpp',
-      'fchelpers.cpp',
-      dependencies: [gtk4_dep, fc_dep])
+      link_with: l,
+      dependencies: [gtk4_dep])
 endif

@@ -7,7 +7,7 @@
 #include <textstats.hpp>
 #include <algorithm>
 
-static TextStats hack;
+static TextStats hack{"Gentium", 10};
 #include <sstream>
 
 namespace {

@@ -4,15 +4,15 @@
 #include <cairo-pdf.h>
 #include <cassert>
 
-TextStats::TextStats() {
-    surface = cairo_pdf_surface_create("/tmp/dummy.pdf", 595, 842);
+TextStats::TextStats(const std::string &font, int fontsize) {
+    surface = cairo_pdf_surface_create(nullptr, 595, 842);
     cr = cairo_create(surface);
     assert(cr);
     cairo_move_to(cr, 72, 72);
     layout = pango_cairo_create_layout(cr);
-    desc = pango_font_description_from_string("Gentium");
+    desc = pango_font_description_from_string(font.c_str());
     assert(desc);
-    pango_font_description_set_absolute_size(desc, 10 * PANGO_SCALE);
+    pango_font_description_set_absolute_size(desc, fontsize * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
     pango_layout_set_text(layout, "I am Bender, please insert girder.", -1);
 }

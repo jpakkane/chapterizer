@@ -1,9 +1,9 @@
 #include <wordhyphenator.hpp>
 #include <chapterbuilder.hpp>
 #include <pdfrenderer.hpp>
+#include <utils.hpp>
 #include <cstdio>
 #include <cassert>
-#include <sstream>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -32,26 +32,6 @@ straggling woodbine, seemed to make the stillness more oppressive. The dim roar 
 London was like the bourdon note of a distant organ.)";
 
 #endif
-
-std::vector<std::string> split(const std::string &in_text) {
-    std::string text;
-    text.reserve(in_text.size());
-    for(size_t i = 0; i < in_text.size(); ++i) {
-        if(in_text[i] == '\n') {
-            text.push_back(' ');
-        } else {
-            text.push_back(in_text[i]);
-        }
-    }
-    std::string val;
-    const char separator = ' ';
-    std::vector<std::string> words;
-    std::stringstream sstream(text);
-    while(std::getline(sstream, val, separator)) {
-        words.push_back(val);
-    }
-    return words;
-}
 
 std::vector<std::string> eager_split(const std::vector<std::string> &words,
                                      const size_t target_width) {
@@ -225,7 +205,9 @@ void monospacetest(const T1 &plain_words, const T2 &hyphenated_words) {
 }
 
 #include <textstats.hpp>
-static TextStats hack;
+
+static TextStats hack{"Gentium", 10};
+
 template<typename T1> void full_test(const T1 &hyphenated_words) {
     const double paragraph_width = 60.0;
     ChapterBuilder spl{hyphenated_words, paragraph_width};
@@ -248,7 +230,7 @@ int main() {
     //hyphentest();
     std::string text{raw_text};
 
-    auto plain_words = split(raw_text);
+    auto plain_words = split_to_words(std::string_view{raw_text});
     auto hyphenated_words = do_hyphenstuff(plain_words);
 
     if(false) {

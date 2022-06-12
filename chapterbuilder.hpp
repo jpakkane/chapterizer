@@ -62,7 +62,21 @@ struct SplitStates {
     bool abandon_search(const std::vector<LineStats> &new_splits, const double target_width);
 };
 
+struct ChapterParameters {
+    double paragraph_width_mm;
+    std::string font;
+    int fontsize;
+};
+
+struct PenaltyStatistics {
+    double delta; // mm
+    double penalty;
+};
+
 typedef std::variant<BetweenWordSplit, WithinWordSplit> SplitPoint;
+
+std::vector<PenaltyStatistics> compute_stats(const std::vector<std::string> &lines,
+                                             const ChapterParameters &par);
 
 class ChapterBuilder {
 public:

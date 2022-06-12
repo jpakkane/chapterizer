@@ -6,7 +6,7 @@
 
 class TextStats {
 public:
-    TextStats();
+    TextStats(const std::string &font, int fontsize);
     ~TextStats();
 
     double text_width(const char *utf8_text) const;

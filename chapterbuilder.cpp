@@ -2,6 +2,7 @@
 #include <textstats.hpp>
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 
 namespace {
 
@@ -22,12 +23,25 @@ double total_penalty(const std::vector<LineStats> &lines, double target_width) {
 
 } // namespace
 
+std::vector<PenaltyStatistics> compute_stats(const std::vector<std::string> &lines,
+                                             const ChapterParameters &par) {
+    TextStats shaper{par.font, par.fontsize};
+    std::vector<PenaltyStatistics> penalties;
+    penalties.reserve(lines.size());
+    for(const auto &line : lines) {
+        const double w = shaper.text_width(line);
+        const double delta = w - par.paragraph_width_mm;
+        penalties.emplace_back(PenaltyStatistics{delta, pow(delta, 2)});
+    }
+    return penalties;
+}
+
 ChapterBuilder::ChapterBuilder(const std::vector<HyphenatedWord> &words_, double paragraph_width_mm)
     : words{words_}, target_width{paragraph_width_mm} {}
 
 std::vector<std::string> ChapterBuilder::split_lines() {
     precompute();
-    TextStats shaper;
+    TextStats shaper{"Gentium", 10}; // FIXME
     best_penalty = 1e100;
     best_split.clear();
     if(false) {

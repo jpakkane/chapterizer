@@ -1,3 +1,4 @@
+#include <utils.hpp>
 #include <gtk/gtk.h>
 #include <vector>
 #include <string>
@@ -63,31 +64,13 @@ static void quitfunc(GtkButton *, gpointer user_data) {
 }
 */
 
-std::vector<std::string> split_to_lines(const char *text) {
-    if(!text) {
-        return {};
-    }
-    size_t i = 0;
-    std::string_view v(text);
-    std::vector<std::string> lines;
-    while(true) {
-        auto next = v.find('\n', i);
-        if(next == std::string_view::npos) {
-            lines.emplace_back(v.substr(i));
-            break;
-        }
-        lines.emplace_back(v.substr(i, next - i));
-        i = next + 1;
-    }
-    return lines;
-}
-
 std::vector<std::string> get_entry_widget_text(App *app) {
     GtkTextIter start;
     GtkTextIter end;
     gtk_text_buffer_get_bounds(app->buf(), &start, &end);
     char *text = gtk_text_buffer_get_text(app->buf(), &start, &end, 0);
-    auto r = split_to_lines(text);
+    std::string t(text);
+    auto r = split_to_lines(t);
     g_free(text);
     return r;
 }
@@ -325,7 +308,7 @@ void activate(GtkApplication *, gpointer user_data) {
     add_property(parameter_grid, "Zoom", GTK_WIDGET(app->zoom), 0);
     add_property(parameter_grid, "Font size", GTK_WIDGET(app->ptsize), 1);
     add_property(parameter_grid, "Row height", GTK_WIDGET(app->row_height), 2);
-    add_property(parameter_grid, "Chapter width", GTK_WIDGET(app->chapter_width), 3);
+    add_property(parameter_grid, "Chapter width (mm)", GTK_WIDGET(app->chapter_width), 3);
     add_property(parameter_grid, "Font", GTK_WIDGET(app->fonts), 4);
     add_property(parameter_grid, "Temphack", GTK_WIDGET(app->status), 5);
 
