@@ -81,7 +81,7 @@ void text_changed(GtkTextBuffer *, gpointer data) {
     gtk_tree_store_clear(app->store);
     GtkTreeIter iter;
     size_t i = 0;
-    int total_penalty = 0;
+    double total_penalty = 0;
     auto lines = get_entry_widget_text(app);
     ChapterParameters par;
     auto *tmp = gtk_combo_box_text_get_active_text(app->fonts);
@@ -91,13 +91,8 @@ void text_changed(GtkTextBuffer *, gpointer data) {
     par.paragraph_width_mm = gtk_spin_button_get_value(app->chapter_width);
     auto line_stats = compute_stats(lines, par);
     for(const auto &stats : line_stats) {
-        const int BUFSIZE = 128;
-        char deltabuf[BUFSIZE];
-        char penaltybuf[BUFSIZE];
         gtk_tree_store_append(app->store, &iter, nullptr);
         total_penalty += stats.penalty;
-        snprintf(deltabuf, BUFSIZE, "%f", stats.delta);
-        snprintf(penaltybuf, BUFSIZE, "%f", stats.penalty);
         gtk_tree_store_set(app->store,
                            &iter,
                            LINENUM_COLUMN,
@@ -105,15 +100,15 @@ void text_changed(GtkTextBuffer *, gpointer data) {
                            TEXT_COLUMN,
                            lines[i].c_str(),
                            DELTA_COLUMN,
-                           deltabuf,
+                           stats.delta,
                            PENALTY_COLUMN,
-                           penaltybuf,
+                           stats.penalty,
                            -1);
         ++i;
     }
     const int BIGBUF = 1024;
     char buf[BIGBUF];
-    snprintf(buf, BIGBUF, "Total penalty is %d.", total_penalty);
+    snprintf(buf, BIGBUF, "Total penalty is %.2f.", total_penalty);
     gtk_label_set_text(app->status, buf);
     gtk_widget_queue_draw(GTK_WIDGET(app->draw));
 }
@@ -246,8 +241,8 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_window_set_default_size(app->win, 800, 480);
     GtkGrid *main_grid = GTK_GRID(gtk_grid_new());
     GtkGrid *parameter_grid = GTK_GRID(gtk_grid_new());
-    app->store = gtk_tree_store_new(
-        N_COLUMNS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING); // Should be int but...
+    app->store =
+        gtk_tree_store_new(N_COLUMNS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_DOUBLE, G_TYPE_DOUBLE);
     app->statview = GTK_TREE_VIEW(gtk_tree_view_new_with_model(GTK_TREE_MODEL(app->store)));
     GtkCellRenderer *r;
     GtkTreeViewColumn *c;
@@ -309,7 +304,6 @@ void activate(GtkApplication *, gpointer user_data) {
     add_property(parameter_grid, "Row height", GTK_WIDGET(app->row_height), 2);
     add_property(parameter_grid, "Chapter width (mm)", GTK_WIDGET(app->chapter_width), 3);
     add_property(parameter_grid, "Font", GTK_WIDGET(app->fonts), 4);
-    add_property(parameter_grid, "Temphack", GTK_WIDGET(app->status), 5);
 
     gtk_widget_set_vexpand(GTK_WIDGET(main_grid), 1);
     gtk_widget_set_hexpand(GTK_WIDGET(main_grid), 1);
@@ -319,6 +313,7 @@ void activate(GtkApplication *, gpointer user_data) {
     app->optimize = GTK_BUTTON(gtk_button_new_with_label("Optimize"));
     gtk_grid_attach(button_grid, GTK_WIDGET(app->reset), 0, 0, 1, 1);
     gtk_grid_attach(button_grid, GTK_WIDGET(app->optimize), 1, 0, 1, 1);
+    gtk_grid_attach(button_grid, GTK_WIDGET(app->status), 2, 0, 1, 1);
     gtk_grid_attach(main_grid, GTK_WIDGET(button_grid), 0, 1, 1, 3);
 
     connect_stuffs(app);
