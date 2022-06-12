@@ -32,7 +32,7 @@ with monotonous insistence round the dusty
 gilt horns of the straggling woodbine, seemed
 to make the stillness more oppressive. The
 dim roar of London was like the bourdon note
- of a distant organ.)";
+of a distant organ.)";
 
 void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data);
 
@@ -52,8 +52,10 @@ struct App {
     GtkSpinButton *row_height;
     GtkSpinButton *chapter_width;
     GtkNotebook *note;
+    GtkButton *store_text;
     GtkButton *reset;
     GtkButton *optimize;
+    std::string default_text{preformatted_text};
 
     GtkTextBuffer *buf() { return gtk_text_view_get_buffer(textview); }
 };
@@ -90,7 +92,14 @@ void text_changed(GtkTextBuffer *, gpointer data) {
     par.fontsize = gtk_spin_button_get_value(app->ptsize);
     par.paragraph_width_mm = gtk_spin_button_get_value(app->chapter_width);
     auto line_stats = compute_stats(lines, par);
+    std::string workarea;
+    const int sample_len = 25;
     for(const auto &stats : line_stats) {
+        workarea = lines[i];
+        if(workarea.length() > sample_len) {
+            workarea.erase(workarea.begin() + sample_len - 4, workarea.end());
+            workarea += " ...";
+        }
         gtk_tree_store_append(app->store, &iter, nullptr);
         total_penalty += stats.penalty;
         gtk_tree_store_set(app->store,
@@ -98,7 +107,7 @@ void text_changed(GtkTextBuffer *, gpointer data) {
                            LINENUM_COLUMN,
                            int(i) + 1,
                            TEXT_COLUMN,
-                           lines[i].c_str(),
+                           workarea.c_str(),
                            DELTA_COLUMN,
                            stats.delta,
                            PENALTY_COLUMN,
@@ -141,7 +150,17 @@ void chapter_width_changed(GtkSpinButton *, gpointer data) {
 
 void reset_text_cb(GtkButton *, gpointer data) {
     auto app = static_cast<App *>(data);
-    gtk_text_buffer_set_text(app->buf(), preformatted_text, -1);
+    gtk_text_buffer_set_text(app->buf(), app->default_text.c_str(), -1);
+}
+
+void store_text_cb(GtkButton *, gpointer data) {
+    auto app = static_cast<App *>(data);
+    GtkTextIter start;
+    GtkTextIter end;
+    gtk_text_buffer_get_bounds(app->buf(), &start, &end);
+    char *text = gtk_text_buffer_get_text(app->buf(), &start, &end, 0);
+    app->default_text = text;
+    g_free(text);
 }
 
 void run_optimization_cb(GtkButton *, gpointer data) { auto app = static_cast<App *>(data); }
@@ -162,6 +181,8 @@ void connect_stuffs(App *app) {
     g_signal_connect(app->reset, "clicked", G_CALLBACK(reset_text_cb), static_cast<gpointer>(app));
     g_signal_connect(
         app->optimize, "clicked", G_CALLBACK(run_optimization_cb), static_cast<gpointer>(app));
+    g_signal_connect(
+        app->store_text, "clicked", G_CALLBACK(store_text_cb), static_cast<gpointer>(app));
 }
 
 void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointer data) {
@@ -311,9 +332,11 @@ void activate(GtkApplication *, gpointer user_data) {
     GtkGrid *button_grid = GTK_GRID(gtk_grid_new());
     app->reset = GTK_BUTTON(gtk_button_new_with_label("Reset text"));
     app->optimize = GTK_BUTTON(gtk_button_new_with_label("Optimize"));
+    app->store_text = GTK_BUTTON(gtk_button_new_with_label("Store current text"));
     gtk_grid_attach(button_grid, GTK_WIDGET(app->reset), 0, 0, 1, 1);
     gtk_grid_attach(button_grid, GTK_WIDGET(app->optimize), 1, 0, 1, 1);
-    gtk_grid_attach(button_grid, GTK_WIDGET(app->status), 2, 0, 1, 1);
+    gtk_grid_attach(button_grid, GTK_WIDGET(app->store_text), 2, 0, 1, 1);
+    gtk_grid_attach(button_grid, GTK_WIDGET(app->status), 3, 0, 1, 1);
     gtk_grid_attach(main_grid, GTK_WIDGET(button_grid), 0, 1, 1, 3);
 
     connect_stuffs(app);

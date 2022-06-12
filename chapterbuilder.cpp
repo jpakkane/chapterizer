@@ -33,8 +33,8 @@ std::vector<PenaltyStatistics> compute_stats(const std::vector<std::string> &lin
         const double delta = w - par.paragraph_width_mm;
         penalties.emplace_back(PenaltyStatistics{delta, pow(delta, 2)});
     }
-    // The last line does not get a length penalty.
-    if(!penalties.empty()) {
+    // The last line does not get a length penalty unless it is the only line.
+    if(penalties.size() > 1) {
         penalties.back() = PenaltyStatistics{0, 0};
     }
     return penalties;
