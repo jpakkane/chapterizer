@@ -89,3 +89,12 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
     free(cut);
     return result;
 }
+
+std::vector<HyphenatedWord> WordHyphenator::hyphenate(const std::vector<std::string> &words) const {
+    std::vector<HyphenatedWord> hyphs;
+    hyphs.reserve(words.size());
+    for(const auto &w : words) {
+        hyphs.emplace_back(hyphenate(w));
+    }
+    return hyphs;
+}

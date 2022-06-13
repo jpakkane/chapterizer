@@ -40,8 +40,9 @@ std::vector<PenaltyStatistics> compute_stats(const std::vector<std::string> &lin
     return penalties;
 }
 
-ChapterBuilder::ChapterBuilder(const std::vector<HyphenatedWord> &words_, double paragraph_width_mm)
-    : words{words_}, target_width{paragraph_width_mm} {}
+ChapterBuilder::ChapterBuilder(const std::vector<HyphenatedWord> &words_,
+                               const ChapterParameters &in_params)
+    : words{words_}, params{in_params} {}
 
 std::vector<std::string> ChapterBuilder::split_lines() {
     precompute();
@@ -50,7 +51,7 @@ std::vector<std::string> ChapterBuilder::split_lines() {
     best_split.clear();
     if(false) {
         best_split = simple_split(shaper);
-        best_penalty = total_penalty(best_split, target_width);
+        best_penalty = total_penalty(best_split, params.paragraph_width_mm);
         return stats_to_lines(best_split);
     } else {
         return global_split(shaper);
@@ -66,7 +67,7 @@ std::vector<LineStats> ChapterBuilder::simple_split(TextStats &shaper) {
         lines.emplace_back(line_end);
         current_split = line_end.end_split;
     }
-    const auto total = total_penalty(lines, target_width);
+    const auto total = total_penalty(lines, params.paragraph_width_mm);
     printf("Total penalty: %.1f\n", total);
     return lines;
 }
@@ -96,14 +97,14 @@ std::vector<std::string> ChapterBuilder::global_split(const TextStats &shaper) {
 void ChapterBuilder::global_split_recursive(const TextStats &shaper,
                                             std::vector<LineStats> &line_stats,
                                             size_t current_split) {
-    if(state_cache.abandon_search(line_stats, target_width)) {
+    if(state_cache.abandon_search(line_stats, params.paragraph_width_mm)) {
         return;
     }
     auto line_end_choices = get_line_end_choices(current_split, shaper);
     if(line_end_choices.front().end_split == split_points.size() - 1) {
         // Text exhausted.
         line_stats.emplace_back(line_end_choices.front());
-        const auto current_penalty = total_penalty(line_stats, target_width);
+        const auto current_penalty = total_penalty(line_stats, params.paragraph_width_mm);
         // printf("Total penalty: %.1f\n", current_penalty);
         if(current_penalty < best_penalty) {
             best_penalty = current_penalty;
@@ -235,8 +236,9 @@ LineStats ChapterBuilder::get_line_end(size_t start_split, const TextStats &shap
     while(trial < split_points.size()) {
         const auto trial_line = build_line(start_split, trial);
         const auto trial_width = shaper.text_width(trial_line);
-        if(trial_width >= target_width) {
-            if(abs(trial_width - target_width) > abs(previous_width - target_width)) {
+        if(trial_width >= params.paragraph_width_mm) {
+            if(abs(trial_width - params.paragraph_width_mm) >
+               abs(previous_width - params.paragraph_width_mm)) {
                 --trial;
                 final_width = previous_width;
             } else {

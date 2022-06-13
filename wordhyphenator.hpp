@@ -26,6 +26,7 @@ public:
     ~WordHyphenator();
 
     HyphenatedWord hyphenate(const std::string &word) const;
+    std::vector<HyphenatedWord> hyphenate(const std::vector<std::string> &words) const;
 
 private:
     HyphenatedWord build_hyphenation_data(const std::string &word,

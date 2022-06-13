@@ -210,7 +210,11 @@ static TextStats hack{"Gentium", 10};
 
 template<typename T1> void full_test(const T1 &hyphenated_words) {
     const double paragraph_width = 60.0;
-    ChapterBuilder spl{hyphenated_words, paragraph_width};
+    ChapterParameters params;
+    params.font = "Gentium";
+    params.paragraph_width_mm = 60;
+    params.fontsize = 10;
+    ChapterBuilder spl{hyphenated_words, params};
     const auto lines = spl.split_lines();
 
     for(const auto &line : lines) {
@@ -218,7 +222,7 @@ template<typename T1> void full_test(const T1 &hyphenated_words) {
         for(size_t i = line.length(); i < 70; ++i) {
             printf(" ");
         }
-        printf("%.2f\n", hack.text_width(line.c_str()) - paragraph_width);
+        printf("%.2f\n", hack.text_width(line.c_str()) - params.paragraph_width_mm);
     }
 
     PdfRenderer r("texttest.pdf");

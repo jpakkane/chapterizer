@@ -68,30 +68,46 @@ static void quitfunc(GtkButton *, gpointer user_data) {
 }
 */
 
-std::vector<std::string> get_entry_widget_text(App *app) {
+std::vector<std::string> get_entry_widget_text_lines(App *app) {
     GtkTextIter start;
     GtkTextIter end;
     gtk_text_buffer_get_bounds(app->buf(), &start, &end);
     char *text = gtk_text_buffer_get_text(app->buf(), &start, &end, 0);
     std::string t(text);
-    auto r = split_to_lines(t);
+    auto lines = split_to_lines(t);
     g_free(text);
-    return r;
+    return lines;
 }
 
-void text_changed(GtkTextBuffer *, gpointer data) {
-    auto app = static_cast<App *>(data);
-    gtk_tree_store_clear(app->store);
-    GtkTreeIter iter;
-    size_t i = 0;
-    double total_penalty = 0;
-    auto lines = get_entry_widget_text(app);
+std::vector<std::string> get_entry_widget_text_words(App *app) {
+    GtkTextIter start;
+    GtkTextIter end;
+    gtk_text_buffer_get_bounds(app->buf(), &start, &end);
+    char *text = gtk_text_buffer_get_text(app->buf(), &start, &end, 0);
+    std::string_view t(text);
+    auto words = split_to_words(t);
+    g_free(text);
+    return words;
+}
+
+ChapterParameters get_params(App *app) {
     ChapterParameters par;
     auto *tmp = gtk_combo_box_text_get_active_text(app->fonts);
     par.font = tmp;
     g_free(tmp);
     par.fontsize = gtk_spin_button_get_value(app->ptsize);
     par.paragraph_width_mm = gtk_spin_button_get_value(app->chapter_width);
+    return par;
+}
+
+void text_changed(GtkTextBuffer *, gpointer data) {
+    auto app = static_cast<App *>(data);
+    gtk_tree_store_clear(app->store);
+    GtkTreeIter iter;
+    ChapterParameters par = get_params(app);
+    size_t i = 0;
+    double total_penalty = 0;
+    auto lines = get_entry_widget_text_lines(app);
     auto line_stats = compute_stats(lines, par);
     std::string workarea;
     const int sample_len = 25;
@@ -164,9 +180,27 @@ void store_text_cb(GtkButton *, gpointer data) {
     g_free(text);
 }
 
-void run_optimization_cb(GtkButton *, gpointer data) { auto app = static_cast<App *>(data); }
+void run_optimization_cb(GtkButton *, gpointer data) {
+    auto app = static_cast<App *>(data);
+    // FIXME: run as an async task.
+    WordHyphenator hyp;
+    ChapterParameters params = get_params(app);
+    auto words = get_entry_widget_text_words(app);
+    auto hyphenated_words = hyp.hyphenate(words);
+    ChapterBuilder builder{hyphenated_words, params};
+    auto new_lines = builder.split_lines();
+    std::string collator;
+    for(const auto &l : new_lines) {
+        collator += l;
+        collator += '\n';
+    }
+    gtk_text_buffer_set_text(app->buf(), collator.c_str(), collator.size());
+}
 
-void justify_toggle_cb(GtkToggleButton *, gpointer data) { auto app = static_cast<App *>(data); }
+void justify_toggle_cb(GtkToggleButton *, gpointer data) {
+    auto app = static_cast<App *>(data);
+    // FIXME do redraw.
+}
 
 void connect_stuffs(App *app) {
     g_signal_connect(app->buf(), "changed", G_CALLBACK(text_changed), static_cast<gpointer>(app));
@@ -202,7 +236,7 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
-    auto text = get_entry_widget_text(a);
+    auto text = get_entry_widget_text_lines(a);
     color.red = color.green = color.blue = 1.0f;
     color.alpha = 1.0f;
     gdk_cairo_set_source_rgba(cr, &color);

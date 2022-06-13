@@ -80,7 +80,7 @@ std::vector<PenaltyStatistics> compute_stats(const std::vector<std::string> &lin
 
 class ChapterBuilder {
 public:
-    ChapterBuilder(const std::vector<HyphenatedWord> &words, double paragraph_width_mm);
+    ChapterBuilder(const std::vector<HyphenatedWord> &words, const ChapterParameters &in_params);
 
     std::vector<std::string> split_lines();
 
@@ -99,7 +99,6 @@ private:
 
     std::string build_line(size_t from_split, size_t to_split) const;
     std::vector<HyphenatedWord> words;
-    double target_width; // in mm
     std::vector<SplitPoint> split_points;
     std::vector<TextLocation> split_locations;
 
@@ -108,4 +107,5 @@ private:
 
     // Cached results of best states we have achieved thus far.
     SplitStates state_cache;
+    ChapterParameters params;
 };
