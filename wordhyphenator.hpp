@@ -18,6 +18,22 @@ struct HyphenPoint {
 struct HyphenatedWord {
     std::vector<HyphenPoint> hyphen_points;
     std::string word;
+
+    std::string get_visual_string() const {
+        std::string dashed_word;
+        dashed_word.reserve(word.size() + hyphen_points.size());
+        size_t hyphen_index = 0;
+        for(size_t i = 0; i < word.size(); ++i) {
+            dashed_word += word[i];
+            if(hyphen_index < hyphen_points.size() && i == hyphen_points[hyphen_index].loc) {
+                if(hyphen_points[hyphen_index].type == SplitType::Regular) {
+                    dashed_word += '-';
+                }
+                ++hyphen_index;
+            }
+        }
+        return dashed_word;
+    }
 };
 
 class WordHyphenator {

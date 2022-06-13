@@ -57,6 +57,8 @@ struct App {
     GtkButton *reset;
     GtkButton *optimize;
     GtkToggleButton *justify;
+    GtkEntry *hyp_entry;
+    GtkLabel *hyp_output;
     std::string default_text{preformatted_text};
 
     GtkTextBuffer *buf() { return gtk_text_view_get_buffer(textview); }
@@ -203,6 +205,16 @@ void justify_toggle_cb(GtkToggleButton *, gpointer data) {
     gtk_widget_queue_draw(GTK_WIDGET(app->draw));
 }
 
+void hyphenword_changed_cb(GtkEditable *, gpointer data) {
+    auto app = static_cast<App *>(data);
+    auto b = gtk_entry_get_buffer(app->hyp_entry);
+    std::string word = gtk_entry_buffer_get_text(b);
+    WordHyphenator hyphenator; // Not very efficient, but whatever.
+    auto hyphenatedword = hyphenator.hyphenate(word);
+    auto visual = hyphenatedword.get_visual_string();
+    gtk_label_set_text(app->hyp_output, visual.c_str());
+}
+
 void connect_stuffs(App *app) {
     g_signal_connect(app->buf(), "changed", G_CALLBACK(text_changed), static_cast<gpointer>(app));
     g_signal_connect(
@@ -223,6 +235,8 @@ void connect_stuffs(App *app) {
         app->store_text, "clicked", G_CALLBACK(store_text_cb), static_cast<gpointer>(app));
     g_signal_connect(
         app->justify, "toggled", G_CALLBACK(justify_toggle_cb), static_cast<gpointer>(app));
+    g_signal_connect(
+        app->hyp_entry, "changed", G_CALLBACK(hyphenword_changed_cb), static_cast<gpointer>(app));
 }
 
 void render_line_justified(cairo_t *cr,
@@ -419,6 +433,15 @@ void activate(GtkApplication *, gpointer user_data) {
     add_property(parameter_grid, "Alignment", GTK_WIDGET(app->justify), 5);
     gtk_widget_set_vexpand(GTK_WIDGET(main_grid), 1);
     gtk_widget_set_hexpand(GTK_WIDGET(main_grid), 1);
+
+    auto *hyphen_grid = GTK_GRID(gtk_grid_new());
+    app->hyp_entry = GTK_ENTRY(gtk_entry_new());
+    app->hyp_output = GTK_LABEL(gtk_label_new(""));
+    gtk_grid_attach(hyphen_grid, gtk_label_new("Word to hyphenate"), 0, 0, 1, 1);
+    gtk_grid_attach(hyphen_grid, gtk_label_new("Hyphenated form"), 0, 1, 1, 1);
+    gtk_grid_attach(hyphen_grid, GTK_WIDGET(app->hyp_entry), 1, 0, 1, 1);
+    gtk_grid_attach(hyphen_grid, GTK_WIDGET(app->hyp_output), 1, 1, 1, 1);
+    gtk_notebook_append_page(app->note, GTK_WIDGET(hyphen_grid), gtk_label_new("Hyphenation tool"));
 
     GtkGrid *button_grid = GTK_GRID(gtk_grid_new());
     app->reset = GTK_BUTTON(gtk_button_new_with_label("Reset text"));
