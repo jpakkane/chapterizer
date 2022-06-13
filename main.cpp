@@ -209,7 +209,6 @@ void monospacetest(const T1 &plain_words, const T2 &hyphenated_words) {
 static TextStats hack{"Gentium", 10};
 
 template<typename T1> void full_test(const T1 &hyphenated_words) {
-    const double paragraph_width = 60.0;
     ChapterParameters params;
     params.font = "Gentium";
     params.paragraph_width_mm = 60;
@@ -226,7 +225,7 @@ template<typename T1> void full_test(const T1 &hyphenated_words) {
     }
 
     PdfRenderer r("texttest.pdf");
-    r.render(lines, paragraph_width);
+    r.render(lines, params.paragraph_width_mm);
 }
 
 int main() {

@@ -5,6 +5,7 @@
 #include <string>
 #include <fontconfig/fontconfig.h>
 #include <fchelpers.hpp>
+#include <cassert>
 
 namespace {
 
@@ -199,7 +200,7 @@ void run_optimization_cb(GtkButton *, gpointer data) {
 
 void justify_toggle_cb(GtkToggleButton *, gpointer data) {
     auto app = static_cast<App *>(data);
-    // FIXME do redraw.
+    gtk_widget_queue_draw(GTK_WIDGET(app->draw));
 }
 
 void connect_stuffs(App *app) {
@@ -224,9 +225,54 @@ void connect_stuffs(App *app) {
         app->justify, "toggled", G_CALLBACK(justify_toggle_cb), static_cast<gpointer>(app));
 }
 
+void render_line_justified(cairo_t *cr,
+                           PangoLayout *layout,
+                           const std::string &line_text,
+                           double x,
+                           double y,
+                           double chapter_width_pt) {
+    assert(!line_text.empty());
+    const auto words = split_to_words(std::string_view(line_text));
+    assert(!words.empty());
+    const int num_spaces = int(words.size() - 1);
+    double text_width_pt = 0.0;
+    cairo_move_to(cr, -1000, -1000);
+    // Measure the total width of printed words.
+    for(const auto &word : words) {
+        PangoRectangle r;
+        pango_layout_set_text(layout, word.c_str(), -1);
+        pango_layout_get_extents(layout, nullptr, &r);
+        pango_cairo_update_layout(cr, layout);
+        text_width_pt += double(r.width) / PANGO_SCALE;
+    }
+    const double space_extra_width_pt =
+        num_spaces > 0 ? (chapter_width_pt - text_width_pt) / num_spaces : 0.0;
+
+    for(size_t i = 0; i < words.size(); ++i) {
+        cairo_move_to(cr, x, y);
+        PangoRectangle r;
+
+        pango_layout_set_text(layout, words[i].c_str(), -1);
+        pango_layout_get_extents(layout, nullptr, &r);
+        pango_cairo_update_layout(cr, layout);
+        pango_cairo_show_layout(cr, layout);
+        x += double(r.width) / PANGO_SCALE;
+        x += space_extra_width_pt;
+    }
+}
+
+void render_line_as_is(
+    cairo_t *cr, PangoLayout *layout, const std::string &line, double x, double y) {
+    cairo_move_to(cr, x, y);
+    pango_layout_set_text(layout, line.c_str(), line.length());
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_show_layout(cr, layout);
+}
+
 void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointer data) {
     App *a = static_cast<App *>(data);
     GdkRGBA color;
+    auto text = get_entry_widget_text_lines(a);
     const double point_size = gtk_spin_button_get_value(a->ptsize);
     const double line_height = gtk_spin_button_get_value(a->row_height);
     auto *layout = pango_cairo_create_layout(cr);
@@ -236,7 +282,6 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
-    auto text = get_entry_widget_text_lines(a);
     color.red = color.green = color.blue = 1.0f;
     color.alpha = 1.0f;
     gdk_cairo_set_source_rgba(cr, &color);
@@ -253,21 +298,27 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     cairo_rectangle(cr, xoff, yoff, parwid, parhei);
     color.red = color.green = 0.0;
     gdk_cairo_set_source_rgba(cr, &color);
-    cairo_stroke(cr);
     cairo_set_line_width(cr, 1.0);
+    cairo_stroke(cr);
 
-    color.blue = 0;
-    gdk_cairo_set_source_rgba(cr, &color);
-    if(!text.empty())
+    if(!text.empty()) {
+        color.blue = 0;
+        gdk_cairo_set_source_rgba(cr, &color);
         cairo_select_font_face(cr,
                                gtk_combo_box_text_get_active_text(a->fonts),
                                CAIRO_FONT_SLANT_NORMAL,
                                CAIRO_FONT_WEIGHT_NORMAL);
-    for(size_t i = 0; i < text.size(); ++i) {
-        cairo_move_to(cr, xoff, yoff + line_height * i);
-        pango_layout_set_text(layout, text[i].c_str(), -1);
-        pango_cairo_update_layout(cr, layout);
-        pango_cairo_show_layout(cr, layout);
+        if(gtk_toggle_button_get_active(a->justify)) {
+            for(size_t i = 0; i < text.size() - 1; ++i) {
+                render_line_justified(cr, layout, text[i], xoff, yoff + line_height * i, parwid);
+            }
+            render_line_as_is(
+                cr, layout, text.back(), xoff, yoff + line_height * (text.size() - 1));
+        } else {
+            for(size_t i = 0; i < text.size(); ++i) {
+                render_line_as_is(cr, layout, text[i], xoff, yoff + line_height * i);
+            }
+        }
     }
     g_object_unref(G_OBJECT(layout));
 }

@@ -46,7 +46,7 @@ ChapterBuilder::ChapterBuilder(const std::vector<HyphenatedWord> &words_,
 
 std::vector<std::string> ChapterBuilder::split_lines() {
     precompute();
-    TextStats shaper{"Gentium", 10}; // FIXME
+    TextStats shaper{params.font, params.fontsize};
     best_penalty = 1e100;
     best_split.clear();
     if(false) {
