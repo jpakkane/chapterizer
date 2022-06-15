@@ -24,11 +24,12 @@ double mm2pt(const double x) { return x * 2.8346456693; }
 double pt2mm(const double x) { return x / 2.8346456693; }
 
 int main() {
+    setlocale(LC_ALL, "");
     //    cairo_status_t status;
     cairo_surface_t *surface = cairo_pdf_surface_create("pangocairotest.pdf", 595, 842);
     cairo_t *cr = cairo_create(surface);
+    cairo_save(cr);
     cairo_move_to(cr, 72, 72);
-    setlocale(LC_ALL, "");
     printf("PANGO_SCALE = %d\n", PANGO_SCALE);
     PangoLayout *layout = pango_cairo_create_layout(cr);
     PangoFontDescription *desc;
@@ -48,6 +49,18 @@ int main() {
     printf("Size: (%d, %d)\n", w / PANGO_SCALE, h / PANGO_SCALE);
     g_object_unref(G_OBJECT(layout));
     //    g_object_unref(G_OBJECT(context));
+    cairo_restore(cr);
+
+    // Image
+    cairo_surface_t *image;
+    image = cairo_image_surface_create_from_png("../chapterizer/1bit.png");
+    //    cairo_rectangle(cr, 100, 100, 100, 100);
+    //    cairo_clip(cr);
+    cairo_translate(cr, 100, 100);
+    cairo_scale(cr, 0.1, 0.1);
+    cairo_set_source_surface(cr, image, 0, 0);
+    cairo_paint(cr);
+    cairo_surface_destroy(image);
     cairo_surface_destroy(surface);
     cairo_destroy(cr);
     return 0;
