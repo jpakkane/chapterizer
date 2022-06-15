@@ -86,6 +86,20 @@ static void quitfunc(GtkButton *, gpointer user_data) {
     g_main_loop_quit(nullptr);
 }
 */
+double mm2screenpt(double mm) { return mm / 25.4 * 72; }
+
+void resize_canvas(App *app) {
+    const double zoom = gtk_spin_button_get_value(app->zoom);
+    const double text_width = mm2screenpt(gtk_spin_button_get_value(app->chapter_width));
+    const double row_height = gtk_spin_button_get_value(app->row_height);
+    const int num_rows = 40; // FIXme
+    const int boundary = 10;
+    const int magic_extra_space_to_the_right = 50;
+    const int canvas_w = int(2 * boundary + text_width * zoom + magic_extra_space_to_the_right);
+    const int canvas_h = int(2 * boundary + num_rows * row_height * zoom);
+    gtk_drawing_area_set_content_height(app->draw, canvas_h);
+    gtk_drawing_area_set_content_width(app->draw, canvas_w);
+}
 
 std::vector<std::string> get_entry_widget_text_lines(App *app) {
     GtkTextIter start;
@@ -160,7 +174,7 @@ void text_changed(GtkTextBuffer *, gpointer data) {
 
 void zoom_changed(GtkSpinButton *, gpointer data) {
     auto app = static_cast<App *>(data);
-    gtk_widget_queue_draw(GTK_WIDGET(app->draw));
+    resize_canvas(app);
 }
 
 void font_changed(GtkComboBox *, gpointer data) {
@@ -176,12 +190,12 @@ void font_size_changed(GtkSpinButton *new_size, gpointer data) {
 
 void row_height_changed(GtkSpinButton *, gpointer data) {
     auto app = static_cast<App *>(data);
-    gtk_widget_queue_draw(GTK_WIDGET(app->draw));
+    resize_canvas(app);
 }
 
 void chapter_width_changed(GtkSpinButton *, gpointer data) {
     auto app = static_cast<App *>(data);
-    gtk_widget_queue_draw(GTK_WIDGET(app->draw));
+    resize_canvas(app);
 }
 
 void reset_text_cb(GtkButton *, gpointer data) {
@@ -319,17 +333,17 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     cairo_fill(cr);
 
     const double zoom_ratio = gtk_spin_button_get_value(a->zoom);
-    cairo_scale(cr, zoom_ratio, zoom_ratio);
     const double xoff = 10;
     const double yoff = 10;
-    const double parwid = gtk_spin_button_get_value(a->chapter_width) / 25.4 * 72;
-    const double parhei = text.size() * line_height;
-    cairo_set_line_width(cr, 1.0 / zoom_ratio);
+    const double parwid = zoom_ratio * mm2screenpt(gtk_spin_button_get_value(a->chapter_width));
+    const double parhei = zoom_ratio * text.size() * line_height;
+    cairo_set_line_width(cr, 1.0);
     cairo_rectangle(cr, xoff, yoff, parwid, parhei);
     color.red = color.green = 0.0;
     gdk_cairo_set_source_rgba(cr, &color);
     cairo_set_line_width(cr, 1.0);
     cairo_stroke(cr);
+    cairo_scale(cr, zoom_ratio, zoom_ratio);
 
     if(!text.empty()) {
         color.blue = 0;
@@ -340,13 +354,22 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
                                CAIRO_FONT_WEIGHT_NORMAL);
         if(gtk_toggle_button_get_active(a->justify)) {
             for(size_t i = 0; i < text.size() - 1; ++i) {
-                render_line_justified(cr, layout, text[i], xoff, yoff + line_height * i, parwid);
+                render_line_justified(cr,
+                                      layout,
+                                      text[i],
+                                      xoff / zoom_ratio,
+                                      yoff / zoom_ratio + line_height * i,
+                                      parwid / zoom_ratio);
             }
-            render_line_as_is(
-                cr, layout, text.back(), xoff, yoff + line_height * (text.size() - 1));
+            render_line_as_is(cr,
+                              layout,
+                              text.back(),
+                              xoff / zoom_ratio,
+                              yoff / zoom_ratio + line_height * (text.size() - 1));
         } else {
             for(size_t i = 0; i < text.size(); ++i) {
-                render_line_as_is(cr, layout, text[i], xoff, yoff + line_height * i);
+                render_line_as_is(
+                    cr, layout, text[i], xoff / zoom_ratio, yoff / zoom_ratio + line_height * i);
             }
         }
     }
@@ -413,11 +436,6 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_text_view_set_monospace(app->textview, 1);
     app->status = GTK_LABEL(gtk_label_new("Total error is ?."));
 
-    app->draw = GTK_DRAWING_AREA(gtk_drawing_area_new());
-    gtk_drawing_area_set_content_height(app->draw, 600);
-    gtk_drawing_area_set_content_width(app->draw, 300);
-    gtk_drawing_area_set_draw_func(app->draw, draw_function, app, nullptr);
-
     app->zoom = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(1.0, 4.0, 0.1));
     app->ptsize = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(6.0, 18.0, 0.5));
     app->row_height = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(4.0, 20, 0.1));
@@ -426,7 +444,11 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_spin_button_set_value(app->ptsize, 10.0);
     gtk_spin_button_set_value(app->row_height, 12.0);
     gtk_spin_button_set_value(app->chapter_width, 66);
+
     populate_fontlist(app);
+    app->draw = GTK_DRAWING_AREA(gtk_drawing_area_new());
+    gtk_drawing_area_set_draw_func(app->draw, draw_function, app, nullptr);
+    resize_canvas(app);
 
     auto *text_scroll = gtk_scrolled_window_new();
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(text_scroll), GTK_WIDGET(app->textview));

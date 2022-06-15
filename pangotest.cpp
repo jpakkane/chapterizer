@@ -29,6 +29,7 @@ int main() {
     cairo_surface_t *surface = cairo_pdf_surface_create("pangocairotest.pdf", 595, 842);
     cairo_t *cr = cairo_create(surface);
     cairo_save(cr);
+    cairo_set_source_rgb(cr, 1.0, 0.2, 0.1);
     cairo_move_to(cr, 72, 72);
     printf("PANGO_SCALE = %d\n", PANGO_SCALE);
     PangoLayout *layout = pango_cairo_create_layout(cr);
