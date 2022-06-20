@@ -25,3 +25,23 @@ cause eye bleeding in people sensitive to UI purism
 
 - probably only works on Linux because it uses Cairo, GTK 4, Fontconfig
 et al quite heavily
+
+## Building and using
+
+The program depends on GTK 4 and libhyphen. On debianlike distros they
+can be installed with:
+
+```
+sudo apt install libhyphen-dev libgtk-4-dev
+```
+
+Building is done in the standard Meson way:
+
+```
+<do a git checkout and cd into it>
+mkdir builddir
+cd builddir
+meson ..
+ninja
+./guitool
+```
