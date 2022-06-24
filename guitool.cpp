@@ -51,16 +51,22 @@ to make the stillness more oppressive. The
 dim roar of London was like the bourdon note
 of a distant organ.)";
 
+static const char *extra_penalty_strings[3] = {"Consecutive dashes", "Single word on line", "Single hyphenated word on line"};
+
 void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data);
 
-enum { LINENUM_COLUMN, TEXT_COLUMN, DELTA_COLUMN, PENALTY_COLUMN, N_COLUMNS };
+enum { LINENUM_LINE_COLUMN, TEXT_LINE_COLUMN, DELTA_LINE_COLUMN, PENALTY_LINE_COLUMN, N_LINE_COLUMNS };
+
+enum { LINENUM_EXTRA_COLUMN, TYPE_EXTRA_COLUMN, PENALTY_EXTRA_COLUMN, N_EXTRA_COLUMNS };
 
 struct App {
     GtkApplication *app;
     GtkWindow *win;
     GtkTextView *textview;
     GtkTreeView *statview;
-    GtkTreeStore *store;
+    GtkTreeStore *linestore;
+    GtkTreeView *extraview;
+    GtkTreeStore *extrastore;
     GtkLabel *status;
     GtkDrawingArea *draw;
     GtkSpinButton *zoom;
@@ -133,40 +139,69 @@ ChapterParameters get_params(App *app) {
     return par;
 }
 
-void text_changed(GtkTextBuffer *, gpointer data) {
-    auto app = static_cast<App *>(data);
-    gtk_tree_store_clear(app->store);
+double populate_line_store(App *app, const std::vector<std::string> &lines, const std::vector<LinePenaltyStatistics> &penalties) {
     GtkTreeIter iter;
-    ChapterParameters par = get_params(app);
-    size_t i = 0;
-    double total_penalty = 0;
-    auto lines = get_entry_widget_text_lines(app);
-    auto line_stats = compute_stats(lines, par);
-    std::string workarea;
     const int sample_len = 25;
-    for(const auto &stats : line_stats) {
+    std::string workarea;
+    double total_penalty = 0;
+    gtk_tree_store_clear(app->linestore);
+    size_t i = 0;
+    for(const auto &stats : penalties) {
         workarea = lines[i];
         if(workarea.length() > sample_len) {
             workarea.erase(workarea.begin() + sample_len - 4, workarea.end());
             workarea += " ...";
         }
-        gtk_tree_store_append(app->store, &iter, nullptr);
+        gtk_tree_store_append(app->linestore, &iter, nullptr);
         total_penalty += stats.penalty;
-        gtk_tree_store_set(app->store,
+        gtk_tree_store_set(app->linestore,
                            &iter,
-                           LINENUM_COLUMN,
+                           LINENUM_LINE_COLUMN,
                            int(i) + 1,
-                           TEXT_COLUMN,
+                           TEXT_LINE_COLUMN,
                            workarea.c_str(),
-                           DELTA_COLUMN,
+                           DELTA_LINE_COLUMN,
                            stats.delta,
-                           PENALTY_COLUMN,
+                           PENALTY_LINE_COLUMN,
                            stats.penalty,
                            -1);
         ++i;
     }
+    return total_penalty;
+}
+
+double populate_extra_store(App *app, const std::vector<ExtraPenaltyStatistics> &penalties) {
+    GtkTreeIter iter;
+    std::string workarea;
+    double total_penalty = 0;
+    gtk_tree_store_clear(app->extrastore);
+    for(const auto &stats : penalties) {
+        gtk_tree_store_append(app->extrastore, &iter, nullptr);
+        gtk_tree_store_set(app->extrastore,
+                           &iter,
+                           LINENUM_EXTRA_COLUMN,
+                           stats.line,
+                           TYPE_EXTRA_COLUMN,
+                           extra_penalty_strings[int(stats.type)],
+                           PENALTY_EXTRA_COLUMN,
+                           stats.penalty,
+                           -1);
+        total_penalty += stats.penalty;
+    }
+    return total_penalty;
+}
+
+void text_changed(GtkTextBuffer *, gpointer data) {
+    auto app = static_cast<App *>(data);
+    ChapterParameters par = get_params(app);
+    double total_penalty = 0;
+    auto lines = get_entry_widget_text_lines(app);
+    auto penalties = compute_stats(lines, par);
     const int BIGBUF = 1024;
     char buf[BIGBUF];
+    total_penalty += populate_line_store(app, lines, penalties.lines);
+    //total_penalty +=
+    populate_extra_store(app, penalties.extras);
     snprintf(buf, BIGBUF, "Total penalty is %.2f.", total_penalty);
     gtk_label_set_text(app->status, buf);
     gtk_widget_queue_draw(GTK_WIDGET(app->draw));
@@ -397,34 +432,56 @@ void add_property(GtkGrid *grid, const char *label_text, GtkWidget *w, int yloc)
     gtk_grid_attach(grid, w, 1, yloc, 1, 1);
 }
 
+void build_treeviews(App *app) {
+    GtkCellRenderer *r;
+    GtkTreeViewColumn *c;
+
+    // Line penalties
+    app->linestore =
+        gtk_tree_store_new(N_LINE_COLUMNS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_DOUBLE, G_TYPE_DOUBLE);
+    app->statview = GTK_TREE_VIEW(gtk_tree_view_new_with_model(GTK_TREE_MODEL(app->linestore)));
+    r = gtk_cell_renderer_text_new();
+    c = gtk_tree_view_column_new_with_attributes("Line number", r, "text", LINENUM_LINE_COLUMN, nullptr);
+    gtk_tree_view_append_column(app->statview, c);
+    r = gtk_cell_renderer_text_new();
+    c = gtk_tree_view_column_new_with_attributes("Text", r, "text", TEXT_LINE_COLUMN, nullptr);
+    gtk_tree_view_append_column(app->statview, c);
+    r = gtk_cell_renderer_text_new();
+    c = gtk_tree_view_column_new_with_attributes("Delta", r, "text", DELTA_LINE_COLUMN, nullptr);
+    gtk_tree_view_append_column(app->statview, c);
+    r = gtk_cell_renderer_text_new();
+    c = gtk_tree_view_column_new_with_attributes("Penalty", r, "text", PENALTY_LINE_COLUMN, nullptr);
+    gtk_tree_view_append_column(app->statview, c);
+
+    // Extra penalties
+    app->extrastore = gtk_tree_store_new(N_EXTRA_COLUMNS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_DOUBLE);
+    app->extraview = GTK_TREE_VIEW(gtk_tree_view_new_with_model(GTK_TREE_MODEL(app->extrastore)));
+    r = gtk_cell_renderer_text_new();
+    c = gtk_tree_view_column_new_with_attributes("Line number", r, "text", LINENUM_EXTRA_COLUMN, nullptr);
+    gtk_tree_view_append_column(app->extraview, c);
+    r = gtk_cell_renderer_text_new();
+    c = gtk_tree_view_column_new_with_attributes("Type", r, "text", TYPE_EXTRA_COLUMN, nullptr);
+    gtk_tree_view_append_column(app->extraview, c);
+    r = gtk_cell_renderer_text_new();
+    c = gtk_tree_view_column_new_with_attributes("Penalty", r, "text", PENALTY_EXTRA_COLUMN, nullptr);
+    gtk_tree_view_append_column(app->extraview, c);
+}
+
 void activate(GtkApplication *, gpointer user_data) {
     auto *app = static_cast<App *>(user_data);
     app->win = GTK_WINDOW(gtk_application_window_new(app->app));
     app->note = GTK_NOTEBOOK(gtk_notebook_new());
     gtk_window_set_title(app->win, "Chapterizer devtool");
     gtk_window_set_default_size(app->win, 800, 480);
+    build_treeviews(app);
     GtkGrid *main_grid = GTK_GRID(gtk_grid_new());
     GtkGrid *parameter_grid = GTK_GRID(gtk_grid_new());
-    app->store =
-        gtk_tree_store_new(N_COLUMNS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_DOUBLE, G_TYPE_DOUBLE);
-    app->statview = GTK_TREE_VIEW(gtk_tree_view_new_with_model(GTK_TREE_MODEL(app->store)));
-    GtkCellRenderer *r;
-    GtkTreeViewColumn *c;
-    r = gtk_cell_renderer_text_new();
-    c = gtk_tree_view_column_new_with_attributes("Line number", r, "text", LINENUM_COLUMN, nullptr);
-    gtk_tree_view_append_column(app->statview, c);
-    r = gtk_cell_renderer_text_new();
-    c = gtk_tree_view_column_new_with_attributes("Text", r, "text", TEXT_COLUMN, nullptr);
-    gtk_tree_view_append_column(app->statview, c);
-    r = gtk_cell_renderer_text_new();
-    c = gtk_tree_view_column_new_with_attributes("Delta", r, "text", DELTA_COLUMN, nullptr);
-    gtk_tree_view_append_column(app->statview, c);
-    r = gtk_cell_renderer_text_new();
-    c = gtk_tree_view_column_new_with_attributes("Penalty", r, "text", PENALTY_COLUMN, nullptr);
-    gtk_tree_view_append_column(app->statview, c);
     auto *stat_scroll = gtk_scrolled_window_new();
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(stat_scroll), GTK_WIDGET(app->statview));
-    gtk_notebook_append_page(app->note, stat_scroll, gtk_label_new("Statistics"));
+    gtk_notebook_append_page(app->note, stat_scroll, gtk_label_new("Line Statistics"));
+    auto *extra_scroll = gtk_scrolled_window_new();
+    gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(extra_scroll), GTK_WIDGET(app->extraview));
+    gtk_notebook_append_page(app->note, extra_scroll, gtk_label_new("Extra penalties"));
     auto *par_scroll = gtk_scrolled_window_new();
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(par_scroll), GTK_WIDGET(parameter_grid));
     gtk_notebook_append_page(app->note, par_scroll, gtk_label_new("Parameters"));

@@ -84,14 +84,40 @@ struct ChapterParameters {
     int fontsize;
 };
 
-struct PenaltyStatistics {
+struct LinePenaltyStatistics {
     double delta; // mm
     double penalty;
 };
 
 typedef std::variant<BetweenWordSplit, WithinWordSplit> SplitPoint;
 
-std::vector<PenaltyStatistics> compute_stats(const std::vector<std::string> &lines,
+enum class ExtraPenaltyTypes : int {
+    ConsecutiveDashes,
+    // River,
+    SingleWordLastLine,
+    SplitWordLastLine,
+};
+
+struct ExtraPenaltyStatistics {
+    ExtraPenaltyTypes type;
+    int line;
+    double penalty;
+};
+
+struct ExtraPenaltyAmounts {
+    double three_dashes;
+    // double river;
+    double four_plus_dashes;
+    double single_word_line;
+    double single_split_word_line;
+};
+
+struct PenaltyStatistics {
+    std::vector<LinePenaltyStatistics> lines;
+    std::vector<ExtraPenaltyStatistics> extras;
+};
+
+PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
                                              const ChapterParameters &par);
 
 class ChapterBuilder {

@@ -22,9 +22,16 @@
 
 namespace {
 
-double line_penalty(const LineStats &line, double target_width) {
-    const auto delta = abs(line.text_width - target_width);
+double difference_penalty(double actual_width, double target_width) {
+    //assert(actual_width >= 0);
+    assert(target_width > 0);
+    const auto delta = abs(actual_width - target_width);
     return delta * delta;
+
+}
+
+double line_penalty(const LineStats &line, double target_width) {
+    return difference_penalty(line.text_width, target_width);
 }
 
 double total_penalty(const std::vector<LineStats> &lines, double target_width) {
@@ -37,23 +44,35 @@ double total_penalty(const std::vector<LineStats> &lines, double target_width) {
     return total - last_line_penalty;
 }
 
-} // namespace
-
-std::vector<PenaltyStatistics> compute_stats(const std::vector<std::string> &lines,
+std::vector<LinePenaltyStatistics> compute_line_penalties(const std::vector<std::string> &lines,
                                              const ChapterParameters &par) {
     TextStats shaper{par.font, par.fontsize};
-    std::vector<PenaltyStatistics> penalties;
+    std::vector<LinePenaltyStatistics> penalties;
     penalties.reserve(lines.size());
     for(const auto &line : lines) {
         const double w = shaper.text_width(line);
         const double delta = w - par.paragraph_width_mm;
-        penalties.emplace_back(PenaltyStatistics{delta, pow(delta, 2)});
+        penalties.emplace_back(LinePenaltyStatistics{delta, pow(delta, 2)});
     }
     // The last line does not get a length penalty unless it is the only line.
     if(penalties.size() > 1) {
-        penalties.back() = PenaltyStatistics{0, 0};
+        penalties.back() = LinePenaltyStatistics{0, 0};
     }
     return penalties;
+}
+
+std::vector<ExtraPenaltyStatistics> compute_extra_penalties(const std::vector<std::string> &lines,
+                                             const ChapterParameters &par) {
+    std::vector<ExtraPenaltyStatistics> penalties{ExtraPenaltyStatistics{ExtraPenaltyTypes::ConsecutiveDashes, 0, 20},
+                        ExtraPenaltyStatistics{ExtraPenaltyTypes::SplitWordLastLine, 1, 100}}   ;
+    return penalties;
+}
+
+} // namespace
+
+PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
+                                             const ChapterParameters &par) {
+    return PenaltyStatistics{compute_line_penalties(lines, par), compute_extra_penalties(lines, par)};
 }
 
 ChapterBuilder::ChapterBuilder(const std::vector<HyphenatedWord> &words_,
@@ -122,6 +141,7 @@ void ChapterBuilder::global_split_recursive(const TextStats &shaper,
         line_stats.emplace_back(line_end_choices.front());
         const auto current_penalty = total_penalty(line_stats, params.paragraph_width_mm);
         // printf("Total penalty: %.1f\n", current_penalty);
+        // FIXME: change to include extra penalties here.
         if(current_penalty < best_penalty) {
             best_penalty = current_penalty;
             best_split = line_stats;
