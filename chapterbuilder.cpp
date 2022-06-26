@@ -17,17 +17,17 @@
 #include "chapterbuilder.hpp"
 #include <textstats.hpp>
 #include <algorithm>
+#include <optional>
 #include <cassert>
 #include <cmath>
 
 namespace {
 
 double difference_penalty(double actual_width, double target_width) {
-    //assert(actual_width >= 0);
+    // assert(actual_width >= 0);
     assert(target_width > 0);
     const auto delta = abs(actual_width - target_width);
     return delta * delta;
-
 }
 
 double line_penalty(const LineStats &line, double target_width) {
@@ -45,7 +45,7 @@ double total_penalty(const std::vector<LineStats> &lines, double target_width) {
 }
 
 std::vector<LinePenaltyStatistics> compute_line_penalties(const std::vector<std::string> &lines,
-                                             const ChapterParameters &par) {
+                                                          const ChapterParameters &par) {
     TextStats shaper{par.font, par.fontsize};
     std::vector<LinePenaltyStatistics> penalties;
     penalties.reserve(lines.size());
@@ -61,18 +61,69 @@ std::vector<LinePenaltyStatistics> compute_line_penalties(const std::vector<std:
     return penalties;
 }
 
+std::vector<ExtraPenaltyStatistics>
+compute_multihyphen_penalties(const std::vector<std::string> &lines,
+                              const ExtraPenaltyAmounts &amounts) {
+    std::vector<ExtraPenaltyStatistics> penalties;
+    int dashes = 0;
+    for(size_t i = 0; i < lines.size(); ++i) {
+        const auto &line = lines[i];
+        if(!line.empty() && line.back() == '-') {
+            ++dashes;
+        } else {
+            if(dashes >= 3) {
+                penalties.emplace_back(ExtraPenaltyStatistics{ExtraPenaltyTypes::ConsecutiveDashes,
+                                                              int(i) - dashes,
+                                                              dashes * amounts.multiple_dashes});
+            }
+            dashes = 0;
+        }
+    }
+    // We assume that the last line never ends with a hyphen for simplicity.
+    return penalties;
+}
+
+std::optional<ExtraPenaltyStatistics>
+compute_chapter_end_penalty(const std::vector<std::string> &lines,
+                            const ExtraPenaltyAmounts &amounts) {
+    std::vector<ExtraPenaltyStatistics> penalties;
+    if(lines.size() < 2) {
+        return {};
+    }
+    if(lines.back().find(' ') == std::string::npos) {
+        const auto &penultimate_line = lines[lines.size() - 2];
+        assert(!penultimate_line.empty());
+        if(penultimate_line.back() == '-') {
+            return ExtraPenaltyStatistics{ExtraPenaltyTypes::SplitWordLastLine,
+                                          int(lines.size()) - 2,
+                                          amounts.single_split_word_line};
+        }
+        return ExtraPenaltyStatistics{
+            ExtraPenaltyTypes::SingleWordLastLine, int(lines.size() - 1), amounts.single_word_line};
+    }
+    return {};
+}
+
 std::vector<ExtraPenaltyStatistics> compute_extra_penalties(const std::vector<std::string> &lines,
-                                             const ChapterParameters &par) {
-    std::vector<ExtraPenaltyStatistics> penalties{ExtraPenaltyStatistics{ExtraPenaltyTypes::ConsecutiveDashes, 0, 20},
-                        ExtraPenaltyStatistics{ExtraPenaltyTypes::SplitWordLastLine, 1, 100}}   ;
+                                                            const ExtraPenaltyAmounts &amounts) {
+    std::vector<ExtraPenaltyStatistics> penalties = compute_multihyphen_penalties(lines, amounts);
+    //{ExtraPenaltyStatistics{ExtraPenaltyTypes::ConsecutiveDashes, 0, 20},
+    //                    ExtraPenaltyStatistics{ExtraPenaltyTypes::SplitWordLastLine, 1, 100}}   ;
+    auto end_penalty = compute_chapter_end_penalty(lines, amounts);
+    if(end_penalty) {
+        penalties.push_back(*end_penalty);
+    }
     return penalties;
 }
 
 } // namespace
 
 PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
-                                             const ChapterParameters &par) {
-    return PenaltyStatistics{compute_line_penalties(lines, par), compute_extra_penalties(lines, par)};
+                                const ChapterParameters &par,
+                                const ExtraPenaltyAmounts &amounts) {
+
+    return PenaltyStatistics{compute_line_penalties(lines, par),
+                             compute_extra_penalties(lines, amounts)};
 }
 
 ChapterBuilder::ChapterBuilder(const std::vector<HyphenatedWord> &words_,

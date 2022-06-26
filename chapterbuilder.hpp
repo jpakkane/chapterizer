@@ -105,11 +105,10 @@ struct ExtraPenaltyStatistics {
 };
 
 struct ExtraPenaltyAmounts {
-    double three_dashes;
+    double multiple_dashes = 10; // Total is num_consecutive_dashes * multiple_dashes.
     // double river;
-    double four_plus_dashes;
-    double single_word_line;
-    double single_split_word_line;
+    double single_word_line = 10;
+    double single_split_word_line = 50;
 };
 
 struct PenaltyStatistics {
@@ -118,7 +117,8 @@ struct PenaltyStatistics {
 };
 
 PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
-                                             const ChapterParameters &par);
+                                const ChapterParameters &par,
+                                const ExtraPenaltyAmounts &amounts);
 
 class ChapterBuilder {
 public:

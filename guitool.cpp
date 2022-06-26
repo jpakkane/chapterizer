@@ -51,11 +51,18 @@ to make the stillness more oppressive. The
 dim roar of London was like the bourdon note
 of a distant organ.)";
 
-static const char *extra_penalty_strings[3] = {"Consecutive dashes", "Single word on line", "Single hyphenated word on line"};
+static const char *extra_penalty_strings[3] = {
+    "Consecutive dashes", "Single word on line", "Single hyphenated word on line"};
 
 void draw_function(GtkDrawingArea *area, cairo_t *cr, int width, int height, gpointer data);
 
-enum { LINENUM_LINE_COLUMN, TEXT_LINE_COLUMN, DELTA_LINE_COLUMN, PENALTY_LINE_COLUMN, N_LINE_COLUMNS };
+enum {
+    LINENUM_LINE_COLUMN,
+    TEXT_LINE_COLUMN,
+    DELTA_LINE_COLUMN,
+    PENALTY_LINE_COLUMN,
+    N_LINE_COLUMNS
+};
 
 enum { LINENUM_EXTRA_COLUMN, TYPE_EXTRA_COLUMN, PENALTY_EXTRA_COLUMN, N_EXTRA_COLUMNS };
 
@@ -82,6 +89,11 @@ struct App {
     GtkEntry *hyp_entry;
     GtkLabel *hyp_output;
     std::string default_text{preformatted_text};
+
+    // Penalty amounts
+    GtkSpinButton *dash_penalty;
+    GtkSpinButton *single_word_penalty;
+    GtkSpinButton *single_split_word_penalty;
 
     GtkTextBuffer *buf() { return gtk_text_view_get_buffer(textview); }
 };
@@ -139,7 +151,17 @@ ChapterParameters get_params(App *app) {
     return par;
 }
 
-double populate_line_store(App *app, const std::vector<std::string> &lines, const std::vector<LinePenaltyStatistics> &penalties) {
+ExtraPenaltyAmounts get_penalties(App *app) {
+    ExtraPenaltyAmounts pen_amounts;
+    pen_amounts.multiple_dashes = gtk_spin_button_get_value(app->dash_penalty);
+    pen_amounts.single_word_line = gtk_spin_button_get_value(app->single_word_penalty);
+    pen_amounts.single_split_word_line = gtk_spin_button_get_value(app->single_split_word_penalty);
+    return pen_amounts;
+}
+
+double populate_line_store(App *app,
+                           const std::vector<std::string> &lines,
+                           const std::vector<LinePenaltyStatistics> &penalties) {
     GtkTreeIter iter;
     const int sample_len = 25;
     std::string workarea;
@@ -196,15 +218,20 @@ void text_changed(GtkTextBuffer *, gpointer data) {
     ChapterParameters par = get_params(app);
     double total_penalty = 0;
     auto lines = get_entry_widget_text_lines(app);
-    auto penalties = compute_stats(lines, par);
+    ExtraPenaltyAmounts pen_amounts = get_penalties(app);
+    auto penalties = compute_stats(lines, par, pen_amounts);
     const int BIGBUF = 1024;
     char buf[BIGBUF];
     total_penalty += populate_line_store(app, lines, penalties.lines);
-    //total_penalty +=
-    populate_extra_store(app, penalties.extras);
+    total_penalty += populate_extra_store(app, penalties.extras);
     snprintf(buf, BIGBUF, "Total penalty is %.2f.", total_penalty);
     gtk_label_set_text(app->status, buf);
     gtk_widget_queue_draw(GTK_WIDGET(app->draw));
+}
+
+void penalty_changed(GtkSpinButton *, gpointer data) {
+    // Not correct, but does the job for now.
+    text_changed(nullptr, data);
 }
 
 void zoom_changed(GtkSpinButton *, gpointer data) {
@@ -282,6 +309,7 @@ void hyphenword_changed_cb(GtkEditable *, gpointer data) {
 
 void connect_stuffs(App *app) {
     g_signal_connect(app->buf(), "changed", G_CALLBACK(text_changed), static_cast<gpointer>(app));
+    // Parameters.
     g_signal_connect(
         app->zoom, "value-changed", G_CALLBACK(zoom_changed), static_cast<gpointer>(app));
     g_signal_connect(app->fonts, "changed", G_CALLBACK(font_changed), static_cast<gpointer>(app));
@@ -293,6 +321,13 @@ void connect_stuffs(App *app) {
                      "changed",
                      G_CALLBACK(chapter_width_changed),
                      static_cast<gpointer>(app));
+
+    g_signal_connect(
+        app->dash_penalty, "changed", G_CALLBACK(penalty_changed), static_cast<gpointer>(app));
+
+    // Penalties
+
+    // Bottom buttons
     g_signal_connect(app->reset, "clicked", G_CALLBACK(reset_text_cb), static_cast<gpointer>(app));
     g_signal_connect(
         app->optimize, "clicked", G_CALLBACK(run_optimization_cb), static_cast<gpointer>(app));
@@ -441,7 +476,8 @@ void build_treeviews(App *app) {
         gtk_tree_store_new(N_LINE_COLUMNS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_DOUBLE, G_TYPE_DOUBLE);
     app->statview = GTK_TREE_VIEW(gtk_tree_view_new_with_model(GTK_TREE_MODEL(app->linestore)));
     r = gtk_cell_renderer_text_new();
-    c = gtk_tree_view_column_new_with_attributes("Line number", r, "text", LINENUM_LINE_COLUMN, nullptr);
+    c = gtk_tree_view_column_new_with_attributes(
+        "Line number", r, "text", LINENUM_LINE_COLUMN, nullptr);
     gtk_tree_view_append_column(app->statview, c);
     r = gtk_cell_renderer_text_new();
     c = gtk_tree_view_column_new_with_attributes("Text", r, "text", TEXT_LINE_COLUMN, nullptr);
@@ -450,21 +486,41 @@ void build_treeviews(App *app) {
     c = gtk_tree_view_column_new_with_attributes("Delta", r, "text", DELTA_LINE_COLUMN, nullptr);
     gtk_tree_view_append_column(app->statview, c);
     r = gtk_cell_renderer_text_new();
-    c = gtk_tree_view_column_new_with_attributes("Penalty", r, "text", PENALTY_LINE_COLUMN, nullptr);
+    c = gtk_tree_view_column_new_with_attributes(
+        "Penalty", r, "text", PENALTY_LINE_COLUMN, nullptr);
     gtk_tree_view_append_column(app->statview, c);
 
     // Extra penalties
     app->extrastore = gtk_tree_store_new(N_EXTRA_COLUMNS, G_TYPE_INT, G_TYPE_STRING, G_TYPE_DOUBLE);
     app->extraview = GTK_TREE_VIEW(gtk_tree_view_new_with_model(GTK_TREE_MODEL(app->extrastore)));
     r = gtk_cell_renderer_text_new();
-    c = gtk_tree_view_column_new_with_attributes("Line number", r, "text", LINENUM_EXTRA_COLUMN, nullptr);
+    c = gtk_tree_view_column_new_with_attributes(
+        "Line number", r, "text", LINENUM_EXTRA_COLUMN, nullptr);
     gtk_tree_view_append_column(app->extraview, c);
     r = gtk_cell_renderer_text_new();
     c = gtk_tree_view_column_new_with_attributes("Type", r, "text", TYPE_EXTRA_COLUMN, nullptr);
     gtk_tree_view_append_column(app->extraview, c);
     r = gtk_cell_renderer_text_new();
-    c = gtk_tree_view_column_new_with_attributes("Penalty", r, "text", PENALTY_EXTRA_COLUMN, nullptr);
+    c = gtk_tree_view_column_new_with_attributes(
+        "Penalty", r, "text", PENALTY_EXTRA_COLUMN, nullptr);
     gtk_tree_view_append_column(app->extraview, c);
+}
+
+void populate_parameter_grid(App *app, GtkGrid *parameter_grid) {
+    int i = 0;
+    add_property(parameter_grid, "Zoom", GTK_WIDGET(app->zoom), i++);
+    add_property(parameter_grid, "Font size", GTK_WIDGET(app->ptsize), i++);
+    add_property(parameter_grid, "Row height", GTK_WIDGET(app->row_height), i++);
+    add_property(parameter_grid, "Chapter width (mm)", GTK_WIDGET(app->chapter_width), i++);
+    add_property(parameter_grid, "Font", GTK_WIDGET(app->fonts), i++);
+    add_property(parameter_grid, "Alignment", GTK_WIDGET(app->justify), i++);
+
+    add_property(parameter_grid, "Dash penalty", GTK_WIDGET(app->dash_penalty), i++);
+    add_property(parameter_grid, "Single word penalty", GTK_WIDGET(app->single_word_penalty), i++);
+    add_property(parameter_grid,
+                 "Single split word penalty",
+                 GTK_WIDGET(app->single_split_word_penalty),
+                 i++);
 }
 
 void activate(GtkApplication *, gpointer user_data) {
@@ -502,6 +558,13 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_spin_button_set_value(app->row_height, 12.0);
     gtk_spin_button_set_value(app->chapter_width, 66);
 
+    app->dash_penalty = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(0, 100, 1));
+    app->single_word_penalty = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(0, 100, 1));
+    app->single_split_word_penalty = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(0, 1000, 1));
+    gtk_spin_button_set_value(app->dash_penalty, 10);
+    gtk_spin_button_set_value(app->single_word_penalty, 10);
+    gtk_spin_button_set_value(app->single_split_word_penalty, 50);
+
     populate_fontlist(app);
     app->draw = GTK_DRAWING_AREA(gtk_drawing_area_new());
     gtk_drawing_area_set_draw_func(app->draw, draw_function, app, nullptr);
@@ -520,12 +583,7 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_grid_attach(main_grid, draw_scroll, 1, 0, 1, 1);
     gtk_grid_attach(main_grid, GTK_WIDGET(app->note), 2, 0, 1, 1);
 
-    add_property(parameter_grid, "Zoom", GTK_WIDGET(app->zoom), 0);
-    add_property(parameter_grid, "Font size", GTK_WIDGET(app->ptsize), 1);
-    add_property(parameter_grid, "Row height", GTK_WIDGET(app->row_height), 2);
-    add_property(parameter_grid, "Chapter width (mm)", GTK_WIDGET(app->chapter_width), 3);
-    add_property(parameter_grid, "Font", GTK_WIDGET(app->fonts), 4);
-    add_property(parameter_grid, "Alignment", GTK_WIDGET(app->justify), 5);
+    populate_parameter_grid(app, parameter_grid);
     gtk_widget_set_vexpand(GTK_WIDGET(main_grid), 1);
     gtk_widget_set_hexpand(GTK_WIDGET(main_grid), 1);
 
