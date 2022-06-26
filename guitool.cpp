@@ -98,6 +98,11 @@ struct App {
     GtkTextBuffer *buf() { return gtk_text_view_get_buffer(textview); }
 };
 
+struct Outdents {
+    double left;
+    double right;
+};
+
 /*
 static void quitfunc(GtkButton *, gpointer user_data) {
     auto *app = static_cast<App *>(user_data);
@@ -105,6 +110,72 @@ static void quitfunc(GtkButton *, gpointer user_data) {
 }
 */
 double mm2screenpt(double mm) { return mm / 25.4 * 72; }
+
+Outdents compute_outdents(const std::string &s, double point_size) {
+    Outdents r{0, 0};
+    if(s.size() < 2) {
+        return r;
+    }
+    switch(s.front()) {
+    case '-':
+        r.left = 0.2 * point_size;
+        break;
+
+    case '.':
+    case ',':
+        r.left = 0.15 * point_size;
+        break;
+
+    case 'o':
+    case 'O':
+    case '0':
+        r.left = 0.15 * point_size;
+        break;
+
+    case '"':
+    case '\'':
+        r.left = 0.15 * point_size;
+        break;
+
+    case '/':
+    case '\\':
+        r.left = 0.15 * point_size;
+        break;
+
+    default:;
+    }
+
+    switch(s.back()) {
+    case '-':
+        r.right = 0.15 * point_size;
+        break;
+
+    case '.':
+    case ',':
+        r.right = 0.15 * point_size;
+        break;
+
+    case 'o':
+    case 'O':
+    case '0':
+        r.right = 0.2 * point_size;
+        break;
+
+    case '"':
+    case '\'':
+        r.right = 0.2 * point_size;
+        break;
+
+    case '/':
+    case '\\':
+        r.right = 0.15 * point_size;
+        break;
+
+    default:;
+    }
+
+    return r;
+}
 
 void resize_canvas(App *app) {
     const double zoom = gtk_spin_button_get_value(app->zoom);
@@ -341,6 +412,7 @@ void connect_stuffs(App *app) {
 
 void render_line_justified(cairo_t *cr,
                            PangoLayout *layout,
+                           double point_size,
                            const std::string &line_text,
                            double x,
                            double y,
@@ -351,6 +423,8 @@ void render_line_justified(cairo_t *cr,
     const int num_spaces = int(words.size() - 1);
     double text_width_pt = 0.0;
     cairo_move_to(cr, -1000, -1000);
+    const auto outdents = compute_outdents(line_text, point_size);
+    const auto total_outdent = outdents.left + outdents.right;
     // Measure the total width of printed words.
     for(const auto &word : words) {
         PangoRectangle r;
@@ -360,8 +434,9 @@ void render_line_justified(cairo_t *cr,
         text_width_pt += double(r.width) / PANGO_SCALE;
     }
     const double space_extra_width_pt =
-        num_spaces > 0 ? (chapter_width_pt - text_width_pt) / num_spaces : 0.0;
+        num_spaces > 0 ? (chapter_width_pt - text_width_pt + total_outdent) / num_spaces : 0.0;
 
+    x -= outdents.left;
     for(size_t i = 0; i < words.size(); ++i) {
         cairo_move_to(cr, x, y);
         PangoRectangle r;
@@ -426,6 +501,7 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
             for(size_t i = 0; i < text.size() - 1; ++i) {
                 render_line_justified(cr,
                                       layout,
+                                      point_size,
                                       text[i],
                                       xoff / zoom_ratio,
                                       yoff / zoom_ratio + line_height * i,
@@ -542,8 +618,8 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(par_scroll), GTK_WIDGET(parameter_grid));
     gtk_notebook_append_page(app->note, par_scroll, gtk_label_new("Parameters"));
     gtk_widget_set_vexpand(GTK_WIDGET(app->note), 1);
-    gtk_widget_set_hexpand(GTK_WIDGET(app->note), 1);
-    gtk_widget_set_size_request(GTK_WIDGET(app->note), 600, 600);
+    gtk_widget_set_hexpand(GTK_WIDGET(app->note), 0);
+    // gtk_widget_set_size_request(GTK_WIDGET(app->note), 600, 600);
 
     app->textview = GTK_TEXT_VIEW(gtk_text_view_new());
     gtk_text_view_set_monospace(app->textview, 1);
@@ -554,6 +630,7 @@ void activate(GtkApplication *, gpointer user_data) {
     app->row_height = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(4.0, 20, 0.1));
     app->chapter_width = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(30, 100, 1));
     app->justify = GTK_TOGGLE_BUTTON(gtk_toggle_button_new_with_label("Justify"));
+    gtk_spin_button_set_value(app->zoom, 2);
     gtk_spin_button_set_value(app->ptsize, 10.0);
     gtk_spin_button_set_value(app->row_height, 12.0);
     gtk_spin_button_set_value(app->chapter_width, 66);
