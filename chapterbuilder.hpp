@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <chaptercommon.hpp>
 #include <wordhyphenator.hpp>
 #include <variant>
 
@@ -80,8 +81,7 @@ struct SplitStates {
 
 struct ChapterParameters {
     double paragraph_width_mm;
-    std::string font;
-    int fontsize;
+    FontParameters font;
 };
 
 struct LinePenaltyStatistics {
@@ -90,26 +90,6 @@ struct LinePenaltyStatistics {
 };
 
 typedef std::variant<BetweenWordSplit, WithinWordSplit> SplitPoint;
-
-enum class ExtraPenaltyTypes : int {
-    ConsecutiveDashes,
-    // River,
-    SingleWordLastLine,
-    SplitWordLastLine,
-};
-
-struct ExtraPenaltyStatistics {
-    ExtraPenaltyTypes type;
-    int line;
-    double penalty;
-};
-
-struct ExtraPenaltyAmounts {
-    double multiple_dashes = 10; // Total is num_consecutive_dashes * multiple_dashes.
-    // double river;
-    double single_word_line = 10;
-    double single_split_word_line = 50;
-};
 
 struct PenaltyStatistics {
     std::vector<LinePenaltyStatistics> lines;

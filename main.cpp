@@ -222,13 +222,14 @@ void monospacetest(const T1 &plain_words, const T2 &hyphenated_words) {
 
 #include <textstats.hpp>
 
-static TextStats hack{"Gentium", 10};
+static TextStats hack{};
 
 template<typename T1> void full_test(const T1 &hyphenated_words) {
     ChapterParameters params;
-    params.font = "Gentium";
     params.paragraph_width_mm = 60;
-    params.fontsize = 10;
+    params.font.name = "Gentium";
+    params.font.point_size = 10;
+    params.font.type = FontStyle::Regular;
     ChapterBuilder spl{hyphenated_words, params};
     const auto lines = spl.split_lines();
 
@@ -237,7 +238,7 @@ template<typename T1> void full_test(const T1 &hyphenated_words) {
         for(size_t i = line.length(); i < 70; ++i) {
             printf(" ");
         }
-        printf("%.2f\n", hack.text_width(line.c_str()) - params.paragraph_width_mm);
+        printf("%.2f\n", hack.text_width(line.c_str(), params.font) - params.paragraph_width_mm);
     }
 
     PdfRenderer r("texttest.pdf");

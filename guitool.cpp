@@ -78,6 +78,7 @@ struct App {
     GtkDrawingArea *draw;
     GtkSpinButton *zoom;
     GtkComboBoxText *fonts;
+    GtkComboBoxText *font_style;
     GtkSpinButton *ptsize;
     GtkSpinButton *row_height;
     GtkSpinButton *chapter_width;
@@ -215,9 +216,9 @@ std::vector<std::string> get_entry_widget_text_words(App *app) {
 ChapterParameters get_params(App *app) {
     ChapterParameters par;
     auto *tmp = gtk_combo_box_text_get_active_text(app->fonts);
-    par.font = tmp;
+    par.font.name = tmp;
     g_free(tmp);
-    par.fontsize = gtk_spin_button_get_value(app->ptsize);
+    par.font.point_size = gtk_spin_button_get_value(app->ptsize);
     par.paragraph_width_mm = gtk_spin_button_get_value(app->chapter_width);
     return par;
 }
@@ -385,6 +386,8 @@ void connect_stuffs(App *app) {
         app->zoom, "value-changed", G_CALLBACK(zoom_changed), static_cast<gpointer>(app));
     g_signal_connect(app->fonts, "changed", G_CALLBACK(font_changed), static_cast<gpointer>(app));
     g_signal_connect(
+        app->font_style, "changed", G_CALLBACK(font_changed), static_cast<gpointer>(app));
+    g_signal_connect(
         app->ptsize, "changed", G_CALLBACK(font_size_changed), static_cast<gpointer>(app));
     g_signal_connect(
         app->row_height, "changed", G_CALLBACK(row_height_changed), static_cast<gpointer>(app));
@@ -461,12 +464,23 @@ void render_line_as_is(
 void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointer data) {
     App *a = static_cast<App *>(data);
     GdkRGBA color;
+    FontStyle style = (FontStyle)gtk_combo_box_get_active(GTK_COMBO_BOX(a->font_style));
     auto text = get_entry_widget_text_lines(a);
     const double point_size = gtk_spin_button_get_value(a->ptsize);
     const double line_height = gtk_spin_button_get_value(a->row_height);
     auto *layout = pango_cairo_create_layout(cr);
     PangoFontDescription *desc =
         pango_font_description_from_string(gtk_combo_box_text_get_active_text(a->fonts));
+    if(style == FontStyle::Bold || style == FontStyle::BoldItalic) {
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
+    } else {
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_NORMAL);
+    }
+    if(style == FontStyle::Italic || style == FontStyle::BoldItalic) {
+        pango_font_description_set_style(desc, PANGO_STYLE_ITALIC);
+    } else {
+        pango_font_description_set_style(desc, PANGO_STYLE_NORMAL);
+    }
     pango_font_description_set_absolute_size(desc, point_size * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
@@ -493,10 +507,6 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     if(!text.empty()) {
         color.blue = 0;
         gdk_cairo_set_source_rgba(cr, &color);
-        cairo_select_font_face(cr,
-                               gtk_combo_box_text_get_active_text(a->fonts),
-                               CAIRO_FONT_SLANT_NORMAL,
-                               CAIRO_FONT_WEIGHT_NORMAL);
         if(gtk_toggle_button_get_active(a->justify)) {
             for(size_t i = 0; i < text.size() - 1; ++i) {
                 render_line_justified(cr,
@@ -589,6 +599,7 @@ void populate_parameter_grid(App *app, GtkGrid *parameter_grid) {
     add_property(parameter_grid, "Row height", GTK_WIDGET(app->row_height), i++);
     add_property(parameter_grid, "Chapter width (mm)", GTK_WIDGET(app->chapter_width), i++);
     add_property(parameter_grid, "Font", GTK_WIDGET(app->fonts), i++);
+    add_property(parameter_grid, "Font style", GTK_WIDGET(app->font_style), i++);
     add_property(parameter_grid, "Alignment", GTK_WIDGET(app->justify), i++);
 
     add_property(parameter_grid, "Dash penalty", GTK_WIDGET(app->dash_penalty), i++);
@@ -643,6 +654,13 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_spin_button_set_value(app->single_split_word_penalty, 50);
 
     populate_fontlist(app);
+    app->font_style = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
+    gtk_combo_box_text_append_text(app->font_style, "Regular");
+    gtk_combo_box_text_append_text(app->font_style, "Italic");
+    gtk_combo_box_text_append_text(app->font_style, "Bold");
+    gtk_combo_box_text_append_text(app->font_style, "Bold italic");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(app->font_style), 0);
+
     app->draw = GTK_DRAWING_AREA(gtk_drawing_area_new());
     gtk_drawing_area_set_draw_func(app->draw, draw_function, app, nullptr);
     resize_canvas(app);

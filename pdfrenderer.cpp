@@ -23,7 +23,9 @@
 #include <textstats.hpp>
 #include <algorithm>
 
-static TextStats hack{"Gentium", 10};
+static TextStats hack{};
+static const FontParameters fp{"Gentium", 10, FontStyle::Regular};
+
 #include <sstream>
 
 namespace {
@@ -128,12 +130,12 @@ void PdfRenderer::draw_box(double x, double y, double w, double h) {
 void PdfRenderer::temp() {
     cairo_set_source_rgb(cr, 0, 0, 0);
 
-    printf("\n'space ship' %.2f\n", hack.text_width("space ship"));
-    printf("'space' %.2f\n", hack.text_width("space"));
-    printf("'space ' %.2f\n", hack.text_width("space "));
-    printf("'space ' + 'ship' %.2f\n", hack.text_width("space ") + hack.text_width("ship"));
+    printf("\n'space ship' %.2f\n", hack.text_width("space ship", fp));
+    printf("'space' %.2f\n", hack.text_width("space", fp));
+    printf("'space ' %.2f\n", hack.text_width("space ", fp));
+    printf("'space ' + 'ship' %.2f\n", hack.text_width("space ", fp) + hack.text_width("ship", fp));
     printf("'space' + ' '  + 'ship' %.2f\n",
-           hack.text_width("space") + hack.text_width(" ") + hack.text_width("ship"));
+           hack.text_width("space", fp) + hack.text_width(" ", fp) + hack.text_width("ship", fp));
     render_line_as_is("space ship", 300, 500);
 
     const char *line2 = "Persian saddle-bags on which he";
@@ -149,7 +151,7 @@ void PdfRenderer::temp() {
     draw_box(mm2pt(20), 411, double(ink.width) / PANGO_SCALE, 11);
     cairo_set_source_rgb(cr, 0.0, 1.0, 0.0);
     draw_box(mm2pt(20), 410, double(logical.width) / PANGO_SCALE, 13);
-    printf("Line 2:   %.2f\n", hack.text_width(line2));
+    printf("Line 2:   %.2f\n", hack.text_width(line2, fp));
     printf(" logical: %.2f\n", pt2mm(double(logical.width) / PANGO_SCALE));
     printf("     ink: %.2f\n", pt2mm(double(ink.width) / PANGO_SCALE));
 }
@@ -158,7 +160,7 @@ void PdfRenderer::render_line(const std::string &line_text, double x, double y) 
     assert(line_text.find('\n') == std::string::npos);
     const auto words = hack_split(line_text);
     const double target_width_pt = mm2pt(60.0);
-    double text_width_mm = hack.text_width(line_text.c_str());
+    double text_width_mm = hack.text_width(line_text.c_str(), fp);
     const double text_width_pt = mm2pt(text_width_mm);
     const double num_spaces = std::count(line_text.begin(), line_text.end(), ' ');
     const double space_extra_width =

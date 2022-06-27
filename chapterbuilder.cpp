@@ -46,11 +46,11 @@ double total_penalty(const std::vector<LineStats> &lines, double target_width) {
 
 std::vector<LinePenaltyStatistics> compute_line_penalties(const std::vector<std::string> &lines,
                                                           const ChapterParameters &par) {
-    TextStats shaper{par.font, par.fontsize};
+    TextStats shaper;
     std::vector<LinePenaltyStatistics> penalties;
     penalties.reserve(lines.size());
     for(const auto &line : lines) {
-        const double w = shaper.text_width(line);
+        const double w = shaper.text_width(line, par.font);
         const double delta = w - par.paragraph_width_mm;
         penalties.emplace_back(LinePenaltyStatistics{delta, pow(delta, 2)});
     }
@@ -132,7 +132,9 @@ ChapterBuilder::ChapterBuilder(const std::vector<HyphenatedWord> &words_,
 
 std::vector<std::string> ChapterBuilder::split_lines() {
     precompute();
-    TextStats shaper{params.font, params.fontsize};
+    TextStats shaper;
+    FontParameters font;
+    font.name = "Gentium";
     best_penalty = 1e100;
     best_split.clear();
     if(false) {
@@ -322,7 +324,7 @@ LineStats ChapterBuilder::get_line_end(size_t start_split, const TextStats &shap
     double final_width = -1000000.0;
     while(trial < split_points.size()) {
         const auto trial_line = build_line(start_split, trial);
-        const auto trial_width = shaper.text_width(trial_line);
+        const auto trial_width = shaper.text_width(trial_line, params.font);
         if(trial_width >= params.paragraph_width_mm) {
             if(abs(trial_width - params.paragraph_width_mm) >
                abs(previous_width - params.paragraph_width_mm)) {
@@ -352,7 +354,7 @@ std::vector<LineStats> ChapterBuilder::get_line_end_choices(size_t start_split,
     auto add_point = [&](size_t split_point) {
         const auto trial_split = split_point;
         const auto trial_line = build_line(start_split, trial_split);
-        const auto trial_width = shaper.text_width(trial_line);
+        const auto trial_width = shaper.text_width(trial_line, params.font);
         potentials.emplace_back(LineStats{trial_split, trial_width});
     };
 

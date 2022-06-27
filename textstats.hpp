@@ -16,23 +16,43 @@
 
 #pragma once
 
+#include <chaptercommon.hpp>
+
 #include <pango/pangocairo.h>
 #include <string>
 #include <unordered_map>
 
+struct StyledText {
+    std::string text;
+    FontParameters font;
+
+    bool operator==(const StyledText &o) const noexcept { return text == o.text && font == o.font; }
+};
+
+template<> struct std::hash<StyledText> {
+    std::size_t operator()(StyledText const &s) const noexcept {
+        auto h1 = std::hash<std::string>{}(s.text);
+        auto h2 = std::hash<FontParameters>{}(s.font);
+        return ((h1 * 13) + h2);
+    }
+};
+
 class TextStats {
 public:
-    TextStats(const std::string &font, int fontsize);
+    TextStats();
     ~TextStats();
 
-    double text_width(const char *utf8_text) const;
+    double text_width(const char *utf8_text, const FontParameters &font) const;
 
-    double text_width(const std::string &s) const { return text_width(s.c_str()); };
+    double text_width(const std::string &s, const FontParameters &font) const {
+        return text_width(s.c_str(), font);
+    };
 
 private:
+    void set_pango_state(const char *utf8_text, const FontParameters &font) const;
+
     cairo_t *cr;
     cairo_surface_t *surface;
     PangoLayout *layout;
-    PangoFontDescription *desc;
-    mutable std::unordered_map<std::string, double> widths;
+    mutable std::unordered_map<StyledText, double> widths;
 };
