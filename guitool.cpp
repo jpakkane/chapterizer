@@ -127,6 +127,9 @@ Outdents compute_outdents(const std::string &s, double point_size) {
         r.left = 0.15 * point_size;
         break;
 
+    case 'd':
+        r.left = 0.15 * point_size;
+
     case 'o':
     case 'O':
     case '0':
@@ -155,6 +158,9 @@ Outdents compute_outdents(const std::string &s, double point_size) {
     case ',':
         r.right = 0.15 * point_size;
         break;
+
+    case 'b':
+        r.right = 0.15 * point_size;
 
     case 'o':
     case 'O':
