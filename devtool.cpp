@@ -19,8 +19,7 @@
 #include <textstats.hpp>
 #include <cstdio>
 
-const char *text =
-    "From the corner of the divan of Persian saddle-bags on which he was lying, smoking, as";
+const char *text = "Lord Henry Wotton would just catch th";
 
 int main(int, char **) {
     TextStats s;
@@ -28,8 +27,6 @@ int main(int, char **) {
     p.name = "Gentium";
     p.point_size = 10;
     p.type = FontStyle::Regular;
-    printf("Regular width: %.2f\n", s.text_width(text, p));
-    p.type = FontStyle::Italic;
-    printf("Italic width: %.2f\n", s.text_width(text, p));
+    printf("%s\n%.2fmm\n", text, s.text_width(text, p));
     return 0;
 }

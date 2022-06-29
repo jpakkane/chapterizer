@@ -82,6 +82,7 @@ struct App {
     GtkSpinButton *ptsize;
     GtkSpinButton *row_height;
     GtkSpinButton *chapter_width;
+    GtkSpinButton *indent;
     GtkNotebook *note;
     GtkButton *store_text;
     GtkButton *reset;
@@ -228,6 +229,7 @@ ChapterParameters get_params(App *app) {
     par.font.type = (FontStyle)gtk_combo_box_get_active(GTK_COMBO_BOX(app->font_style));
     par.paragraph_width_mm = gtk_spin_button_get_value(app->chapter_width);
     par.line_height_pt = gtk_spin_button_get_value(app->row_height);
+    par.indent = gtk_spin_button_get_value(app->indent);
     return par;
 }
 
@@ -340,6 +342,11 @@ void chapter_width_changed(GtkSpinButton *, gpointer data) {
     resize_canvas(app);
 }
 
+void indent_changed(GtkSpinButton *, gpointer data) {
+    auto app = static_cast<App *>(data);
+    gtk_widget_queue_draw(GTK_WIDGET(app->draw));
+}
+
 void reset_text_cb(GtkButton *, gpointer data) {
     auto app = static_cast<App *>(data);
     gtk_text_buffer_set_text(app->buf(), app->default_text.c_str(), -1);
@@ -403,6 +410,8 @@ void connect_stuffs(App *app) {
                      "changed",
                      G_CALLBACK(chapter_width_changed),
                      static_cast<gpointer>(app));
+    g_signal_connect(
+        app->indent, "changed", G_CALLBACK(indent_changed), static_cast<gpointer>(app));
 
     g_signal_connect(
         app->dash_penalty, "changed", G_CALLBACK(penalty_changed), static_cast<gpointer>(app));
@@ -500,7 +509,7 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     const double zoom_ratio = gtk_spin_button_get_value(a->zoom);
     const double xoff = 10;
     const double yoff = 10;
-    const double parwid = zoom_ratio * mm2screenpt(gtk_spin_button_get_value(a->chapter_width));
+    const double parwid = zoom_ratio * mm2screenpt(cp.paragraph_width_mm);
     const double parhei = zoom_ratio * text.size() * cp.line_height_pt;
     cairo_set_line_width(cr, 1.0);
     cairo_rectangle(cr, xoff, yoff, parwid, parhei);
@@ -515,13 +524,14 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
         gdk_cairo_set_source_rgba(cr, &color);
         if(gtk_toggle_button_get_active(a->justify)) {
             for(size_t i = 0; i < text.size() - 1; ++i) {
+                double indent = i == 0 ? zoom_ratio * mm2screenpt(cp.indent) : 0;
                 render_line_justified(cr,
                                       layout,
                                       cp.font.point_size,
                                       text[i],
-                                      xoff / zoom_ratio,
+                                      (xoff + indent) / zoom_ratio,
                                       yoff / zoom_ratio + cp.line_height_pt * i,
-                                      parwid / zoom_ratio);
+                                      (parwid - indent) / zoom_ratio);
             }
             render_line_as_is(cr,
                               layout,
@@ -530,10 +540,11 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
                               yoff / zoom_ratio + cp.line_height_pt * (text.size() - 1));
         } else {
             for(size_t i = 0; i < text.size(); ++i) {
+                double indent = i == 0 ? zoom_ratio * mm2screenpt(cp.indent) : 0;
                 render_line_as_is(cr,
                                   layout,
                                   text[i],
-                                  xoff / zoom_ratio,
+                                  (xoff + indent) / zoom_ratio,
                                   yoff / zoom_ratio + cp.line_height_pt * i);
             }
         }
@@ -607,6 +618,7 @@ void populate_parameter_grid(App *app, GtkGrid *parameter_grid) {
     add_property(parameter_grid, "Font size", GTK_WIDGET(app->ptsize), i++);
     add_property(parameter_grid, "Row height", GTK_WIDGET(app->row_height), i++);
     add_property(parameter_grid, "Chapter width (mm)", GTK_WIDGET(app->chapter_width), i++);
+    add_property(parameter_grid, "Indent (mm)", GTK_WIDGET(app->indent), i++);
     add_property(parameter_grid, "Font", GTK_WIDGET(app->fonts), i++);
     add_property(parameter_grid, "Font style", GTK_WIDGET(app->font_style), i++);
     add_property(parameter_grid, "Alignment", GTK_WIDGET(app->justify), i++);
@@ -649,11 +661,13 @@ void activate(GtkApplication *, gpointer user_data) {
     app->ptsize = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(6.0, 18.0, 0.5));
     app->row_height = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(4.0, 20, 0.1));
     app->chapter_width = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(30, 100, 1));
+    app->indent = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(0, 20, 1));
     app->justify = GTK_TOGGLE_BUTTON(gtk_toggle_button_new_with_label("Justify"));
     gtk_spin_button_set_value(app->zoom, 2);
     gtk_spin_button_set_value(app->ptsize, 10.0);
     gtk_spin_button_set_value(app->row_height, 12.0);
     gtk_spin_button_set_value(app->chapter_width, 66);
+    gtk_spin_button_set_value(app->indent, 5);
 
     app->dash_penalty = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(0, 100, 1));
     app->single_word_penalty = GTK_SPIN_BUTTON(gtk_spin_button_new_with_range(0, 100, 1));

@@ -53,5 +53,6 @@ template<> struct std::hash<FontParameters> {
 struct ChapterParameters {
     double paragraph_width_mm;
     double line_height_pt;
+    double indent; // Of first line.
     FontParameters font;
 };

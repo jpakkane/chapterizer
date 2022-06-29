@@ -76,7 +76,7 @@ struct SplitStates {
 
     void clear() { best_to.clear(); }
 
-    bool abandon_search(const std::vector<LineStats> &new_splits, const double target_width);
+    bool abandon_search(const std::vector<LineStats> &new_splits, const ChapterParameters &params);
 };
 
 struct LinePenaltyStatistics {
@@ -104,8 +104,9 @@ public:
 private:
     void precompute();
     TextLocation point_to_location(const SplitPoint &p) const;
-    LineStats get_line_end(size_t start_split, const TextStats &shaper) const;
-    std::vector<LineStats> get_line_end_choices(size_t start_split, const TextStats &shaper) const;
+    LineStats get_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const;
+    std::vector<LineStats>
+    get_line_end_choices(size_t start_split, const TextStats &shaper, size_t line_num) const;
 
     std::vector<LineStats> simple_split(TextStats &shaper);
     std::vector<std::string> global_split(const TextStats &shaper);
@@ -113,6 +114,7 @@ private:
                                 std::vector<LineStats> &line_stats,
                                 size_t split_pos);
     std::vector<std::string> stats_to_lines(const std::vector<LineStats> &linestats) const;
+    double current_line_width(size_t line_num) const;
 
     std::string build_line(size_t from_split, size_t to_split) const;
     std::vector<HyphenatedWord> words;

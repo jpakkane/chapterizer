@@ -34,11 +34,13 @@ double line_penalty(const LineStats &line, double target_width) {
     return difference_penalty(line.text_width, target_width);
 }
 
-double total_penalty(const std::vector<LineStats> &lines, double target_width) {
+double total_penalty(const std::vector<LineStats> &lines, const ChapterParameters &params) {
     double total = 0;
     double last_line_penalty = 0;
+    double indent = params.indent;
     for(const auto &l : lines) {
-        last_line_penalty = line_penalty(l, target_width);
+        last_line_penalty = line_penalty(l, params.paragraph_width_mm - indent);
+        indent = 0;
         total += last_line_penalty;
     }
     return total - last_line_penalty;
@@ -49,9 +51,11 @@ std::vector<LinePenaltyStatistics> compute_line_penalties(const std::vector<std:
     TextStats shaper;
     std::vector<LinePenaltyStatistics> penalties;
     penalties.reserve(lines.size());
+    double indent = par.indent;
     for(const auto &line : lines) {
         const double w = shaper.text_width(line, par.font);
-        const double delta = w - par.paragraph_width_mm;
+        const double delta = w - (par.paragraph_width_mm - indent);
+        indent = 0;
         penalties.emplace_back(LinePenaltyStatistics{delta, pow(delta, 2)});
     }
     // The last line does not get a length penalty unless it is the only line.
@@ -133,13 +137,11 @@ ChapterBuilder::ChapterBuilder(const std::vector<HyphenatedWord> &words_,
 std::vector<std::string> ChapterBuilder::split_lines() {
     precompute();
     TextStats shaper;
-    FontParameters font;
-    font.name = "Gentium";
     best_penalty = 1e100;
     best_split.clear();
     if(false) {
         best_split = simple_split(shaper);
-        best_penalty = total_penalty(best_split, params.paragraph_width_mm);
+        best_penalty = total_penalty(best_split, params);
         return stats_to_lines(best_split);
     } else {
         return global_split(shaper);
@@ -151,11 +153,11 @@ std::vector<LineStats> ChapterBuilder::simple_split(TextStats &shaper) {
     std::vector<TextLocation> splits;
     size_t current_split = 0;
     while(current_split < split_points.size() - 1) {
-        auto line_end = get_line_end(current_split, shaper);
+        auto line_end = get_line_end(current_split, shaper, lines.size());
         lines.emplace_back(line_end);
         current_split = line_end.end_split;
     }
-    const auto total = total_penalty(lines, params.paragraph_width_mm);
+    const auto total = total_penalty(lines, params);
     printf("Total penalty: %.1f\n", total);
     return lines;
 }
@@ -169,6 +171,13 @@ ChapterBuilder::stats_to_lines(const std::vector<LineStats> &linestats) const {
         lines.emplace_back(build_line(linestats[i - 1].end_split, linestats[i].end_split));
     }
     return lines;
+}
+
+double ChapterBuilder::current_line_width(size_t line_num) const {
+    if(line_num == 0) {
+        return params.paragraph_width_mm - params.indent;
+    }
+    return params.paragraph_width_mm;
 }
 
 std::vector<std::string> ChapterBuilder::global_split(const TextStats &shaper) {
@@ -185,14 +194,14 @@ std::vector<std::string> ChapterBuilder::global_split(const TextStats &shaper) {
 void ChapterBuilder::global_split_recursive(const TextStats &shaper,
                                             std::vector<LineStats> &line_stats,
                                             size_t current_split) {
-    if(state_cache.abandon_search(line_stats, params.paragraph_width_mm)) {
+    if(state_cache.abandon_search(line_stats, params)) {
         return;
     }
-    auto line_end_choices = get_line_end_choices(current_split, shaper);
+    auto line_end_choices = get_line_end_choices(current_split, shaper, line_stats.size());
     if(line_end_choices.front().end_split == split_points.size() - 1) {
         // Text exhausted.
         line_stats.emplace_back(line_end_choices.front());
-        const auto current_penalty = total_penalty(line_stats, params.paragraph_width_mm);
+        const auto current_penalty = total_penalty(line_stats, params);
         // printf("Total penalty: %.1f\n", current_penalty);
         // FIXME: change to include extra penalties here.
         if(current_penalty < best_penalty) {
@@ -210,7 +219,6 @@ void ChapterBuilder::global_split_recursive(const TextStats &shaper,
             line_stats.pop_back();
         }
     }
-    // return lines;
 }
 
 void ChapterBuilder::precompute() {
@@ -317,17 +325,19 @@ TextLocation ChapterBuilder::point_to_location(const SplitPoint &p) const {
     }
 }
 
-LineStats ChapterBuilder::get_line_end(size_t start_split, const TextStats &shaper) const {
+LineStats
+ChapterBuilder::get_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const {
     assert(start_split < split_points.size() - 1);
     size_t trial = start_split + 2;
     double previous_width = -100.0;
     double final_width = -1000000.0;
+    double current_line_width_mm = current_line_width(line_num);
     while(trial < split_points.size()) {
         const auto trial_line = build_line(start_split, trial);
         const auto trial_width = shaper.text_width(trial_line, params.font);
-        if(trial_width >= params.paragraph_width_mm) {
-            if(abs(trial_width - params.paragraph_width_mm) >
-               abs(previous_width - params.paragraph_width_mm)) {
+        if(trial_width >= current_line_width_mm) {
+            if(abs(trial_width - current_line_width_mm) >
+               abs(previous_width - current_line_width_mm)) {
                 --trial;
                 final_width = previous_width;
             } else {
@@ -344,10 +354,11 @@ LineStats ChapterBuilder::get_line_end(size_t start_split, const TextStats &shap
 
 // Sorted by decreasing fitness.
 std::vector<LineStats> ChapterBuilder::get_line_end_choices(size_t start_split,
-                                                            const TextStats &shaper) const {
+                                                            const TextStats &shaper,
+                                                            size_t line_num) const {
     std::vector<LineStats> potentials;
     potentials.reserve(5);
-    auto tightest_split = get_line_end(start_split, shaper);
+    auto tightest_split = get_line_end(start_split, shaper, line_num);
     potentials.push_back(tightest_split);
 
     // Lambdas, yo!
@@ -376,8 +387,8 @@ std::vector<LineStats> ChapterBuilder::get_line_end_choices(size_t start_split,
 }
 
 bool SplitStates::abandon_search(const std::vector<LineStats> &new_splits,
-                                 const double target_width) {
-    const double new_penalty = total_penalty(new_splits, target_width);
+                                 const ChapterParameters &params) {
+    const double new_penalty = total_penalty(new_splits, params);
     const auto current_index = new_splits.size();
     auto &current_slot = best_to[current_index];
     if(current_slot.size() >= cache_size && current_slot.back().penalty < new_penalty) {
