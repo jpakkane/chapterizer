@@ -30,6 +30,8 @@ executable('fttest', 'fttest.cpp', dependencies: [ft_dep, cairo_dep])
 
 executable('pangotest', 'pangotest.cpp', dependencies: pangocairo_dep)
 
+executable('devtool', 'devtool.cpp', link_with: l, dependencies: pangocairo_dep)
+
 if gtk4_dep.found()
     executable('guitool', 'guitool.cpp',
       link_with: l,
