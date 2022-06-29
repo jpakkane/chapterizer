@@ -79,11 +79,6 @@ struct SplitStates {
     bool abandon_search(const std::vector<LineStats> &new_splits, const double target_width);
 };
 
-struct ChapterParameters {
-    double paragraph_width_mm;
-    FontParameters font;
-};
-
 struct LinePenaltyStatistics {
     double delta; // mm
     double penalty;

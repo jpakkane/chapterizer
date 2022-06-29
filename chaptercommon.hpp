@@ -49,3 +49,9 @@ template<> struct std::hash<FontParameters> {
         return ((h1 * 13) + h2) * 13 + h3;
     }
 };
+
+struct ChapterParameters {
+    double paragraph_width_mm;
+    double line_height_pt;
+    FontParameters font;
+};

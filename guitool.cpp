@@ -225,7 +225,9 @@ ChapterParameters get_params(App *app) {
     par.font.name = tmp;
     g_free(tmp);
     par.font.point_size = gtk_spin_button_get_value(app->ptsize);
+    par.font.type = (FontStyle)gtk_combo_box_get_active(GTK_COMBO_BOX(app->font_style));
     par.paragraph_width_mm = gtk_spin_button_get_value(app->chapter_width);
+    par.line_height_pt = gtk_spin_button_get_value(app->row_height);
     return par;
 }
 
@@ -470,24 +472,22 @@ void render_line_as_is(
 void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointer data) {
     App *a = static_cast<App *>(data);
     GdkRGBA color;
-    FontStyle style = (FontStyle)gtk_combo_box_get_active(GTK_COMBO_BOX(a->font_style));
+    ChapterParameters cp = get_params(a);
     auto text = get_entry_widget_text_lines(a);
-    const double point_size = gtk_spin_button_get_value(a->ptsize);
-    const double line_height = gtk_spin_button_get_value(a->row_height);
     auto *layout = pango_cairo_create_layout(cr);
     PangoFontDescription *desc =
         pango_font_description_from_string(gtk_combo_box_text_get_active_text(a->fonts));
-    if(style == FontStyle::Bold || style == FontStyle::BoldItalic) {
+    if(cp.font.type == FontStyle::Bold || cp.font.type == FontStyle::BoldItalic) {
         pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
     } else {
         pango_font_description_set_weight(desc, PANGO_WEIGHT_NORMAL);
     }
-    if(style == FontStyle::Italic || style == FontStyle::BoldItalic) {
+    if(cp.font.type == FontStyle::Italic || cp.font.type == FontStyle::BoldItalic) {
         pango_font_description_set_style(desc, PANGO_STYLE_ITALIC);
     } else {
         pango_font_description_set_style(desc, PANGO_STYLE_NORMAL);
     }
-    pango_font_description_set_absolute_size(desc, point_size * PANGO_SCALE);
+    pango_font_description_set_absolute_size(desc, cp.font.point_size * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
@@ -501,7 +501,7 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     const double xoff = 10;
     const double yoff = 10;
     const double parwid = zoom_ratio * mm2screenpt(gtk_spin_button_get_value(a->chapter_width));
-    const double parhei = zoom_ratio * text.size() * line_height;
+    const double parhei = zoom_ratio * text.size() * cp.line_height_pt;
     cairo_set_line_width(cr, 1.0);
     cairo_rectangle(cr, xoff, yoff, parwid, parhei);
     color.red = color.green = 0.0;
@@ -517,21 +517,24 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
             for(size_t i = 0; i < text.size() - 1; ++i) {
                 render_line_justified(cr,
                                       layout,
-                                      point_size,
+                                      cp.font.point_size,
                                       text[i],
                                       xoff / zoom_ratio,
-                                      yoff / zoom_ratio + line_height * i,
+                                      yoff / zoom_ratio + cp.line_height_pt * i,
                                       parwid / zoom_ratio);
             }
             render_line_as_is(cr,
                               layout,
                               text.back(),
                               xoff / zoom_ratio,
-                              yoff / zoom_ratio + line_height * (text.size() - 1));
+                              yoff / zoom_ratio + cp.line_height_pt * (text.size() - 1));
         } else {
             for(size_t i = 0; i < text.size(); ++i) {
-                render_line_as_is(
-                    cr, layout, text[i], xoff / zoom_ratio, yoff / zoom_ratio + line_height * i);
+                render_line_as_is(cr,
+                                  layout,
+                                  text[i],
+                                  xoff / zoom_ratio,
+                                  yoff / zoom_ratio + cp.line_height_pt * i);
             }
         }
     }
