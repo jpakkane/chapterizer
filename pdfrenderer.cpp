@@ -84,25 +84,30 @@ void PdfRenderer::render(const std::vector<std::string> &lines, const double tar
     const double left_box_origin_y = mm2pt(20);
     const double right_box_origin_x = mm2pt(20 + 10 + target_width_mm);
     const double right_box_origin_y = mm2pt(20);
+    FontParameters par;
+    par.name = "Gentium";
+    par.point_size = 10;
+    par.type = FontStyle::Regular;
 
     for(size_t i = 0; i < lines.size(); ++i) {
         if(i < lines.size() - 1) {
-            render_line_justified(
-                lines[i], left_box_origin_x, target_width_mm, left_box_origin_y + i * line_height);
+            render_line_justified(lines[i],
+                                  par,
+                                  left_box_origin_x,
+                                  target_width_mm,
+                                  left_box_origin_y + i * line_height);
         } else {
             render_line_as_is(
-                lines[i].c_str(), left_box_origin_x, left_box_origin_y + i * line_height);
+                lines[i].c_str(), par, left_box_origin_x, left_box_origin_y + i * line_height);
         }
         render_line_as_is(
-            lines[i].c_str(), right_box_origin_x, right_box_origin_y + i * line_height);
+            lines[i].c_str(), par, right_box_origin_x, right_box_origin_y + i * line_height);
     }
     cairo_set_source_rgb(cr, 0, 0, 1.0);
     cairo_set_line_width(cr, 0.5);
     const double box_height = line_height * lines.size();
     draw_box(left_box_origin_x, left_box_origin_y, target_width_pt, box_height);
     draw_box(right_box_origin_x, right_box_origin_y, target_width_pt, box_height);
-
-    temp();
 }
 
 void PdfRenderer::draw_grid() {
@@ -128,40 +133,13 @@ void PdfRenderer::draw_box(double x, double y, double w, double h) {
     cairo_stroke(cr);
 }
 
-void PdfRenderer::temp() {
-    cairo_set_source_rgb(cr, 0, 0, 0);
-
-    printf("\n'space ship' %.2f\n", hack.text_width("space ship", fp));
-    printf("'space' %.2f\n", hack.text_width("space", fp));
-    printf("'space ' %.2f\n", hack.text_width("space ", fp));
-    printf("'space ' + 'ship' %.2f\n", hack.text_width("space ", fp) + hack.text_width("ship", fp));
-    printf("'space' + ' '  + 'ship' %.2f\n",
-           hack.text_width("space", fp) + hack.text_width(" ", fp) + hack.text_width("ship", fp));
-    render_line_as_is("space ship", 300, 500);
-
-    const char *line2 = "Persian saddle-bags on which he";
-    PangoRectangle logical, ink;
-    cairo_move_to(cr, mm2pt(20), 411);
-    pango_layout_set_justify(layout, FALSE);
-    pango_layout_set_text(layout, line2, -1);
-    // pango_cairo_update_layout(cr, layout);
-    pango_layout_get_extents(layout, &ink, &logical);
-    pango_cairo_show_layout(cr, layout);
-    cairo_set_line_width(cr, 1 / 2.83);
-    cairo_set_source_rgb(cr, 1.0, 0.0, 0.0);
-    draw_box(mm2pt(20), 411, double(ink.width) / PANGO_SCALE, 11);
-    cairo_set_source_rgb(cr, 0.0, 1.0, 0.0);
-    draw_box(mm2pt(20), 410, double(logical.width) / PANGO_SCALE, 13);
-    printf("Line 2:   %.2f\n", hack.text_width(line2, fp));
-    printf(" logical: %.2f\n", pt2mm(double(logical.width) / PANGO_SCALE));
-    printf("     ink: %.2f\n", pt2mm(double(ink.width) / PANGO_SCALE));
-}
-
 void PdfRenderer::render_line_justified(const std::string &line_text,
+                                        const FontParameters &par,
                                         double line_width_mm,
                                         double x,
                                         double y) {
     assert(line_text.find('\n') == std::string::npos);
+    setup_pango(par);
     const auto words = hack_split(line_text);
     const double target_width_pt = mm2pt(line_width_mm);
     double text_width_mm = hack.text_width(line_text.c_str(), fp);
@@ -194,7 +172,28 @@ void PdfRenderer::render_line_justified(const std::string &line_text,
     }
 }
 
-void PdfRenderer::render_line_as_is(const char *line, double x, double y) {
+void PdfRenderer::setup_pango(const FontParameters &par) {
+    PangoFontDescription *desc = pango_font_description_from_string(par.name.c_str());
+    if(par.type == FontStyle::Bold || par.type == FontStyle::BoldItalic) {
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
+    } else {
+        pango_font_description_set_weight(desc, PANGO_WEIGHT_NORMAL);
+    }
+    if(par.type == FontStyle::Italic || par.type == FontStyle::BoldItalic) {
+        pango_font_description_set_style(desc, PANGO_STYLE_ITALIC);
+    } else {
+        pango_font_description_set_style(desc, PANGO_STYLE_NORMAL);
+    }
+    pango_font_description_set_absolute_size(desc, par.point_size * PANGO_SCALE);
+    pango_layout_set_font_description(layout, desc);
+    pango_font_description_free(desc);
+}
+
+void PdfRenderer::render_line_as_is(const char *line,
+                                    const FontParameters &par,
+                                    double x,
+                                    double y) {
+    setup_pango(par);
     cairo_move_to(cr, x, y);
     pango_layout_set_text(layout, line, -1);
     pango_cairo_update_layout(cr, layout);

@@ -20,6 +20,26 @@
 double mm2pt(const double x) { return x * 2.8346456693; }
 double pt2mm(const double x) { return x / 2.8346456693; }
 
+std::vector<std::string> split_to_lines(const std::string &in_text) {
+    std::vector<std::string> lines;
+    std::string val;
+    const char separator = '\n';
+    std::vector<std::string> words;
+    std::stringstream sstream(in_text);
+    while(std::getline(sstream, val, separator)) {
+        while(!val.empty() && val.back() == ' ') {
+            val.pop_back();
+        }
+        while(!val.empty() && val.front() == ' ') {
+            val.erase(val.begin());
+        }
+        if(!val.empty()) {
+            words.push_back(val);
+        }
+    }
+    return words;
+}
+
 std::vector<std::string> split_to_words(std::string_view in_text) {
     std::string text;
     text.reserve(in_text.size());
@@ -41,26 +61,6 @@ std::vector<std::string> split_to_words(std::string_view in_text) {
     std::vector<std::string> words;
     std::stringstream sstream(text);
     while(std::getline(sstream, val, separator)) {
-        if(!val.empty()) {
-            words.push_back(val);
-        }
-    }
-    return words;
-}
-
-std::vector<std::string> split_to_lines(const std::string &in_text) {
-    std::vector<std::string> lines;
-    std::string val;
-    const char separator = '\n';
-    std::vector<std::string> words;
-    std::stringstream sstream(in_text);
-    while(std::getline(sstream, val, separator)) {
-        while(!val.empty() && val.back() == ' ') {
-            val.pop_back();
-        }
-        while(!val.empty() && val.front() == ' ') {
-            val.erase(val.begin());
-        }
         if(!val.empty()) {
             words.push_back(val);
         }

@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <chaptercommon.hpp>
+
 #include <cairo.h>
 #include <pango/pangocairo.h>
 
@@ -29,16 +31,19 @@ public:
 
     void render(const std::vector<std::string> &lines, const double target_width_mm);
 
-    void render_line_justified(const std::string &text, double line_width_mm, double x, double y);
+    void render_line_justified(const std::string &text,
+                               const FontParameters &par,
+                               double line_width_mm,
+                               double x,
+                               double y);
+    void render_line_as_is(const char *line, const FontParameters &par, double x, double y);
 
     void new_page();
 
 private:
-    void temp();
-    void render_line_as_is(const char *line, double x, double y);
-
     void draw_box(double x, double y, double w, double h);
     void draw_grid();
+    void setup_pango(const FontParameters &par);
 
     cairo_t *cr;
     cairo_surface_t *surf;
