@@ -51,8 +51,8 @@ std::vector<std::string> hack_split(const std::string &in_text) {
 }
 } // namespace
 
-PdfRenderer::PdfRenderer(const char *ofname) {
-    surf = cairo_pdf_surface_create(ofname, 595, 842);
+PdfRenderer::PdfRenderer(const char *ofname, int pagew, int pageh) {
+    surf = cairo_pdf_surface_create(ofname, pagew, pageh);
     cr = cairo_create(surf);
     layout = pango_cairo_create_layout(cr);
     PangoFontDescription *desc;
@@ -87,7 +87,8 @@ void PdfRenderer::render(const std::vector<std::string> &lines, const double tar
 
     for(size_t i = 0; i < lines.size(); ++i) {
         if(i < lines.size() - 1) {
-            render_line(lines[i], left_box_origin_x, left_box_origin_y + i * line_height);
+            render_line_justified(
+                lines[i], left_box_origin_x, target_width_mm, left_box_origin_y + i * line_height);
         } else {
             render_line_as_is(
                 lines[i].c_str(), left_box_origin_x, left_box_origin_y + i * line_height);
@@ -156,10 +157,13 @@ void PdfRenderer::temp() {
     printf("     ink: %.2f\n", pt2mm(double(ink.width) / PANGO_SCALE));
 }
 
-void PdfRenderer::render_line(const std::string &line_text, double x, double y) {
+void PdfRenderer::render_line_justified(const std::string &line_text,
+                                        double line_width_mm,
+                                        double x,
+                                        double y) {
     assert(line_text.find('\n') == std::string::npos);
     const auto words = hack_split(line_text);
-    const double target_width_pt = mm2pt(60.0);
+    const double target_width_pt = mm2pt(line_width_mm);
     double text_width_mm = hack.text_width(line_text.c_str(), fp);
     const double text_width_pt = mm2pt(text_width_mm);
     const double num_spaces = std::count(line_text.begin(), line_text.end(), ' ');
@@ -196,3 +200,5 @@ void PdfRenderer::render_line_as_is(const char *line, double x, double y) {
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
 }
+
+void PdfRenderer::new_page() { cairo_surface_show_page(surf); }
