@@ -123,7 +123,7 @@ void render(const char *ofilename, std::vector<Chapter> &chapters) {
             if(line_num < lines.size() - 1) {
                 book.render_line_justified(line,
                                            chapter_par.font,
-                                           chapter_par.paragraph_width_mm,
+                                           chapter_par.paragraph_width_mm - current_indent,
                                            mm2pt(x + current_indent),
                                            mm2pt(y));
             } else {
