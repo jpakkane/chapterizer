@@ -16,19 +16,22 @@ int main(int argc, char **argv) {
     }
 
     //    std::vector<std::string> paragraphs;
+    int num_lines = 0;
     for(std::string line; std::getline(ifile, line);) {
+        ++num_lines;
         if(line.empty()) {
             continue;
         }
-        ustr = icu::UnicodeString::fromUTF8(line);
+        auto tmpstr = icu::UnicodeString::fromUTF8(line);
         if(ustr.isBogus()) {
             fprintf(stderr, "Fail.\n");
             return 1;
         }
-        if(ustr.length() > 40) {
-            break;
+        if(tmpstr.length() > ustr.length()) {
+            ustr = tmpstr;
         }
     }
+    printf("%d lines.\n", num_lines);
     // https://www.unicode.org/reports/tr15/
     UErrorCode status = U_ZERO_ERROR;
     auto *nrml = icu::Normalizer2::getNFCInstance(status);
