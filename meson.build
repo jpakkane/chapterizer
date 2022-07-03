@@ -7,6 +7,7 @@ cairo_dep = dependency('cairo')
 pangocairo_dep = dependency('pangocairo')
 gtk4_dep = dependency('gtk4', required: false, method: 'pkg-config')
 fc_dep = dependency('fontconfig')
+icu_dep = dependency('icu-i18n')
 
 add_project_arguments('-Wshadow', language: 'cpp')
 
@@ -39,3 +40,5 @@ if gtk4_dep.found()
       link_with: l,
       dependencies: [gtk4_dep])
 endif
+
+executable('icutest', 'icutest.cpp', dependencies: icu_dep)
