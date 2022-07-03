@@ -26,6 +26,8 @@ TextStats::TextStats() {
     assert(cr);
     cairo_move_to(cr, 72, 72);
     layout = pango_cairo_create_layout(cr);
+    PangoContext *context = pango_layout_get_context(layout);
+    pango_context_set_round_glyph_positions(context, FALSE);
 }
 
 TextStats::~TextStats() {

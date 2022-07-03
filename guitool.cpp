@@ -484,6 +484,8 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     ChapterParameters cp = get_params(a);
     auto text = get_entry_widget_text_lines(a);
     auto *layout = pango_cairo_create_layout(cr);
+    PangoContext *context = pango_layout_get_context(layout);
+    pango_context_set_round_glyph_positions(context, FALSE);
     PangoFontDescription *desc =
         pango_font_description_from_string(gtk_combo_box_text_get_active_text(a->fonts));
     if(cp.font.type == FontStyle::Bold || cp.font.type == FontStyle::BoldItalic) {

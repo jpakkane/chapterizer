@@ -55,6 +55,8 @@ PdfRenderer::PdfRenderer(const char *ofname, int pagew, int pageh) {
     surf = cairo_pdf_surface_create(ofname, pagew, pageh);
     cr = cairo_create(surf);
     layout = pango_cairo_create_layout(cr);
+    PangoContext *context = pango_layout_get_context(layout);
+    pango_context_set_round_glyph_positions(context, FALSE);
     PangoFontDescription *desc;
     desc = pango_font_description_from_string("Gentium");
     assert(desc);
