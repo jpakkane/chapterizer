@@ -1,6 +1,7 @@
 #include <unicode/unistr.h>
 #include <unicode/search.h>
 #include <unicode/regex.h>
+#include <unicode/normalizer2.h>
 
 #include <fstream>
 #include <vector>
@@ -28,23 +29,37 @@ int main(int argc, char **argv) {
             break;
         }
     }
-    //  icu::Locale lang = icu::Locale::getUS();
+    // https://www.unicode.org/reports/tr15/
     UErrorCode status = U_ZERO_ERROR;
+    auto *nrml = icu::Normalizer2::getNFCInstance(status);
+    if(U_FAILURE(status)) {
+        fprintf(stderr, "Fail %d.\n\n%s\n", status, u_errorName(status));
+        return 1;
+    };
+    auto normalized = nrml->normalize(ustr, status);
+    if(U_FAILURE(status)) {
+        fprintf(stderr, "Fail %d.\n\n%s\n", status, u_errorName(status));
+        return 1;
+    };
+    ustr = normalized;
+
+    //  icu::Locale lang = icu::Locale::getUS();
+    status = U_ZERO_ERROR;
     //    icu::BreakIterator *word_breaker = icu::BreakIterator::createWordInstance(lang, status);
-    if(status != U_ZERO_ERROR && status != U_USING_DEFAULT_WARNING) {
+    if(U_FAILURE(status)) {
         fprintf(stderr, "Fail %d.\n\n%s\n", status, u_errorName(status));
         return 1;
     };
     status = U_ZERO_ERROR;
     icu::RegexMatcher matcher("\\s+", 0, status);
-    if(status != U_ZERO_ERROR) {
+    if(U_FAILURE(status)) {
         fprintf(stderr, "Fail %d.\n\n%s\n", status, u_errorName(status));
         return 1;
     }
     const int max_words = 100;
     icu::UnicodeString buf[max_words];
     int num_matches = matcher.split(ustr, buf, max_words, status);
-    if(status != U_ZERO_ERROR) {
+    if(U_FAILURE(status)) {
         fprintf(stderr, "Fail %d.\n\n%s\n", status, u_errorName(status));
         return 1;
     }
