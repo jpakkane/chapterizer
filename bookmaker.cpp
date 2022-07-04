@@ -4,6 +4,7 @@
 #include <chapterbuilder.hpp>
 #include <wordhyphenator.hpp>
 
+#include <glib.h>
 #include <cassert>
 #include <fstream>
 
@@ -44,6 +45,13 @@ std::vector<Chapter> load_text(const char *fname) {
             }
             continue;
         }
+        if(!g_utf8_validate(line.c_str(), line.length(), nullptr)) {
+            printf("Line %d not valid UTF-8.\n", num_lines);
+            exit(1);
+        }
+        gchar *normalized_text = g_utf8_normalize(line.c_str(), line.length(), G_NORMALIZE_NFC);
+        line = normalized_text;
+        g_free(normalized_text);
         if(!reading_title) {
             if(looks_like_title(line)) {
                 reading_title = true;
