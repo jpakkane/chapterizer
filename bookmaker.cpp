@@ -103,9 +103,6 @@ void render(const char *ofilename, std::vector<Chapter> &chapters) {
     const double indent = 5;
     WordHyphenator hyphen;
     int current_page = 1;
-    while(chapters[0].paragraphs.size() > 1) {
-        chapters[0].paragraphs.pop_back();
-    }
     for(const auto &p : c.paragraphs) {
         auto plain_words = split_to_words(std::string_view(p));
         auto hyphenated_words = hyphen.hyphenate(plain_words);

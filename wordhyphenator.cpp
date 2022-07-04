@@ -15,6 +15,7 @@
  */
 
 #include "wordhyphenator.hpp"
+
 #include <cassert>
 #include <cctype>
 
@@ -65,6 +66,12 @@ HyphenatedWord WordHyphenator::build_hyphenation_data(const std::string &word,
     result.word = word;
     size_t previous_point = 0;
     for(size_t i = 0; i < word.size(); ++i) {
+        if(hyphens[i] == char(-1)) {
+            // The hyphenator library's output is a bit weird.
+            // When we reach an item it has not touched (i.e. is still 255)
+            // exit out.
+            break;
+        }
         if(hyphens[i] & 1 || i == word.size() - 1) {
             auto dash_point = word.find('-', previous_point);
             while(dash_point != std::string::npos) {
@@ -92,6 +99,12 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
     // Attached punctuation, quotes, capital letters etc break it.
     // For words like spatio-temporal it splits the individual words but not the hyphen.
     const auto trips = tripartite(word);
+    if(trips.core.empty()) {
+        // Non-word such as a number or other weird character combinations.
+        // FIXME to add dashelss hyphenation points for things like
+        // 1,000,000.
+        return HyphenatedWord{{}, word};
+    }
     const auto lw = lowerword(trips.core);
     // printf("X %s\n", lw.c_str());
     const auto rc = hnj_hyphen_hyphenate2(
@@ -99,6 +112,8 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
     assert(rc == 0);
 
     auto result = build_hyphenation_data(word, hyphens, trips.prefix.length());
+
+    result.sanity_check();
 
     free(rep);
     free(pos);
@@ -113,4 +128,26 @@ std::vector<HyphenatedWord> WordHyphenator::hyphenate(const std::vector<std::str
         hyphs.emplace_back(hyphenate(w));
     }
     return hyphs;
+}
+
+std::string HyphenatedWord::get_visual_string() const {
+    std::string dashed_word;
+    dashed_word.reserve(word.size() + hyphen_points.size());
+    size_t hyphen_index = 0;
+    for(size_t i = 0; i < word.size(); ++i) {
+        dashed_word += word[i];
+        if(hyphen_index < hyphen_points.size() && i == hyphen_points[hyphen_index].loc) {
+            if(hyphen_points[hyphen_index].type == SplitType::Regular) {
+                dashed_word += '-';
+            }
+            ++hyphen_index;
+        }
+    }
+    return dashed_word;
+}
+
+void HyphenatedWord::sanity_check() const {
+    for(const auto &h : hyphen_points) {
+        assert(h.loc < word.length());
+    }
 }
