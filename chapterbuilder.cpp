@@ -23,6 +23,11 @@
 
 namespace {
 
+int next_char_utf8_length(const char *src) {
+    gunichar c = g_utf8_get_char(src);
+    return g_unichar_to_utf8(c, nullptr);
+}
+
 double difference_penalty(double actual_width, double target_width) {
     // assert(actual_width >= 0);
     assert(target_width > 0);

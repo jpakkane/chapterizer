@@ -140,7 +140,7 @@ void hyphenate_and_append(std::string &reconstructed_word,
     hyphen_points.insert(hyphen_points.cend(), subhyphens.begin(), subhyphens.end());
     reconstructed_word += word;
     if(separator) {
-        char buf[5] = {0, 0, 0, 0, 0};
+        char buf[7] = {0, 0, 0, 0, 0, 0, 0};
         g_unichar_to_utf8(*separator, buf);
         reconstructed_word += buf;
         hyphen_points.emplace_back(HyphenPoint{reconstructed_word.size() - 1, SplitType::NoHyphen});
