@@ -42,3 +42,5 @@ if gtk4_dep.found()
 endif
 
 executable('icutest', 'icutest.cpp', dependencies: icu_dep)
+
+executable('tests', 'tests.cpp', link_with: [l])

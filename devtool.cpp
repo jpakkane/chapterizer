@@ -19,7 +19,7 @@
 #include <textstats.hpp>
 #include <cstdio>
 
-const char *text = "Lord Henry Wotton would just catch th";
+const char *text = "us—more"; // Note: has an em-dash.
 
 int main(int, char **) {
     TextStats s;

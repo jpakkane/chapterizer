@@ -118,6 +118,7 @@ void render(const char *ofilename, std::vector<Chapter> &chapters) {
         auto lines = b.split_lines();
         size_t line_num = 0;
         for(const auto &line : lines) {
+            assert(g_utf8_validate(line.c_str(), -1, nullptr));
             double current_indent = line_num == 0 ? chapter_par.indent : 0;
             if(y >= bottom_watermark) {
                 book.new_page();

@@ -29,6 +29,8 @@ enum class SplitType : int {
 struct HyphenPoint {
     size_t loc;
     SplitType type;
+
+    bool operator==(const HyphenPoint &o) const { return loc == o.loc && type == o.type; }
 };
 
 struct HyphenatedWord {
@@ -49,8 +51,5 @@ public:
     std::vector<HyphenatedWord> hyphenate(const std::vector<std::string> &words) const;
 
 private:
-    HyphenatedWord build_hyphenation_data(const std::string &word,
-                                          const std::vector<char> &hyphens,
-                                          size_t prefix_length) const;
     HyphenDict *dict;
 };

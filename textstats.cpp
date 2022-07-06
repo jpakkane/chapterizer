@@ -51,6 +51,7 @@ void TextStats::set_pango_state(const char *utf8_text, const FontParameters &fon
         pango_font_description_set_style(desc, PANGO_STYLE_NORMAL);
     }
     pango_layout_set_font_description(layout, desc);
+    assert(g_utf8_validate(utf8_text, -1, nullptr));
     pango_layout_set_text(layout, utf8_text, -1);
     pango_font_description_free(desc);
 }

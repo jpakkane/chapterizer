@@ -15,7 +15,11 @@
  */
 
 #include "wordhyphenator.hpp"
+#include <array>
+#include <memory>
+#include <optional>
 
+#include <glib.h>
 #include <cassert>
 #include <cctype>
 
@@ -26,6 +30,47 @@ struct WordPieces {
 };
 
 namespace {
+
+const std::array<uint32_t, 4> dash_codepoints{0x2d, 0x2012, 0x2014, 0x2212};
+
+struct DashSplit {
+    std::vector<std::string> words;
+    std::vector<uint32_t> separators;
+};
+
+bool is_dashlike(uint32_t uchar) {
+    for(const auto c : dash_codepoints) {
+        if(c == uchar) {
+            return true;
+        }
+    }
+    return false;
+}
+
+DashSplit split_at_dashes(const std::string &word) {
+    DashSplit splits;
+    std::unique_ptr<char[]> bufd{new char[word.size() + 10]};
+    char *buf = bufd.get();
+    int chars_in_buf = 0;
+    const char *in = word.c_str();
+    while(*in) {
+        auto c = g_utf8_get_char(in);
+        if(is_dashlike(c)) {
+            buf[chars_in_buf] = '\0';
+            splits.words.emplace_back(buf);
+            chars_in_buf = 0;
+            splits.separators.push_back(c);
+        } else {
+            chars_in_buf += g_unichar_to_utf8(c, buf + chars_in_buf);
+        }
+        in = g_utf8_next_char(in);
+    }
+    assert(splits.words.size() == splits.separators.size());
+    assert(chars_in_buf > 0); // Words ending in dashes are not supported yet. :)
+    buf[chars_in_buf] = '\0';
+    splits.words.emplace_back(buf);
+    return splits;
+}
 
 std::string lowerword(const std::string &w) {
     std::string lw;
@@ -47,8 +92,60 @@ WordPieces tripartite(const std::string &word) {
     const auto p2 = word.find_last_of(letterview);
     assert(p2 != std::string::npos);
 
-    return WordPieces{word.substr(0, p1), word.substr(p1, p2 + 1), word.substr(p2 + 1)};
+    return WordPieces{word.substr(0, p1), word.substr(p1, p2 - p1 + 1), word.substr(p2 + 1)};
 };
+
+std::vector<HyphenPoint> build_hyphenation_data(const std::string &word,
+                                                const std::vector<char> &hyphens,
+                                                size_t prefix_length) {
+    std::vector<HyphenPoint> hyphen_points;
+    for(size_t i = 0; i < word.size(); ++i) {
+        if(hyphens[i] == char(-1)) {
+            // The hyphenator library's output is a bit weird.
+            // When we reach an item it has not touched (i.e. is still 255)
+            // exit out.
+            break;
+        }
+        if(hyphens[i] & 1) {
+            hyphen_points.emplace_back(HyphenPoint{i + prefix_length, SplitType::Regular});
+        }
+    }
+    return hyphen_points;
+}
+
+void hyphenate_and_append(std::string &reconstructed_word,
+                          std::vector<HyphenPoint> &hyphen_points,
+                          const std::string &word,
+                          std::optional<uint32_t> separator,
+                          HyphenDict *dict) {
+    std::string lowercase_word = lowerword(word);
+    std::vector<char> output(word.size() * 2 + 1, '\0');
+    std::vector<char> hyphens(word.size() + 5, (char)-1);
+    char **rep = nullptr;
+    int *pos = nullptr;
+    int *cut = nullptr;
+    const auto rc = hnj_hyphen_hyphenate2(dict,
+                                          lowercase_word.c_str(),
+                                          (int)lowercase_word.size(),
+                                          hyphens.data(),
+                                          output.data(),
+                                          &rep,
+                                          &pos,
+                                          &cut);
+    assert(rc == 0);
+    auto subhyphens = build_hyphenation_data(word, hyphens, reconstructed_word.length());
+    free(rep);
+    free(pos);
+    free(cut);
+    hyphen_points.insert(hyphen_points.cend(), subhyphens.begin(), subhyphens.end());
+    reconstructed_word += word;
+    if(separator) {
+        char buf[5] = {0, 0, 0, 0, 0};
+        g_unichar_to_utf8(*separator, buf);
+        reconstructed_word += buf;
+        hyphen_points.emplace_back(HyphenPoint{reconstructed_word.size() - 1, SplitType::NoHyphen});
+    }
+}
 
 } // namespace
 
@@ -59,42 +156,11 @@ WordHyphenator::WordHyphenator() {
 
 WordHyphenator::~WordHyphenator() { hnj_hyphen_free(dict); }
 
-HyphenatedWord WordHyphenator::build_hyphenation_data(const std::string &word,
-                                                      const std::vector<char> &hyphens,
-                                                      size_t prefix_length) const {
-    HyphenatedWord result;
-    result.word = word;
-    size_t previous_point = 0;
-    for(size_t i = 0; i < word.size(); ++i) {
-        if(hyphens[i] == char(-1)) {
-            // The hyphenator library's output is a bit weird.
-            // When we reach an item it has not touched (i.e. is still 255)
-            // exit out.
-            break;
-        }
-        if(hyphens[i] & 1 || i == word.size() - 1) {
-            auto dash_point = word.find('-', previous_point);
-            while(dash_point != std::string::npos) {
-                result.hyphen_points.emplace_back(
-                    HyphenPoint{dash_point + prefix_length, SplitType::NoHyphen});
-                dash_point = word.find('-', dash_point + 1);
-            }
-            previous_point = dash_point;
-        }
-        if(hyphens[i] & 1) {
-            result.hyphen_points.emplace_back(HyphenPoint{i + prefix_length, SplitType::Regular});
-        }
-    }
-    return result;
-}
-
 HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
     assert(word.find(' ') == std::string::npos);
-    std::vector<char> output(word.size() * 2 + 1, '\0');
-    char **rep = nullptr;
-    int *pos = nullptr;
-    int *cut = nullptr;
-    std::vector<char> hyphens(word.size() + 5, (char)-1);
+    HyphenatedWord result;
+    std::string reconstructed_word;
+    reconstructed_word.reserve(word.size());
     // The hyphenation function only deals with lower case single words.
     // Attached punctuation, quotes, capital letters etc break it.
     // For words like spatio-temporal it splits the individual words but not the hyphen.
@@ -105,19 +171,22 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
         // 1,000,000.
         return HyphenatedWord{{}, word};
     }
-    const auto lw = lowerword(trips.core);
-    // printf("X %s\n", lw.c_str());
-    const auto rc = hnj_hyphen_hyphenate2(
-        dict, lw.c_str(), (int)lw.size(), hyphens.data(), output.data(), &rep, &pos, &cut);
-    assert(rc == 0);
-
-    auto result = build_hyphenation_data(word, hyphens, trips.prefix.length());
-
+    const auto subwords = split_at_dashes(trips.core);
+    assert(subwords.words.size() == subwords.separators.size() + 1);
+    reconstructed_word = trips.prefix;
+    for(size_t ind = 0; ind < subwords.words.size(); ++ind) {
+        hyphenate_and_append(reconstructed_word,
+                             result.hyphen_points,
+                             subwords.words[ind],
+                             ind < subwords.separators.size()
+                                 ? std::optional<uint32_t>{subwords.separators[ind]}
+                                 : std::optional<uint32_t>{},
+                             dict);
+    }
+    reconstructed_word += trips.suffix;
+    assert(reconstructed_word == word);
+    result.word = word;
     result.sanity_check();
-
-    free(rep);
-    free(pos);
-    free(cut);
     return result;
 }
 
@@ -137,9 +206,7 @@ std::string HyphenatedWord::get_visual_string() const {
     for(size_t i = 0; i < word.size(); ++i) {
         dashed_word += word[i];
         if(hyphen_index < hyphen_points.size() && i == hyphen_points[hyphen_index].loc) {
-            if(hyphen_points[hyphen_index].type == SplitType::Regular) {
-                dashed_word += '-';
-            }
+            dashed_word += "⬧";
             ++hyphen_index;
         }
     }
