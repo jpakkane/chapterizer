@@ -151,6 +151,9 @@ void hyphenate_and_append(std::string &reconstructed_word,
 
 WordHyphenator::WordHyphenator() {
     dict = hnj_hyphen_load("/usr/share/hyphen/hyph_en.dic");
+    if(!dict) {
+        dict = hnj_hyphen_load("/usr/share/hyphen/hyph_en_US.dic");
+    }
     assert(dict);
 }
 
