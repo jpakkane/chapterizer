@@ -14,7 +14,7 @@ add_project_arguments('-Wshadow', language: 'cpp')
 
 l = static_library('chap',
     'wordhyphenator.cpp',
-    'chapterbuilder.cpp',
+    'paragraphformatter.cpp',
     'textstats.cpp',
     'pdfrenderer.cpp',
     'utils.cpp',

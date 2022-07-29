@@ -15,7 +15,7 @@
  */
 
 #include <wordhyphenator.hpp>
-#include <chapterbuilder.hpp>
+#include <paragraphformatter.hpp>
 #include <pdfrenderer.hpp>
 #include <utils.hpp>
 #include <cstdio>
@@ -231,7 +231,7 @@ template<typename T1> void full_test(const T1 &hyphenated_words) {
     params.font.point_size = 10;
     params.font.type = FontStyle::Regular;
     ExtraPenaltyAmounts extras;
-    ChapterBuilder spl{hyphenated_words, params, extras};
+    ParagraphFormatter spl{hyphenated_words, params, extras};
     const auto lines = spl.split_lines();
 
     for(const auto &line : lines) {

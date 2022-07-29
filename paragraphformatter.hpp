@@ -98,9 +98,9 @@ PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
                                 const ChapterParameters &par,
                                 const ExtraPenaltyAmounts &amounts);
 
-class ChapterBuilder {
+class ParagraphFormatter {
 public:
-    ChapterBuilder(const std::vector<HyphenatedWord> &words,
+    ParagraphFormatter(const std::vector<HyphenatedWord> &words,
                    const ChapterParameters &in_params,
                    const ExtraPenaltyAmounts &ea);
 

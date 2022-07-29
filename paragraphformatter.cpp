@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "chapterbuilder.hpp"
+#include "paragraphformatter.hpp"
 #include <textstats.hpp>
 #include <algorithm>
 #include <numeric>
@@ -156,12 +156,12 @@ PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
                              compute_extra_penalties(lines, amounts)};
 }
 
-ChapterBuilder::ChapterBuilder(const std::vector<HyphenatedWord> &words_,
+ParagraphFormatter::ParagraphFormatter(const std::vector<HyphenatedWord> &words_,
                                const ChapterParameters &in_params,
                                const ExtraPenaltyAmounts &ea)
     : words{words_}, params{in_params}, extras(ea) {}
 
-std::vector<std::string> ChapterBuilder::split_lines() {
+std::vector<std::string> ParagraphFormatter::split_lines() {
     precompute();
     TextStats shaper;
     best_penalty = 1e100;
@@ -175,7 +175,7 @@ std::vector<std::string> ChapterBuilder::split_lines() {
     }
 }
 
-std::vector<LineStats> ChapterBuilder::simple_split(TextStats &shaper) {
+std::vector<LineStats> ParagraphFormatter::simple_split(TextStats &shaper) {
     std::vector<LineStats> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
@@ -190,7 +190,7 @@ std::vector<LineStats> ChapterBuilder::simple_split(TextStats &shaper) {
 }
 
 std::vector<std::string>
-ChapterBuilder::stats_to_lines(const std::vector<LineStats> &linestats) const {
+ParagraphFormatter::stats_to_lines(const std::vector<LineStats> &linestats) const {
     std::vector<std::string> lines;
     lines.reserve(linestats.size());
     lines.emplace_back(build_line(0, linestats[0].end_split));
@@ -200,14 +200,14 @@ ChapterBuilder::stats_to_lines(const std::vector<LineStats> &linestats) const {
     return lines;
 }
 
-double ChapterBuilder::current_line_width(size_t line_num) const {
+double ParagraphFormatter::current_line_width(size_t line_num) const {
     if(line_num == 0) {
         return params.paragraph_width_mm - params.indent;
     }
     return params.paragraph_width_mm;
 }
 
-std::vector<std::string> ChapterBuilder::global_split(const TextStats &shaper) {
+std::vector<std::string> ParagraphFormatter::global_split(const TextStats &shaper) {
     std::vector<std::string> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
@@ -218,7 +218,7 @@ std::vector<std::string> ChapterBuilder::global_split(const TextStats &shaper) {
     return stats_to_lines(best_split);
 }
 
-void ChapterBuilder::global_split_recursive(const TextStats &shaper,
+void ParagraphFormatter::global_split_recursive(const TextStats &shaper,
                                             std::vector<LineStats> &line_stats,
                                             size_t current_split) {
     if(state_cache.abandon_search(line_stats, params, extras)) {
@@ -248,7 +248,7 @@ void ChapterBuilder::global_split_recursive(const TextStats &shaper,
     }
 }
 
-void ChapterBuilder::precompute() {
+void ParagraphFormatter::precompute() {
     split_points.clear();
     split_points.reserve(words.size() * 3);
     for(size_t word_index = 0; word_index < words.size(); ++word_index) {
@@ -274,7 +274,7 @@ void ChapterBuilder::precompute() {
     }
 }
 
-std::string ChapterBuilder::build_line(size_t from_split_ind, size_t to_split_ind) const {
+std::string ParagraphFormatter::build_line(size_t from_split_ind, size_t to_split_ind) const {
     assert(to_split_ind >= from_split_ind);
     std::string line;
     if(to_split_ind == from_split_ind) {
@@ -355,7 +355,7 @@ std::string ChapterBuilder::build_line(size_t from_split_ind, size_t to_split_in
     return line;
 }
 
-TextLocation ChapterBuilder::point_to_location(const SplitPoint &p) const {
+TextLocation ParagraphFormatter::point_to_location(const SplitPoint &p) const {
     if(std::holds_alternative<BetweenWordSplit>(p)) {
         const auto &r = std::get<BetweenWordSplit>(p);
         return TextLocation{r.word_index, 0};
@@ -368,7 +368,7 @@ TextLocation ChapterBuilder::point_to_location(const SplitPoint &p) const {
 }
 
 LineStats
-ChapterBuilder::get_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const {
+ParagraphFormatter::get_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const {
     assert(start_split < split_points.size() - 1);
     size_t trial = start_split + 2;
     double previous_width = -100.0;
@@ -399,7 +399,7 @@ ChapterBuilder::get_line_end(size_t start_split, const TextStats &shaper, size_t
 }
 
 // Sorted by decreasing fitness.
-std::vector<LineStats> ChapterBuilder::get_line_end_choices(size_t start_split,
+std::vector<LineStats> ParagraphFormatter::get_line_end_choices(size_t start_split,
                                                             const TextStats &shaper,
                                                             size_t line_num) const {
     std::vector<LineStats> potentials;

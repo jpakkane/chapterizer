@@ -15,7 +15,7 @@
  */
 
 #include <utils.hpp>
-#include <chapterbuilder.hpp>
+#include <paragraphformatter.hpp>
 #include <gtk/gtk.h>
 #include <vector>
 #include <string>
@@ -370,7 +370,7 @@ void run_optimization_cb(GtkButton *, gpointer data) {
     ExtraPenaltyAmounts extras = get_penalties(app);
     auto words = get_entry_widget_text_words(app);
     auto hyphenated_words = hyp.hyphenate(words);
-    ChapterBuilder builder{hyphenated_words, params, extras};
+    ParagraphFormatter builder{hyphenated_words, params, extras};
     auto new_lines = builder.split_lines();
     std::string collator;
     for(const auto &l : new_lines) {
