@@ -289,7 +289,7 @@ std::string ChapterBuilder::build_line(size_t from_split_ind, size_t to_split_in
     const bool pathological_single_word = from_loc.word_index == to_loc.word_index;
     if(pathological_single_word) {
         const auto &bad_word = words[from_loc.word_index].word;
-        line = bad_word.substr(from_loc.offset, to_loc.offset - from_loc.offset + 1);
+        line = bad_word.substr(from_loc.offset + 1, to_loc.offset - from_loc.offset);
         if(std::holds_alternative<WithinWordSplit>(to_split)) {
             const auto &source_loc = std::get<WithinWordSplit>(to_split);
             if(words[source_loc.word_index].hyphen_points[source_loc.hyphen_index].type ==
@@ -297,8 +297,10 @@ std::string ChapterBuilder::build_line(size_t from_split_ind, size_t to_split_in
                 line += '-';
             }
         }
+        assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
         return line;
     }
+    assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
 
     // First word.
     if(std::holds_alternative<BetweenWordSplit>(from_split)) {
@@ -308,6 +310,7 @@ std::string ChapterBuilder::build_line(size_t from_split_ind, size_t to_split_in
         const auto sv = std::string_view(word_to_split.word);
         line = sv.substr(from_loc.offset + 1);
     }
+    assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
 
     if(from_loc.word_index == to_loc.word_index) {
         // Pathological case, one word spans the entire line.
@@ -321,6 +324,7 @@ std::string ChapterBuilder::build_line(size_t from_split_ind, size_t to_split_in
             ++current_word_index;
         }
     }
+    assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
 
     // Final word.
     if(std::holds_alternative<BetweenWordSplit>(to_split)) {
@@ -336,6 +340,7 @@ std::string ChapterBuilder::build_line(size_t from_split_ind, size_t to_split_in
             line += '-';
         }
     }
+    assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
 
     return line;
 }

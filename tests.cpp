@@ -1,4 +1,5 @@
 #include <wordhyphenator.hpp>
+#include <glib.h>
 
 #define CHECK(cond)                                                                                \
     if(!(cond)) {                                                                                  \
@@ -47,12 +48,27 @@ void test_hyphenation_underscore() {
     CHECK(w.hyphen_points.front() == expected);
 }
 
+void test_utf8_splitting() {
+    WordHyphenator h;
+    const std::string text{"emerge—possibly"};
+    HyphenatedWord w = h.hyphenate(text); // Note: has an em-dash.
+    for(size_t i = 0; i < w.hyphen_points.size(); ++i) {
+        auto sub = text.substr(0, w.hyphen_points[i].loc + 1);
+        CHECK(g_utf8_validate(sub.c_str(), -1, nullptr));
+    }
+    for(size_t i = 0; i < w.hyphen_points.size(); ++i) {
+        auto sub = text.substr(w.hyphen_points[i].loc + 1);
+        CHECK(g_utf8_validate(sub.c_str(), -1, nullptr));
+    }
+}
+
 void test_hyphenation() {
     test_hyphenation_simple();
     test_hyphenation_dash();
     test_hyphenation_emdash();
     test_hyphenation_prefix();
     test_hyphenation_underscore();
+    test_utf8_splitting();
 }
 
 int main(int, char **) {
