@@ -101,15 +101,19 @@ PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
 class ParagraphFormatter {
 public:
     ParagraphFormatter(const std::vector<HyphenatedWord> &words,
-                   const ChapterParameters &in_params,
-                   const ExtraPenaltyAmounts &ea);
+                       const ChapterParameters &in_params,
+                       const ExtraPenaltyAmounts &ea);
 
     std::vector<std::string> split_lines();
 
 private:
     void precompute();
     TextLocation point_to_location(const SplitPoint &p) const;
-    LineStats get_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const;
+    LineStats
+    get_closest_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const;
+    LineStats
+    compute_closest_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const;
+
     std::vector<LineStats>
     get_line_end_choices(size_t start_split, const TextStats &shaper, size_t line_num) const;
 
@@ -133,4 +137,6 @@ private:
     SplitStates state_cache;
     ChapterParameters params;
     ExtraPenaltyAmounts extras;
+
+    mutable std::unordered_map<size_t, LineStats> closest_line_ends;
 };

@@ -157,8 +157,8 @@ PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
 }
 
 ParagraphFormatter::ParagraphFormatter(const std::vector<HyphenatedWord> &words_,
-                               const ChapterParameters &in_params,
-                               const ExtraPenaltyAmounts &ea)
+                                       const ChapterParameters &in_params,
+                                       const ExtraPenaltyAmounts &ea)
     : words{words_}, params{in_params}, extras(ea) {}
 
 std::vector<std::string> ParagraphFormatter::split_lines() {
@@ -180,7 +180,7 @@ std::vector<LineStats> ParagraphFormatter::simple_split(TextStats &shaper) {
     std::vector<TextLocation> splits;
     size_t current_split = 0;
     while(current_split < split_points.size() - 1) {
-        auto line_end = get_line_end(current_split, shaper, lines.size());
+        auto line_end = get_closest_line_end(current_split, shaper, lines.size());
         lines.emplace_back(line_end);
         current_split = line_end.end_split;
     }
@@ -219,8 +219,8 @@ std::vector<std::string> ParagraphFormatter::global_split(const TextStats &shape
 }
 
 void ParagraphFormatter::global_split_recursive(const TextStats &shaper,
-                                            std::vector<LineStats> &line_stats,
-                                            size_t current_split) {
+                                                std::vector<LineStats> &line_stats,
+                                                size_t current_split) {
     if(state_cache.abandon_search(line_stats, params, extras)) {
         return;
     }
@@ -367,8 +367,21 @@ TextLocation ParagraphFormatter::point_to_location(const SplitPoint &p) const {
     }
 }
 
-LineStats
-ParagraphFormatter::get_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const {
+LineStats ParagraphFormatter::get_closest_line_end(size_t start_split,
+                                                   const TextStats &shaper,
+                                                   size_t line_num) const {
+    auto f = closest_line_ends.find(start_split);
+    if(f != closest_line_ends.end()) {
+        return f->second;
+    }
+    auto val = compute_closest_line_end(start_split, shaper, line_num);
+    closest_line_ends[start_split] = val;
+    return val;
+}
+
+LineStats ParagraphFormatter::compute_closest_line_end(size_t start_split,
+                                                       const TextStats &shaper,
+                                                       size_t line_num) const {
     assert(start_split < split_points.size() - 1);
     size_t trial = start_split + 2;
     double previous_width = -100.0;
@@ -400,11 +413,11 @@ ParagraphFormatter::get_line_end(size_t start_split, const TextStats &shaper, si
 
 // Sorted by decreasing fitness.
 std::vector<LineStats> ParagraphFormatter::get_line_end_choices(size_t start_split,
-                                                            const TextStats &shaper,
-                                                            size_t line_num) const {
+                                                                const TextStats &shaper,
+                                                                size_t line_num) const {
     std::vector<LineStats> potentials;
     potentials.reserve(5);
-    auto tightest_split = get_line_end(start_split, shaper, line_num);
+    auto tightest_split = get_closest_line_end(start_split, shaper, line_num);
     potentials.push_back(tightest_split);
 
     // Lambdas, yo!
