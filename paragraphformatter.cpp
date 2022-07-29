@@ -383,29 +383,28 @@ LineStats ParagraphFormatter::compute_closest_line_end(size_t start_split,
                                                        const TextStats &shaper,
                                                        size_t line_num) const {
     assert(start_split < split_points.size() - 1);
-    size_t trial = start_split + 2;
-    double previous_width = -100.0;
-    double final_width = -1000000.0;
-    double current_line_width_mm = current_line_width(line_num);
-    while(trial < split_points.size()) {
-        const auto trial_line = build_line(start_split, trial);
-        const auto trial_width = shaper.text_width(trial_line, params.font);
-        if(trial_width >= current_line_width_mm) {
-            if(abs(trial_width - current_line_width_mm) >
-               abs(previous_width - current_line_width_mm)) {
-                --trial;
-                final_width = previous_width;
-            } else {
-                final_width = trial_width;
-            }
-            break;
-        }
-        ++trial;
-        previous_width = trial_width;
-        final_width = previous_width;
+    double target_line_width_mm = current_line_width(line_num);
+    size_t chosen_point = -1;
+    auto ppoint = std::partition_point(
+        split_points.begin() + start_split + 2,
+        split_points.end(),
+        [this, &shaper, start_split, target_line_width_mm](const SplitPoint &p) {
+            const auto loc = &p - split_points.data();
+            const auto trial_line = build_line(start_split, loc);
+            const auto trial_width = shaper.text_width(trial_line, params.font);
+            return trial_width <= target_line_width_mm;
+        });
+    if(ppoint == split_points.end()) {
+        chosen_point = split_points.size() - 1;
+    } else {
+        --ppoint; // We want the last point that satisfies the constraint rather than the first
+                  // which does not.
+        chosen_point = size_t(&(*ppoint) - split_points.data());
     }
-    const auto chosen_point = std::min(trial, split_points.size() - 1);
-    // FIXME: also check if the last word on the line ends with a hyphen character.
+
+    const auto final_line = build_line(start_split, chosen_point);
+    const auto final_width = shaper.text_width(final_line, params.font);
+    // FIXME, check whether the word ends in a dash.
     return LineStats{chosen_point,
                      final_width,
                      std::holds_alternative<WithinWordSplit>(split_points[chosen_point])};
@@ -441,11 +440,6 @@ std::vector<LineStats> ParagraphFormatter::get_line_end_choices(size_t start_spl
 
     if(tightest_split.end_split > start_split + 3) {
         add_point(tightest_split.end_split - 2);
-    }
-
-    // FIXME consider removing, these would probably lead to too tight lines.
-    if(tightest_split.end_split + 3 < split_points.size()) {
-        add_point(tightest_split.end_split + 2);
     }
 
     return potentials;
