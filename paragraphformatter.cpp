@@ -345,12 +345,12 @@ std::string ParagraphFormatter::build_line(size_t from_split_ind, size_t to_spli
         const auto &word_to_split = words[to_loc.word_index];
         const auto sv = std::string_view(word_to_split.word);
         line += sv.substr(0, to_loc.offset + 1);
+        assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
         if(words[source_loc.word_index].hyphen_points[source_loc.hyphen_index].type ==
            SplitType::Regular) {
             line += '-';
         }
     }
-    assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
 
     return line;
 }

@@ -62,6 +62,27 @@ void test_utf8_splitting() {
     }
 }
 
+void test_strange_combo() {
+    WordHyphenator h;
+    const std::string text{"impact—“splashed”"}; // impact—“splashed”"};
+    HyphenatedWord w = h.hyphenate(text);
+    HyphenPoint expected{1, SplitType::Regular};
+    HyphenPoint expected2{8, SplitType::NoHyphen};
+    CHECK(w.hyphen_points.size() == 2);
+    CHECK(w.hyphen_points.front() == expected);
+    CHECK(w.hyphen_points.back() == expected2);
+}
+
+void test_dualhyphen() {
+    // Not sure if correct, this could also be hyphenless.
+    WordHyphenator h;
+    const std::string text{"maybe——"};
+    HyphenatedWord w = h.hyphenate(text);
+    HyphenPoint expected{7, SplitType::NoHyphen};
+    CHECK(w.hyphen_points.size() == 1);
+    CHECK(w.hyphen_points.front() == expected);
+}
+
 void test_hyphenation() {
     test_hyphenation_simple();
     test_hyphenation_dash();
@@ -69,6 +90,8 @@ void test_hyphenation() {
     test_hyphenation_prefix();
     test_hyphenation_underscore();
     test_utf8_splitting();
+    test_strange_combo();
+    test_dualhyphen();
 }
 
 int main(int, char **) {

@@ -66,7 +66,6 @@ DashSplit split_at_dashes(const std::string &word) {
         in = g_utf8_next_char(in);
     }
     assert(splits.words.size() == splits.separators.size());
-    assert(chars_in_buf > 0); // Words ending in dashes are not supported yet. :)
     buf[chars_in_buf] = '\0';
     splits.words.emplace_back(buf);
     return splits;
@@ -118,7 +117,18 @@ void hyphenate_and_append(std::string &reconstructed_word,
                           const std::string &word,
                           std::optional<uint32_t> separator,
                           HyphenDict *dict) {
-    std::string lowercase_word = lowerword(word);
+    const auto trips = tripartite(word);
+    char buf[7] = {0, 0, 0, 0, 0, 0, 0};
+    if(trips.core.empty()) {
+        reconstructed_word += word;
+        if(separator) {
+            g_unichar_to_utf8(*separator, buf);
+            reconstructed_word += buf;
+        }
+        return;
+    }
+    reconstructed_word += trips.prefix;
+    std::string lowercase_word = lowerword(trips.core);
     std::vector<char> output(word.size() * 2 + 1, '\0');
     std::vector<char> hyphens(word.size() + 5, (char)-1);
     char **rep = nullptr;
@@ -138,9 +148,9 @@ void hyphenate_and_append(std::string &reconstructed_word,
     free(pos);
     free(cut);
     hyphen_points.insert(hyphen_points.cend(), subhyphens.begin(), subhyphens.end());
-    reconstructed_word += word;
+    reconstructed_word += trips.core;
+    reconstructed_word += trips.suffix;
     if(separator) {
-        char buf[7] = {0, 0, 0, 0, 0, 0, 0};
         g_unichar_to_utf8(*separator, buf);
         reconstructed_word += buf;
         hyphen_points.emplace_back(HyphenPoint{reconstructed_word.size() - 1, SplitType::NoHyphen});
@@ -167,16 +177,16 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
     // The hyphenation function only deals with lower case single words.
     // Attached punctuation, quotes, capital letters etc break it.
     // For words like spatio-temporal it splits the individual words but not the hyphen.
-    const auto trips = tripartite(word);
-    if(trips.core.empty()) {
+    std::string_view letterview(letters);
+    const auto p1 = word.find_first_of(letterview);
+    if(p1 == std::string::npos) {
         // Non-word such as a number or other weird character combinations.
         // FIXME to add dashelss hyphenation points for things like
         // 1,000,000.
         return HyphenatedWord{{}, word};
     }
-    const auto subwords = split_at_dashes(trips.core);
+    const auto subwords = split_at_dashes(word);
     assert(subwords.words.size() == subwords.separators.size() + 1);
-    reconstructed_word = trips.prefix;
     for(size_t ind = 0; ind < subwords.words.size(); ++ind) {
         hyphenate_and_append(reconstructed_word,
                              result.hyphen_points,
@@ -186,7 +196,6 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
                                  : std::optional<uint32_t>{},
                              dict);
     }
-    reconstructed_word += trips.suffix;
     assert(reconstructed_word == word);
     result.word = word;
     result.sanity_check();
