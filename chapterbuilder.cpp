@@ -282,14 +282,24 @@ std::string ChapterBuilder::build_line(size_t from_split_ind, size_t to_split_in
     }
     const auto &from_split = split_points[from_split_ind];
     const auto &to_split = split_points[to_split_ind];
-    const auto from_loc = split_locations[from_split_ind];
-    const auto to_loc = split_locations[to_split_ind];
+    const auto &from_loc = split_locations[from_split_ind];
+    const auto &to_loc = split_locations[to_split_ind];
 
     // A single word spans the entire line.
     const bool pathological_single_word = from_loc.word_index == to_loc.word_index;
     if(pathological_single_word) {
         const auto &bad_word = words[from_loc.word_index].word;
-        line = bad_word.substr(from_loc.offset + 1, to_loc.offset - from_loc.offset);
+        auto substr_start = from_loc.offset + 1;
+        auto substr_length = to_loc.offset - from_loc.offset;
+        if(from_loc.offset == 0) {
+            // Indices in the middle point to the last character of the leftside word,
+            // because that is how the hyphenator code sets them.
+            // However we also need to point to the "very first" character, which is at
+            // index 0. In that case the "pointed to" character needs to be part of the substring.
+            substr_start -= 1;
+            substr_length += 1;
+        }
+        line = bad_word.substr(substr_start, substr_length);
         if(std::holds_alternative<WithinWordSplit>(to_split)) {
             const auto &source_loc = std::get<WithinWordSplit>(to_split);
             if(words[source_loc.word_index].hyphen_points[source_loc.hyphen_index].type ==
