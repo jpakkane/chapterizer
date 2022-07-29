@@ -367,9 +367,10 @@ void run_optimization_cb(GtkButton *, gpointer data) {
     // FIXME: run as an async task.
     WordHyphenator hyp;
     ChapterParameters params = get_params(app);
+    ExtraPenaltyAmounts extras = get_penalties(app);
     auto words = get_entry_widget_text_words(app);
     auto hyphenated_words = hyp.hyphenate(words);
-    ChapterBuilder builder{hyphenated_words, params};
+    ChapterBuilder builder{hyphenated_words, params, extras};
     auto new_lines = builder.split_lines();
     std::string collator;
     for(const auto &l : new_lines) {

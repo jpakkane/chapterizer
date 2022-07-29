@@ -230,7 +230,8 @@ template<typename T1> void full_test(const T1 &hyphenated_words) {
     params.font.name = "Gentium";
     params.font.point_size = 10;
     params.font.type = FontStyle::Regular;
-    ChapterBuilder spl{hyphenated_words, params};
+    ExtraPenaltyAmounts extras;
+    ChapterBuilder spl{hyphenated_words, params, extras};
     const auto lines = spl.split_lines();
 
     for(const auto &line : lines) {

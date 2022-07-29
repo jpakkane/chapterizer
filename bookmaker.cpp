@@ -96,6 +96,7 @@ void render(const char *ofilename, std::vector<Chapter> &chapters) {
     chapter_par.indent = 5; // First chapter does not get indented.
     chapter_par.line_height_pt = 12;
     chapter_par.paragraph_width_mm = pagew_mm - m.inner - m.outer;
+    ExtraPenaltyAmounts extras;
     const double bottom_watermark = pageh_mm - m.lower - pt2mm(chapter_par.line_height_pt);
     const double title_above_space = 50;
     const double title_below_space = 10;
@@ -114,7 +115,7 @@ void render(const char *ofilename, std::vector<Chapter> &chapters) {
     for(const auto &p : c.paragraphs) {
         auto plain_words = split_to_words(std::string_view(p));
         auto hyphenated_words = hyphen.hyphenate(plain_words);
-        ChapterBuilder b(hyphenated_words, chapter_par);
+        ChapterBuilder b(hyphenated_words, chapter_par, extras);
         auto lines = b.split_lines();
         size_t line_num = 0;
         for(const auto &line : lines) {

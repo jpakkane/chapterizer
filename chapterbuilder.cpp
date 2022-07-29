@@ -17,6 +17,7 @@
 #include "chapterbuilder.hpp"
 #include <textstats.hpp>
 #include <algorithm>
+#include <numeric>
 #include <optional>
 #include <cassert>
 #include <cmath>
@@ -39,18 +40,6 @@ double line_penalty(const LineStats &line, double target_width) {
     return difference_penalty(line.text_width, target_width);
 }
 
-double total_penalty(const std::vector<LineStats> &lines, const ChapterParameters &params) {
-    double total = 0;
-    double last_line_penalty = 0;
-    double indent = params.indent;
-    for(const auto &l : lines) {
-        last_line_penalty = line_penalty(l, params.paragraph_width_mm - indent);
-        indent = 0;
-        total += last_line_penalty;
-    }
-    return total - last_line_penalty;
-}
-
 std::vector<LinePenaltyStatistics> compute_line_penalties(const std::vector<std::string> &lines,
                                                           const ChapterParameters &par) {
     TextStats shaper;
@@ -70,14 +59,21 @@ std::vector<LinePenaltyStatistics> compute_line_penalties(const std::vector<std:
     return penalties;
 }
 
+bool line_ends_in_dash(const std::string &line) {
+    // FIXME: Unicode.
+    return !line.empty() && line.back() == '-';
+}
+
+bool line_ends_in_dash(const LineStats &line) { return line.ends_in_dash; }
+
+template<typename T>
 std::vector<ExtraPenaltyStatistics>
-compute_multihyphen_penalties(const std::vector<std::string> &lines,
-                              const ExtraPenaltyAmounts &amounts) {
+compute_multihyphen_penalties(const std::vector<T> &lines, const ExtraPenaltyAmounts &amounts) {
     std::vector<ExtraPenaltyStatistics> penalties;
     int dashes = 0;
     for(size_t i = 0; i < lines.size(); ++i) {
         const auto &line = lines[i];
-        if(!line.empty() && line.back() == '-') {
+        if(line_ends_in_dash(line)) {
             ++dashes;
         } else {
             if(dashes >= 3) {
@@ -88,8 +84,33 @@ compute_multihyphen_penalties(const std::vector<std::string> &lines,
             dashes = 0;
         }
     }
-    // We assume that the last line never ends with a hyphen for simplicity.
+    if(dashes >= 3) {
+        penalties.emplace_back(ExtraPenaltyStatistics{ExtraPenaltyTypes::ConsecutiveDashes,
+                                                      int(lines.size()) - 1 - dashes,
+                                                      dashes * amounts.multiple_dashes});
+    }
     return penalties;
+}
+
+double total_penalty(const std::vector<LineStats> &lines,
+                     const ChapterParameters &params,
+                     const ExtraPenaltyAmounts &amounts) {
+    double total = 0;
+    double last_line_penalty = 0;
+    double indent = params.indent;
+    for(const auto &l : lines) {
+        last_line_penalty = line_penalty(l, params.paragraph_width_mm - indent);
+        indent = 0;
+        total += last_line_penalty;
+    }
+    const auto line_penalty = total - last_line_penalty;
+    const auto extras = compute_multihyphen_penalties(lines, amounts);
+    const auto extra_penalty = std::accumulate(
+        extras.begin(), extras.end(), 0.0, [](double i, const ExtraPenaltyStatistics &stats) {
+            return i + stats.penalty;
+        });
+    // FIXME, add chapter end penalty.
+    return line_penalty + extra_penalty;
 }
 
 std::optional<ExtraPenaltyStatistics>
@@ -136,8 +157,9 @@ PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
 }
 
 ChapterBuilder::ChapterBuilder(const std::vector<HyphenatedWord> &words_,
-                               const ChapterParameters &in_params)
-    : words{words_}, params{in_params} {}
+                               const ChapterParameters &in_params,
+                               const ExtraPenaltyAmounts &ea)
+    : words{words_}, params{in_params}, extras(ea) {}
 
 std::vector<std::string> ChapterBuilder::split_lines() {
     precompute();
@@ -146,7 +168,7 @@ std::vector<std::string> ChapterBuilder::split_lines() {
     best_split.clear();
     if(false) {
         best_split = simple_split(shaper);
-        best_penalty = total_penalty(best_split, params);
+        best_penalty = total_penalty(best_split, params, extras);
         return stats_to_lines(best_split);
     } else {
         return global_split(shaper);
@@ -162,7 +184,7 @@ std::vector<LineStats> ChapterBuilder::simple_split(TextStats &shaper) {
         lines.emplace_back(line_end);
         current_split = line_end.end_split;
     }
-    const auto total = total_penalty(lines, params);
+    const auto total = total_penalty(lines, params, extras);
     printf("Total penalty: %.1f\n", total);
     return lines;
 }
@@ -199,14 +221,14 @@ std::vector<std::string> ChapterBuilder::global_split(const TextStats &shaper) {
 void ChapterBuilder::global_split_recursive(const TextStats &shaper,
                                             std::vector<LineStats> &line_stats,
                                             size_t current_split) {
-    if(state_cache.abandon_search(line_stats, params)) {
+    if(state_cache.abandon_search(line_stats, params, extras)) {
         return;
     }
     auto line_end_choices = get_line_end_choices(current_split, shaper, line_stats.size());
     if(line_end_choices.front().end_split == split_points.size() - 1) {
         // Text exhausted.
         line_stats.emplace_back(line_end_choices.front());
-        const auto current_penalty = total_penalty(line_stats, params);
+        const auto current_penalty = total_penalty(line_stats, params, extras);
         // printf("Total penalty: %.1f\n", current_penalty);
         // FIXME: change to include extra penalties here.
         if(current_penalty < best_penalty) {
@@ -354,7 +376,11 @@ ChapterBuilder::get_line_end(size_t start_split, const TextStats &shaper, size_t
         previous_width = trial_width;
         final_width = previous_width;
     }
-    return LineStats{std::min(trial, split_points.size() - 1), final_width};
+    const auto chosen_point = std::min(trial, split_points.size() - 1);
+    // FIXME: also check if the last word on the line ends with a hyphen character.
+    return LineStats{chosen_point,
+                     final_width,
+                     std::holds_alternative<WithinWordSplit>(split_points[chosen_point])};
 }
 
 // Sorted by decreasing fitness.
@@ -371,7 +397,11 @@ std::vector<LineStats> ChapterBuilder::get_line_end_choices(size_t start_split,
         const auto trial_split = split_point;
         const auto trial_line = build_line(start_split, trial_split);
         const auto trial_width = shaper.text_width(trial_line, params.font);
-        potentials.emplace_back(LineStats{trial_split, trial_width});
+        potentials.emplace_back(LineStats{
+            trial_split,
+            trial_width,
+            std::holds_alternative<WithinWordSplit>(
+                split_points[trial_split])}); // FIXME, check if word ends with a dash character.
     };
 
     if(tightest_split.end_split > start_split + 2) {
@@ -384,6 +414,8 @@ std::vector<LineStats> ChapterBuilder::get_line_end_choices(size_t start_split,
     if(tightest_split.end_split > start_split + 3) {
         add_point(tightest_split.end_split - 2);
     }
+
+    // FIXME consider removing, these would probably lead to too tight lines.
     if(tightest_split.end_split + 3 < split_points.size()) {
         add_point(tightest_split.end_split + 2);
     }
@@ -392,8 +424,9 @@ std::vector<LineStats> ChapterBuilder::get_line_end_choices(size_t start_split,
 }
 
 bool SplitStates::abandon_search(const std::vector<LineStats> &new_splits,
-                                 const ChapterParameters &params) {
-    const double new_penalty = total_penalty(new_splits, params);
+                                 const ChapterParameters &params,
+                                 const ExtraPenaltyAmounts &extras) {
+    const double new_penalty = total_penalty(new_splits, params, extras);
     const auto current_index = new_splits.size();
     auto &current_slot = best_to[current_index];
     if(current_slot.size() >= cache_size && current_slot.back().penalty < new_penalty) {

@@ -61,6 +61,7 @@ struct LineStats {
     size_t end_split;
     double text_width;
     // int num_spaces;
+    bool ends_in_dash;
 };
 
 struct UpTo {
@@ -76,7 +77,9 @@ struct SplitStates {
 
     void clear() { best_to.clear(); }
 
-    bool abandon_search(const std::vector<LineStats> &new_splits, const ChapterParameters &params);
+    bool abandon_search(const std::vector<LineStats> &new_splits,
+                        const ChapterParameters &params,
+                        const ExtraPenaltyAmounts &extras);
 };
 
 struct LinePenaltyStatistics {
@@ -97,7 +100,9 @@ PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
 
 class ChapterBuilder {
 public:
-    ChapterBuilder(const std::vector<HyphenatedWord> &words, const ChapterParameters &in_params);
+    ChapterBuilder(const std::vector<HyphenatedWord> &words,
+                   const ChapterParameters &in_params,
+                   const ExtraPenaltyAmounts &ea);
 
     std::vector<std::string> split_lines();
 
@@ -127,4 +132,5 @@ private:
     // Cached results of best states we have achieved thus far.
     SplitStates state_cache;
     ChapterParameters params;
+    ExtraPenaltyAmounts extras;
 };
