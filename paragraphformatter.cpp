@@ -185,7 +185,7 @@ std::vector<LineStats> ParagraphFormatter::simple_split(TextStats &shaper) {
         current_split = line_end.end_split;
     }
     const auto total = total_penalty(lines, params, extras);
-    printf("Total penalty: %.1f\n", total);
+    // printf("Total penalty: %.1f\n", total);
     return lines;
 }
 
@@ -214,7 +214,7 @@ std::vector<std::string> ParagraphFormatter::global_split(const TextStats &shape
     std::vector<LineStats> line_stats;
 
     global_split_recursive(shaper, line_stats, current_split);
-    printf("Total penalty: %.2f\n", best_penalty);
+    // printf("Total penalty: %.2f\n", best_penalty);
     return stats_to_lines(best_split);
 }
 
@@ -259,9 +259,9 @@ void ParagraphFormatter::precompute() {
         }
     }
     split_points.emplace_back(BetweenWordSplit{words.size()}); // The end sentinel
-    printf("The text has a total of %d words and %d split points.\n\n",
-           (int)words.size(),
-           (int)split_points.size());
+    // printf("The text has a total of %d words and %d split points.\n\n",
+    //        (int)words.size(),
+    //        (int)split_points.size());
     split_locations.clear();
     split_locations.reserve(split_points.size());
     for(const auto &i : split_points) {

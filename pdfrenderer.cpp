@@ -202,4 +202,15 @@ void PdfRenderer::render_line_as_is(const char *line,
     pango_cairo_show_layout(cr, layout);
 }
 
+void PdfRenderer::render_line_centered(const char *line,
+                                       const FontParameters &par,
+                                       double x,
+                                       double y) {
+    PangoRectangle r;
+
+    pango_layout_set_text(layout, line, -1);
+    pango_layout_get_extents(layout, nullptr, &r);
+    render_line_as_is(line, par, x - (r.width / (2 * PANGO_SCALE)), y);
+}
+
 void PdfRenderer::new_page() { cairo_surface_show_page(surf); }

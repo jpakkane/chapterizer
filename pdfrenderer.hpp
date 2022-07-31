@@ -37,6 +37,7 @@ public:
                                double x,
                                double y);
     void render_line_as_is(const char *line, const FontParameters &par, double x, double y);
+    void render_line_centered(const char *line, const FontParameters &par, double x, double y);
 
     void new_page();
 
