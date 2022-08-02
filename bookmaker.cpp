@@ -33,6 +33,17 @@ const char containertext[] = R"(<?xml version='1.0' encoding='utf-8'?>
 </container>
 )";
 
+const char csstext[] = R"(h1, h2, h3, h4, h5 {
+  font-family: Sans-Serif;
+}
+
+p {
+  font-family: Serif;
+  text-align: justify;
+}
+
+)";
+
 bool looks_like_title(const std::string &line) {
     if(line.empty()) {
         return false;
@@ -245,6 +256,12 @@ void generate_epub_manifest(tinyxml2::XMLNode *manifest,
         node->SetAttribute("media-type", "application/xhtml+xml");
     }
 
+    auto css = opf->NewElement("item");
+    manifest->InsertEndChild(css);
+    css->SetAttribute("id", "stylesheet");
+    css->SetAttribute("href", "book.css");
+    css->SetAttribute("media-type", "text/css");
+
     if(coverfile) {
         auto item = opf->NewElement("item");
         manifest->InsertEndChild(item);
@@ -443,7 +460,11 @@ void write_chapters(const fs::path &outdir, const std::vector<Chapter> &chapters
         auto title = doc.NewElement("title");
         head->InsertEndChild(title);
         title->SetText("War of the Worlds");
-        // <link rel="stylesheet" href="css/main.css" type="text/css" />
+        auto style = doc.NewElement("link");
+        head->InsertEndChild(style);
+        style->SetAttribute("rel", "stylesheet");
+        style->SetAttribute("href", "book.css");
+        style->SetAttribute("type", "text/css");
 
         auto body = doc.NewElement("body");
         html->InsertEndChild(body);
@@ -469,10 +490,10 @@ void create_epub(const char *ofilename, const std::vector<Chapter> &chapters) {
     auto containerfile = metadir / "container.xml";
     auto contentfile = oebpsdir / "content.opf";
     auto ncxfile = oebpsdir / "toc.ncx";
+    auto cssfile = oebpsdir / "book.css";
 
     fs::path cover_in{"cover.png"};
     fs::path cover_out = oebpsdir / cover_in;
-    fs::path cover_rel = "OEBPS" / cover_in;
     bool has_cover = false;
 
     fs::create_directories(metadir);
@@ -491,7 +512,11 @@ void create_epub(const char *ofilename, const std::vector<Chapter> &chapters) {
     fwrite(containertext, 1, strlen(containertext), f);
     fclose(f);
 
-    write_opf(contentfile, chapters, has_cover ? cover_rel.c_str() : nullptr);
+    f = fopen(cssfile.c_str(), "w");
+    fwrite(csstext, 1, strlen(csstext), f);
+    fclose(f);
+
+    write_opf(contentfile, chapters, has_cover ? cover_in.c_str() : nullptr);
     write_ncx(ncxfile.c_str(), chapters);
     write_chapters(oebpsdir, chapters);
 
