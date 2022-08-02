@@ -227,7 +227,9 @@ void package(const char *ofilename, const char *builddir) {
     }
 }
 
-void generate_epub_manifest(tinyxml2::XMLNode *manifest, const std::vector<Chapter> &chapters) {
+void generate_epub_manifest(tinyxml2::XMLNode *manifest,
+                            const std::vector<Chapter> &chapters,
+                            const char *coverfile) {
     auto opf = manifest->GetDocument();
     const int num_chapters = int(chapters.size());
 
@@ -243,6 +245,13 @@ void generate_epub_manifest(tinyxml2::XMLNode *manifest, const std::vector<Chapt
         node->SetAttribute("media-type", "application/xhtml+xml");
     }
 
+    if(coverfile) {
+        auto item = opf->NewElement("item");
+        manifest->InsertEndChild(item);
+        item->SetAttribute("href", coverfile);
+        item->SetAttribute("id", "coverpic");
+        item->SetAttribute("media-type", "image/png");
+    }
     auto ncx = opf->NewElement("item");
     manifest->InsertEndChild(ncx);
     ncx->SetAttribute("id", "ncx");
@@ -265,7 +274,7 @@ void generate_epub_spine(tinyxml2::XMLNode *spine, const std::vector<Chapter> &c
     }
 }
 
-void write_opf(const fs::path &ofile, const std::vector<Chapter> &chapters) {
+void write_opf(const fs::path &ofile, const std::vector<Chapter> &chapters, const char *coverfile) {
     tinyxml2::XMLDocument opf;
 
     auto decl = opf.NewDeclaration(nullptr);
@@ -298,11 +307,16 @@ void write_opf(const fs::path &ofile, const std::vector<Chapter> &chapters) {
     creator->SetAttribute("opf:file-as", "Wells, HG");
     creator->SetAttribute("opf:role", "aut");
     creator->SetText("HG Wells");
-    // FIXME: <meta name="cover" content="item1"/>
+    if(coverfile) {
+        auto meta = opf.NewElement("meta");
+        metadata->InsertEndChild(meta);
+        meta->SetAttribute("name", "cover");
+        meta->SetAttribute("content", "coverpic");
+    }
 
     auto manifest = opf.NewElement("manifest");
     package->InsertEndChild(manifest);
-    generate_epub_manifest(manifest, chapters);
+    generate_epub_manifest(manifest, chapters, coverfile);
 
     auto spine = opf.NewElement("spine");
     package->InsertEndChild(spine);
@@ -456,8 +470,18 @@ void create_epub(const char *ofilename, const std::vector<Chapter> &chapters) {
     auto contentfile = oebpsdir / "content.opf";
     auto ncxfile = oebpsdir / "toc.ncx";
 
+    fs::path cover_in{"cover.png"};
+    fs::path cover_out = oebpsdir / cover_in;
+    fs::path cover_rel = "OEBPS" / cover_in;
+    bool has_cover = false;
+
     fs::create_directories(metadir);
     fs::create_directory(oebpsdir);
+
+    if(fs::exists(cover_in)) {
+        has_cover = true;
+        fs::copy(cover_in, cover_out);
+    }
 
     FILE *f = fopen(mimefile.c_str(), "w");
     fwrite(mimetext, 1, strlen(mimetext), f);
@@ -467,7 +491,7 @@ void create_epub(const char *ofilename, const std::vector<Chapter> &chapters) {
     fwrite(containertext, 1, strlen(containertext), f);
     fclose(f);
 
-    write_opf(contentfile, chapters);
+    write_opf(contentfile, chapters, has_cover ? cover_rel.c_str() : nullptr);
     write_ncx(ncxfile.c_str(), chapters);
     write_chapters(oebpsdir, chapters);
 
@@ -488,7 +512,7 @@ int main(int argc, char **argv) {
            (int)chapters.front().paragraphs.size());
     // printf("%s\n", chapters.front().paragraphs.back().c_str());
     */
-    // create_pdf("bookout.pdf", chapters);
+    create_pdf("bookout.pdf", chapters);
     create_epub("war_test.epub", chapters);
     return 0;
 }
