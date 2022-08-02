@@ -4,14 +4,24 @@
 #include <paragraphformatter.hpp>
 #include <wordhyphenator.hpp>
 
+#include <tinyxml2.h>
+#include <filesystem>
+
 #include <glib.h>
 #include <cassert>
 #include <fstream>
+#include <cstring>
 
 struct Chapter {
     std::string title;
     std::vector<std::string> paragraphs;
 };
+
+namespace fs = std::filesystem;
+
+namespace {
+
+const char mimetext[] = "application/epub+zip";
 
 bool looks_like_title(const std::string &line) {
     if(line.empty()) {
@@ -23,6 +33,8 @@ bool looks_like_title(const std::string &line) {
     }
     return false;
 }
+
+} // namespace
 
 std::vector<Chapter> load_text(const char *fname) {
     std::vector<Chapter> chapters;
@@ -108,7 +120,7 @@ void render_page_num(
     book.render_line_centered(buf, par, mm2pt(xloc), mm2pt(yloc));
 }
 
-void render(const char *ofilename, std::vector<Chapter> &chapters) {
+void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
     PageSize page;
 
     page.w_mm = 110;
@@ -156,12 +168,12 @@ void render(const char *ofilename, std::vector<Chapter> &chapters) {
         y += title_below_space;
         bool first_paragraph = true;
         for(const auto &p : c.paragraphs) {
+            chapter_par.indent = first_paragraph ? 0 : indent;
             auto plain_words = split_to_words(std::string_view(p));
             auto hyphenated_words = hyphen.hyphenate(plain_words);
             ParagraphFormatter b(hyphenated_words, chapter_par, extras);
             auto lines = b.split_lines();
             size_t line_num = 0;
-            chapter_par.indent = first_paragraph ? 0 : indent;
             for(const auto &line : lines) {
                 assert(g_utf8_validate(line.c_str(), -1, nullptr));
                 double current_indent = line_num == 0 ? chapter_par.indent : 0;
@@ -192,6 +204,22 @@ void render(const char *ofilename, std::vector<Chapter> &chapters) {
     render_page_num(book, chapter_par.font, current_page, page, m);
 }
 
+void create_epub(const char *ofilename, std::vector<Chapter> &chapters) {
+    fs::path outdir{"epubtmp"};
+    fs::remove_all(outdir);
+    auto metadir = outdir / "META-INF";
+    auto oebpsdir = outdir / "OEBPS";
+    auto mimefile = outdir / "mimetype";
+    auto containerfile = metadir / "container.xml";
+
+    fs::create_directories(metadir);
+    fs::create_directory(oebpsdir);
+
+    FILE *f = fopen(mimefile.c_str(), "w");
+    fwrite(mimetext, 1, strlen(mimetext), f);
+    fclose(f);
+}
+
 int main(int argc, char **argv) {
     if(argc != 2) {
         printf("%s <input text file>\n", argv[0]);
@@ -205,6 +233,7 @@ int main(int argc, char **argv) {
            (int)chapters.front().paragraphs.size());
     // printf("%s\n", chapters.front().paragraphs.back().c_str());
     */
-    render("bookout.pdf", chapters);
+    // create_pdf("bookout.pdf", chapters);
+    create_epub("war_test.epub", chapters);
     return 0;
 }

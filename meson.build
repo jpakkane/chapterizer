@@ -8,6 +8,7 @@ pangocairo_dep = dependency('pangocairo')
 gtk4_dep = dependency('gtk4', required: false, method: 'pkg-config')
 fc_dep = dependency('fontconfig')
 glib_dep = dependency('glib-2.0')
+tixml_dep = dependency('tinyxml2')
 
 add_project_arguments('-Wshadow', language: 'cpp')
 
@@ -33,7 +34,9 @@ executable('pangotest', 'pangotest.cpp', dependencies: pangocairo_dep)
 
 executable('devtool', 'devtool.cpp', link_with: l, dependencies: pangocairo_dep)
 
-executable('bookmaker', 'bookmaker.cpp', link_with: l, dependencies: pangocairo_dep)
+executable('bookmaker', 'bookmaker.cpp',
+    link_with: l,
+    dependencies: [pangocairo_dep, tixml_dep])
 
 if gtk4_dep.found()
     executable('guitool', 'guitool.cpp',
