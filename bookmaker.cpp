@@ -298,6 +298,7 @@ void write_opf(const fs::path &ofile, const std::vector<Chapter> &chapters) {
     creator->SetAttribute("opf:file-as", "Wells, HG");
     creator->SetAttribute("opf:role", "aut");
     creator->SetText("HG Wells");
+    // FIXME: <meta name="cover" content="item1"/>
 
     auto manifest = opf.NewElement("manifest");
     package->InsertEndChild(manifest);
@@ -399,6 +400,52 @@ void write_ncx(const char *ofile, const std::vector<Chapter> &chapters) {
     ncx.SaveFile(ofile);
 }
 
+void write_chapters(const fs::path &outdir, const std::vector<Chapter> &chapters) {
+    const int num_chapters = int(chapters.size());
+
+    const int bufsize = 128;
+    char buf[bufsize];
+
+    for(int i = 0; i < num_chapters; i++) {
+        snprintf(buf, bufsize, "chapter%d.xhtml", i + 1);
+        auto ofile = outdir / buf;
+        tinyxml2::XMLDocument doc;
+        auto decl = doc.NewDeclaration(nullptr);
+        doc.InsertFirstChild(decl);
+        auto doctype = doc.NewUnknown(
+            R"(DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd")");
+        doc.InsertEndChild(doctype);
+        auto html = doc.NewElement("html");
+        doc.InsertEndChild(html);
+        html->SetAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+        html->SetAttribute("xml:lang", "en");
+
+        auto head = doc.NewElement("head");
+        html->InsertEndChild(head);
+        auto meta = doc.NewElement("meta");
+        head->InsertEndChild(meta);
+        meta->SetAttribute("http-equiv", "Content-Type");
+        meta->SetAttribute("content", "application/xhtml+xml; charset=utf-8");
+        auto title = doc.NewElement("title");
+        head->InsertEndChild(title);
+        title->SetText("War of the Worlds");
+        // <link rel="stylesheet" href="css/main.css" type="text/css" />
+
+        auto body = doc.NewElement("body");
+        html->InsertEndChild(body);
+        auto heading = doc.NewElement("h2");
+        body->InsertEndChild(heading);
+        heading->SetText(chapters[i].title.c_str());
+        for(const auto &paragraph : chapters[i].paragraphs) {
+            auto p = doc.NewElement("p");
+            body->InsertEndChild(p);
+            p->SetText(paragraph.c_str());
+        }
+
+        doc.SaveFile(ofile.c_str());
+    }
+}
+
 void create_epub(const char *ofilename, const std::vector<Chapter> &chapters) {
     fs::path outdir{"epubtmp"};
     fs::remove_all(outdir);
@@ -422,6 +469,7 @@ void create_epub(const char *ofilename, const std::vector<Chapter> &chapters) {
 
     write_opf(contentfile, chapters);
     write_ncx(ncxfile.c_str(), chapters);
+    write_chapters(oebpsdir, chapters);
 
     unlink(ofilename);
     package(ofilename, outdir.c_str());
