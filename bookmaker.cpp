@@ -217,9 +217,9 @@ void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
 void package(const char *ofilename, const char *builddir) {
     std::string command{"cd "};
     command += builddir;
-    command += "; zip -r ../";
+    command += "; zip -r -n .png:.jpg:.tif:.gif ../";
     command += ofilename;
-    command += " META-INF OEBPS mimetype";
+    command += " mimetype META-INF OEBPS";
 
     // I feel shame.
     if(system(command.c_str()) != 0) {
@@ -314,7 +314,92 @@ void write_opf(const fs::path &ofile, const std::vector<Chapter> &chapters) {
     }
 }
 
-void create_epub(const char *ofilename, std::vector<Chapter> &chapters) {
+void write_navmap(tinyxml2::XMLElement *root, const std::vector<Chapter> &chapters) {
+    auto ncx = root->GetDocument();
+    const int num_chapters = int(chapters.size());
+
+    const int bufsize = 128;
+    char buf[bufsize];
+
+    auto navmap = ncx->NewElement("navMap");
+    root->InsertEndChild(navmap);
+
+    for(int i = 0; i < num_chapters; i++) {
+        snprintf(buf, bufsize, "chapter%d", i + 1);
+        auto navpoint = ncx->NewElement("navPoint");
+        navmap->InsertEndChild(navpoint);
+        navpoint->SetAttribute("class", "chapter");
+        navpoint->SetAttribute("id", buf);
+        snprintf(buf, bufsize, "%d", i + 1);
+        navpoint->SetAttribute("playOrder", buf);
+        auto navlabel = ncx->NewElement("navLabel");
+        navpoint->InsertEndChild(navlabel);
+        auto text = ncx->NewElement("text");
+        navlabel->InsertEndChild(text);
+        snprintf(buf, bufsize, "Chapter %d", i + 1);
+        text->SetText(buf);
+        auto content = ncx->NewElement("content");
+        navpoint->InsertEndChild(content);
+        snprintf(buf, bufsize, "chapter%d.xhtml", i + 1);
+        content->SetAttribute("src", buf);
+    }
+}
+
+void write_ncx(const char *ofile, const std::vector<Chapter> &chapters) {
+    tinyxml2::XMLDocument ncx;
+
+    auto decl = ncx.NewDeclaration(nullptr);
+    ncx.InsertFirstChild(decl);
+    auto doctype = ncx.NewUnknown(
+        R"(DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd")");
+    ncx.InsertEndChild(doctype);
+
+    auto root = ncx.NewElement("ncx");
+    ncx.InsertEndChild(root);
+    root->SetAttribute("version", "2005-1");
+    root->SetAttribute("xml:lang", "en");
+    root->SetAttribute("xmlns", "http://www.daisy.org/z3986/2005/ncx/");
+
+    auto head = ncx.NewElement("head");
+    root->InsertEndChild(head);
+
+    auto meta = ncx.NewElement("meta");
+    head->InsertEndChild(meta);
+    meta->SetAttribute("name", "dtb:uid");
+    meta->SetAttribute("content", "123456789X");
+
+    meta = ncx.NewElement("meta");
+    head->InsertEndChild(meta);
+    meta->SetAttribute("name", "dtb:depth");
+    meta->SetAttribute("content", "1");
+
+    meta = ncx.NewElement("meta");
+    head->InsertEndChild(meta);
+    meta->SetAttribute("name", "dtb:totalPageCount");
+    meta->SetAttribute("content", "0");
+
+    meta = ncx.NewElement("meta");
+    head->InsertEndChild(meta);
+    meta->SetAttribute("name", "dtb:maxPageNumber");
+    meta->SetAttribute("content", "0");
+
+    auto doctitle = ncx.NewElement("docTitle");
+    root->InsertEndChild(doctitle);
+    auto text = ncx.NewElement("text");
+    doctitle->InsertEndChild(text);
+    text->SetText("War of the Worlds");
+
+    auto docauthor = ncx.NewElement("docAuthor");
+    root->InsertEndChild(docauthor);
+    text = ncx.NewElement("text");
+    docauthor->InsertEndChild(text);
+    text->SetText("Wells, HG");
+
+    write_navmap(root, chapters);
+    ncx.SaveFile(ofile);
+}
+
+void create_epub(const char *ofilename, const std::vector<Chapter> &chapters) {
     fs::path outdir{"epubtmp"};
     fs::remove_all(outdir);
     auto metadir = outdir / "META-INF";
@@ -322,6 +407,7 @@ void create_epub(const char *ofilename, std::vector<Chapter> &chapters) {
     auto mimefile = outdir / "mimetype";
     auto containerfile = metadir / "container.xml";
     auto contentfile = oebpsdir / "content.opf";
+    auto ncxfile = oebpsdir / "toc.ncx";
 
     fs::create_directories(metadir);
     fs::create_directory(oebpsdir);
@@ -335,7 +421,9 @@ void create_epub(const char *ofilename, std::vector<Chapter> &chapters) {
     fclose(f);
 
     write_opf(contentfile, chapters);
+    write_ncx(ncxfile.c_str(), chapters);
 
+    unlink(ofilename);
     package(ofilename, outdir.c_str());
 }
 
