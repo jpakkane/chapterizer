@@ -21,7 +21,17 @@ namespace fs = std::filesystem;
 
 namespace {
 
+// The contents of these files is always the same.
+
 const char mimetext[] = "application/epub+zip";
+
+const char containertext[] = R"(<?xml version='1.0' encoding='utf-8'?>
+<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
+  <rootfiles>
+    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>
+)";
 
 bool looks_like_title(const std::string &line) {
     if(line.empty()) {
@@ -204,6 +214,106 @@ void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
     render_page_num(book, chapter_par.font, current_page, page, m);
 }
 
+void package(const char *ofilename, const char *builddir) {
+    std::string command{"cd "};
+    command += builddir;
+    command += "; zip -r ../";
+    command += ofilename;
+    command += " META-INF OEBPS mimetype";
+
+    // I feel shame.
+    if(system(command.c_str()) != 0) {
+        std::abort();
+    }
+}
+
+void generate_epub_manifest(tinyxml2::XMLNode *manifest, const std::vector<Chapter> &chapters) {
+    auto opf = manifest->GetDocument();
+    const int num_chapters = int(chapters.size());
+
+    const int bufsize = 128;
+    char buf[bufsize];
+    for(int i = 0; i < num_chapters; i++) {
+        snprintf(buf, bufsize, "chapter%d", i + 1);
+        auto node = opf->NewElement("item");
+        manifest->InsertEndChild(node);
+        node->SetAttribute("id", buf);
+        strcat(buf, ".xhtml");
+        node->SetAttribute("href", buf);
+        node->SetAttribute("media-type", "application/xhtml+xml");
+    }
+
+    auto ncx = opf->NewElement("item");
+    manifest->InsertEndChild(ncx);
+    ncx->SetAttribute("id", "ncx");
+    ncx->SetAttribute("href", "toc.ncx");
+    ncx->SetAttribute("media-type", "application/x-dtbncx+xml");
+    // FIXME add images, fonts and CSS.
+}
+
+void generate_epub_spine(tinyxml2::XMLNode *spine, const std::vector<Chapter> &chapters) {
+    auto opf = spine->GetDocument();
+    const int num_chapters = int(chapters.size());
+
+    const int bufsize = 128;
+    char buf[bufsize];
+    for(int i = 0; i < num_chapters; i++) {
+        snprintf(buf, bufsize, "chapter%d", i + 1);
+        auto node = opf->NewElement("itemref");
+        spine->InsertEndChild(node);
+        node->SetAttribute("idref", buf);
+    }
+}
+
+void write_opf(const fs::path &ofile, const std::vector<Chapter> &chapters) {
+    tinyxml2::XMLDocument opf;
+
+    auto decl = opf.NewDeclaration(nullptr);
+    opf.InsertFirstChild(decl);
+    auto package = opf.NewElement("package");
+    package->SetAttribute("version", "2.0");
+    package->SetAttribute("xmlns", "http://www.idpf.org/2007/opf");
+    package->SetAttribute("unique-identifier", "id");
+
+    opf.InsertEndChild(package);
+
+    auto metadata = opf.NewElement("metadata");
+    package->InsertFirstChild(metadata);
+    metadata->SetAttribute("xmlns:dc", "http://purl.org/dc/elements/1.1/");
+    metadata->SetAttribute("xmlns:opf", "http://www.idpf.org/2007/opf");
+
+    auto name = opf.NewElement("dc:title");
+    metadata->InsertEndChild(name);
+    name->SetText("War of the Worlds");
+    auto language = opf.NewElement("dc:language");
+    language->SetText("en");
+    metadata->InsertEndChild(language);
+    auto identifier = opf.NewElement("dc:identifier");
+    metadata->InsertEndChild(identifier);
+    identifier->SetAttribute("id", "BookId");
+    identifier->SetAttribute("opf:scheme", "ISBN");
+    identifier->SetText("123456789X");
+    auto creator = opf.NewElement("dc:creator");
+    metadata->InsertEndChild(creator);
+    creator->SetAttribute("opf:file-as", "Wells, HG");
+    creator->SetAttribute("opf:role", "aut");
+    creator->SetText("HG Wells");
+
+    auto manifest = opf.NewElement("manifest");
+    package->InsertEndChild(manifest);
+    generate_epub_manifest(manifest, chapters);
+
+    auto spine = opf.NewElement("spine");
+    package->InsertEndChild(spine);
+    spine->SetAttribute("toc", "ncx");
+    generate_epub_spine(spine, chapters);
+
+    if(opf.SaveFile(ofile.c_str()) != tinyxml2::XML_SUCCESS) {
+        printf("Writing opf failed.\n");
+        std::abort();
+    }
+}
+
 void create_epub(const char *ofilename, std::vector<Chapter> &chapters) {
     fs::path outdir{"epubtmp"};
     fs::remove_all(outdir);
@@ -211,6 +321,7 @@ void create_epub(const char *ofilename, std::vector<Chapter> &chapters) {
     auto oebpsdir = outdir / "OEBPS";
     auto mimefile = outdir / "mimetype";
     auto containerfile = metadir / "container.xml";
+    auto contentfile = oebpsdir / "content.opf";
 
     fs::create_directories(metadir);
     fs::create_directory(oebpsdir);
@@ -218,6 +329,14 @@ void create_epub(const char *ofilename, std::vector<Chapter> &chapters) {
     FILE *f = fopen(mimefile.c_str(), "w");
     fwrite(mimetext, 1, strlen(mimetext), f);
     fclose(f);
+
+    f = fopen(containerfile.c_str(), "w");
+    fwrite(containertext, 1, strlen(containertext), f);
+    fclose(f);
+
+    write_opf(contentfile, chapters);
+
+    package(ofilename, outdir.c_str());
 }
 
 int main(int argc, char **argv) {
