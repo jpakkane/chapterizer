@@ -29,19 +29,45 @@ int main() {
     cairo_surface_t *surface = cairo_pdf_surface_create("pangocairotest.pdf", 595, 842);
     cairo_t *cr = cairo_create(surface);
     cairo_save(cr);
-    cairo_set_source_rgb(cr, 1.0, 0.2, 0.1);
+    // cairo_set_source_rgb(cr, 1.0, 0.2, 0.1);
     cairo_move_to(cr, 72, 72);
     printf("PANGO_SCALE = %d\n", PANGO_SCALE);
     PangoLayout *layout = pango_cairo_create_layout(cr);
     PangoFontDescription *desc;
     desc = pango_font_description_from_string("Gentium");
     assert(desc);
-    pango_font_description_set_absolute_size(desc, 10 * PANGO_SCALE);
+    pango_font_description_set_absolute_size(desc, 12 * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
-    pango_layout_set_text(layout, "Persian saddle-bags on which he", -1);
+
+    pango_layout_set_markup(layout, "This text is <i>ita&lt;lic</i>.", -1);
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
+
+    cairo_move_to(cr, 72, 86);
+    pango_layout_set_markup(layout, "This text is <b>bold</b>.", -1);
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_show_layout(cr, layout);
+
+    cairo_move_to(cr, 72, 100);
+    pango_layout_set_markup(layout, "This text is <tt>monospaced</tt>.", -1);
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_show_layout(cr, layout);
+
+    cairo_move_to(cr, 72, 116);
+    pango_layout_set_markup(
+        layout,
+        "This text is <span variant=\"small-caps\" letter_spacing=\"100\">in Small Caps</span>.",
+        -1);
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_show_layout(cr, layout);
+
+    cairo_move_to(cr, 72, 132);
+    pango_layout_set_markup(
+        layout, "This text is <span variant=\"petite-caps\">in Petite Caps</span>.", -1);
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_show_layout(cr, layout);
+
     PangoRectangle ink_rect, logical_rect;
     pango_layout_get_extents(layout, &ink_rect, &logical_rect);
     printf("Text width is %.2f mm\n", pt2mm(double(logical_rect.width) / PANGO_SCALE));
@@ -54,10 +80,10 @@ int main() {
 
     // Image
     cairo_surface_t *image;
-    image = cairo_image_surface_create_from_png("../chapterizer/1bit.png");
+    image = cairo_image_surface_create_from_png("../1bit.png");
     //    cairo_rectangle(cr, 100, 100, 100, 100);
     //    cairo_clip(cr);
-    cairo_translate(cr, 100, 100);
+    cairo_translate(cr, 100, 300);
     cairo_scale(cr, 0.1, 0.1);
     cairo_set_source_surface(cr, image, 0, 0);
     cairo_paint(cr);
