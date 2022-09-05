@@ -40,31 +40,31 @@ int main() {
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
-    pango_layout_set_markup(layout, "This text is <i>ita&lt;lic</i>.", -1);
+    pango_layout_set_markup(layout, "This is <i>some italic</i> text.", -1);
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
 
     cairo_move_to(cr, 72, 86);
-    pango_layout_set_markup(layout, "This text is <b>bold</b>.", -1);
+    pango_layout_set_markup(layout, "This is <b>some bold</b> text.", -1);
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
 
     cairo_move_to(cr, 72, 100);
-    pango_layout_set_markup(layout, "This text is <tt>monospaced</tt>.", -1);
+    pango_layout_set_markup(layout, "This is <tt>some monospaced</tt> text.", -1);
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
 
     cairo_move_to(cr, 72, 116);
     pango_layout_set_markup(
         layout,
-        "This text is <span variant=\"small-caps\" letter_spacing=\"100\">in Small Caps</span>.",
+        "This is <span variant=\"small-caps\" letter_spacing=\"100\">some Small Caps</span> text.",
         -1);
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
 
     cairo_move_to(cr, 72, 132);
     pango_layout_set_markup(
-        layout, "This text is <span variant=\"petite-caps\">in Petite Caps</span>.", -1);
+        layout, "This is <span variant=\"petite-caps\">some Petite Caps</span> text.", -1);
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
 
