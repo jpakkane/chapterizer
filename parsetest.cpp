@@ -16,6 +16,7 @@
 
 #include <pango/pangocairo.h>
 #include <cairo-pdf.h>
+#include <glib.h>
 
 #include <vector>
 #include <string>
@@ -26,8 +27,42 @@
 double mm2pt(const double x) { return x * 2.8346456693; }
 double pt2mm(const double x) { return x / 2.8346456693; }
 
-const std::vector<std::string> lines{{"This chapter is in /italic/."},
-                                     {"The second chapter be *written in bold*."}};
+const std::vector<std::string> lines{
+    {"This chapter is in /italic/."},
+    {"The second chapter be *written in bold*."},
+    {"The third chapter be `written in typewriter`."},
+    {"The fourth chapter be ¤written in Small Caps¤."},
+};
+
+#define ITALIC_BIT 1
+#define BOLD_BIT (1 << 1)
+#define SMALLCAPS_BIT (1 << 2)
+
+enum class LetterFormat : char { None, Italic, Bold, SmallCaps };
+
+struct Formatting {
+    size_t offset;
+    int formats;
+};
+
+struct FormattedWord {
+    std::string word;
+    std::vector<Formatting> blob;
+};
+
+std::vector<std::string> split_to_words(const char *u8string) {
+    GRegex *re = g_regex_new(" ", GRegexCompileFlags(0), GRegexMatchFlags(0), nullptr);
+    std::vector<std::string> words;
+    gchar **parts = g_regex_split(re, u8string, GRegexMatchFlags(0));
+
+    for(int i = 0; parts[i]; ++i) {
+        if(parts[i][0]) {
+            words.emplace_back(parts[i]);
+        }
+    }
+    g_regex_unref(re);
+    return words;
+}
 
 int main() {
     setlocale(LC_ALL, "");
@@ -48,10 +83,14 @@ int main() {
 
     for(const auto &line : lines) {
         ++line_num;
-        cairo_move_to(cr, 72, 72 + 14 * line_num);
-        pango_layout_set_markup(layout, line.c_str(), -1);
-        pango_cairo_update_layout(cr, layout);
-        pango_cairo_show_layout(cr, layout);
+        int word_num = -1;
+        for(const auto &word : split_to_words(line.c_str())) {
+            ++word_num;
+            cairo_move_to(cr, 72 + 50 * word_num, 72 + 14 * line_num);
+            pango_layout_set_markup(layout, word.c_str(), -1);
+            pango_cairo_update_layout(cr, layout);
+            pango_cairo_show_layout(cr, layout);
+        }
     }
 
     cairo_surface_destroy(surface);
