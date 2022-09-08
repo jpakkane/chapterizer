@@ -89,7 +89,13 @@ const std::vector<std::string> lines{{"Some /italic text/ here."},
                                      {"The fourth chapter be |written in Small Caps|."},
                                      {"a/b/c*d*e/f*g*h/i."},
                                      {"Death|death|"},
-                                     {"some`codebits`here _ _ _ `codebits`"}};
+                                     {"# This is a top level header"},
+                                     {"Some text with /emphasis/."},
+                                     {"## This is a second level header"},
+                                     {"Again some text."},
+                                     {"# This heading should have a 2."},
+                                     {"## Did it reset the numbering?"},
+                                     {"This concludes our *broadcast day*."}};
 
 #define ITALIC_BIT 1
 #define BOLD_BIT (1 << 1)
@@ -214,6 +220,27 @@ void append_markup_end(std::string &buf, int style) {
     }
 }
 
+void set_font(PangoLayout *layout, int level) {
+    PangoFontDescription *desc;
+    switch(level) {
+    case 0:
+        desc = pango_font_description_from_string("Gentium");
+        pango_font_description_set_absolute_size(desc, 10 * PANGO_SCALE);
+        break;
+    case 1:
+        desc = pango_font_description_from_string("Noto sans");
+        pango_font_description_set_absolute_size(desc, 14 * PANGO_SCALE);
+        break;
+    case 2:
+        desc = pango_font_description_from_string("Noto sans");
+        pango_font_description_set_absolute_size(desc, 12 * PANGO_SCALE);
+        break;
+    }
+    assert(desc);
+    pango_layout_set_font_description(layout, desc);
+    pango_font_description_free(desc);
+}
+
 int main() {
     setlocale(LC_ALL, "");
     //    cairo_status_t status;
@@ -221,28 +248,51 @@ int main() {
     cairo_t *cr = cairo_create(surface);
     cairo_save(cr);
     // cairo_set_source_rgb(cr, 1.0, 0.2, 0.1);
-    printf("PANGO_SCALE = %d\n", PANGO_SCALE);
     PangoLayout *layout = pango_cairo_create_layout(cr);
-    PangoFontDescription *desc;
     int line_num = -1;
-    desc = pango_font_description_from_string("Gentium");
-    assert(desc);
-    pango_font_description_set_absolute_size(desc, 12 * PANGO_SCALE);
-    pango_layout_set_font_description(layout, desc);
-    pango_font_description_free(desc);
+
+    int section_number = 0;
+    int subsection_number = 0;
+
+    int y = 72;
 
     for(const auto &line : lines) {
+        int delta_y = 0;
+        pango_layout_set_attributes(layout, nullptr);
         ++line_num;
         FormatJiggy jg;
         style_and_append(jg, split_to_words(line.c_str()));
+        if(jg.formatted_words.empty()) {
+            continue;
+        }
+
+        if(jg.formatted_words.front().word == "#") {
+            ++section_number;
+            subsection_number = 0;
+            set_font(layout, 1);
+            jg.formatted_words.front().word = std::to_string(section_number);
+            delta_y = 16;
+        } else if(jg.formatted_words.front().word == "##") {
+            ++subsection_number;
+            set_font(layout, 2);
+            jg.formatted_words.front().word = std::to_string(section_number);
+            jg.formatted_words.front().word += '.';
+            jg.formatted_words.front().word += std::to_string(subsection_number);
+            delta_y = 14;
+        } else {
+            set_font(layout, 0);
+            delta_y = 12;
+        }
 
         int word_num = -1;
         std::string markup_buf;
+        cairo_move_to(cr, 72, y);
+        markup_buf.clear();
         for(const auto &word : jg.formatted_words) {
             ++word_num;
-            cairo_move_to(cr, 72 + 50 * word_num, 72 + 14 * line_num);
-            pango_layout_set_attributes(layout, nullptr);
-            markup_buf.clear();
+            if(word_num != 0) {
+                markup_buf += ' ';
+            }
             for(auto *it = word.styles.cbegin(); it != word.styles.cend(); ++it) {
                 append_markup_start(markup_buf, *it);
             }
@@ -266,10 +316,11 @@ int main() {
             for(auto *it = current_styles.crbegin(); it != current_styles.crend(); --it) {
                 append_markup_end(markup_buf, *it);
             }
-            pango_layout_set_markup(layout, markup_buf.c_str(), -1);
-            pango_cairo_update_layout(cr, layout);
-            pango_cairo_show_layout(cr, layout);
         }
+        pango_layout_set_markup(layout, markup_buf.c_str(), -1);
+        pango_cairo_update_layout(cr, layout);
+        pango_cairo_show_layout(cr, layout);
+        y += delta_y;
     }
 
     cairo_surface_destroy(surface);
