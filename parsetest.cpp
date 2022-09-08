@@ -24,15 +24,72 @@
 #include <clocale>
 #include <cassert>
 
+template<typename T, int max_elements> class SmallStack final {
+
+public:
+    typedef T value_type;
+
+    SmallStack() = default;
+
+    bool empty() const { return size == 0; }
+
+    bool contains(T val) const {
+        for(int i = 0; i < size; ++i) {
+            if(arr[i] == val) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void push(T new_val) {
+        if(contains(new_val)) {
+            printf("Tried to push an element that is already in the stack.\n");
+            std::abort();
+        }
+        if(size >= max_elements) {
+            printf("Stack overflow.\n");
+            std::abort();
+        }
+        arr[size] = new_val;
+        ++size;
+    }
+
+    void pop(T new_val) {
+        if(empty()) {
+            printf("Tried to pop an empty stack.\n");
+            std::abort();
+        }
+        if(arr[size - 1] != new_val) {
+            printf("Tried to pop a different value than is at the end of the stack.\n");
+            std::abort();
+        }
+        --size;
+    }
+
+    const T *cbegin() const { return arr; }
+    const T *cend() const { return arr + size; }
+
+    const T *crbegin() const { return arr + size - 1; } // FIXME, need to use -- to progress.
+    const T *crend() const { return arr - 1; }
+
+private:
+    T arr[max_elements];
+    int size = 0;
+};
+
+typedef SmallStack<int, 4> StyleStack;
+
 double mm2pt(const double x) { return x * 2.8346456693; }
 double pt2mm(const double x) { return x / 2.8346456693; }
 
-const std::vector<std::string> lines{
-    {"Some /italic text/ here."},
-    {"The second chapter be *written in bold*."},
-    {"The third chapter be `written in typewriter`."},
-    {"The fourth chapter be |written in Small Caps|."},
-};
+const std::vector<std::string> lines{{"Some /italic text/ here."},
+                                     {"The second chapter be *written in bold*."},
+                                     {"The third chapter be `written in typewriter`."},
+                                     {"The fourth chapter be |written in Small Caps|."},
+                                     {"a/b/c*d*e/f*g*h/i."},
+                                     {"Death|death|"},
+                                     {"some`codebits`here _ _ _ `codebits`"}};
 
 #define ITALIC_BIT 1
 #define BOLD_BIT (1 << 1)
@@ -54,7 +111,7 @@ struct Formatting {
 struct FormattedWord {
     std::string word;
     std::vector<Formatting> blob;
-    int style_bits = 0;
+    StyleStack styles;
 };
 
 std::vector<std::string> split_to_words(const char *u8string) {
@@ -73,45 +130,87 @@ std::vector<std::string> split_to_words(const char *u8string) {
 
 struct FormatJiggy {
     std::vector<FormattedWord> formatted_words;
-    int enabled_styles = 0;
+    StyleStack styles;
 };
+
+template<typename T> void style_change(T &stack, typename T::value_type val) {
+    if(stack.contains(val)) {
+        stack.pop(val);
+        // If the
+    } else {
+        stack.push(val);
+    }
+}
 
 void style_and_append(FormatJiggy &fwords, const std::vector<std::string> in_words) {
     std::string buf;
-    int current_style = fwords.enabled_styles;
     for(const auto &word : in_words) {
+        auto start_style = fwords.styles;
         buf.clear();
         std::vector<Formatting> changes;
         for(const char c : word) {
             switch(c) {
             case italic_char:
+                style_change(fwords.styles, ITALIC_BIT);
                 changes.emplace_back(Formatting{buf.size(), ITALIC_BIT});
-                current_style ^= ITALIC_BIT;
                 break;
             case bold_char:
+                style_change(fwords.styles, BOLD_BIT);
                 changes.emplace_back(Formatting{buf.size(), BOLD_BIT});
-                current_style ^= BOLD_BIT;
                 break;
             case tt_char:
+                style_change(fwords.styles, TT_BIT);
                 changes.emplace_back(Formatting{buf.size(), TT_BIT});
-                current_style ^= TT_BIT;
                 break;
             case smallcaps_char:
+                style_change(fwords.styles, SMALLCAPS_BIT);
                 changes.emplace_back(Formatting{buf.size(), SMALLCAPS_BIT});
-                current_style ^= SMALLCAPS_BIT;
                 break;
             default:
                 buf.push_back(c);
             }
         }
-        int word_start_style = fwords.enabled_styles;
-        while(!changes.empty() && changes.front().offset == 0) {
-            word_start_style ^= changes.front().formats;
-            changes.erase(changes.begin());
-        }
-        fwords.formatted_words.emplace_back(
-            FormattedWord{buf, std::move(changes), word_start_style});
-        fwords.enabled_styles = current_style;
+        fwords.formatted_words.emplace_back(FormattedWord{buf, std::move(changes), start_style});
+    }
+}
+
+void append_markup_start(std::string &buf, int style) {
+    switch(style) {
+    case ITALIC_BIT:
+        buf.append("<i>");
+        break;
+    case BOLD_BIT:
+        buf.append("<b>");
+        break;
+    case TT_BIT:
+        buf.append("<tt>");
+        break;
+    case SMALLCAPS_BIT:
+        buf.append("<span variant=\"small-caps\" letter_spacing=\"100\">");
+        break;
+    default:
+        printf("Bad style start bit.\n");
+        std::abort();
+    }
+}
+
+void append_markup_end(std::string &buf, int style) {
+    switch(style) {
+    case ITALIC_BIT:
+        buf.append("</i>");
+        break;
+    case BOLD_BIT:
+        buf.append("</b>");
+        break;
+    case TT_BIT:
+        buf.append("</tt>");
+        break;
+    case SMALLCAPS_BIT:
+        buf.append("</span>");
+        break;
+    default:
+        printf("Bad style end bit.\n");
+        std::abort();
     }
 }
 
@@ -140,38 +239,34 @@ int main() {
         int word_num = -1;
         std::string markup_buf;
         for(const auto &word : jg.formatted_words) {
-            pango_layout_set_attributes(layout, nullptr);
             ++word_num;
             cairo_move_to(cr, 72 + 50 * word_num, 72 + 14 * line_num);
-            if(word.style_bits == 0) {
-                pango_layout_set_text(layout, word.word.c_str(), -1);
-            } else {
-                markup_buf.clear();
-                // FIXME, replace < and >.
-                if(word.style_bits & ITALIC_BIT) {
-                    markup_buf = "<i>";
-                    markup_buf += word.word;
-                    markup_buf += "</i>";
-                    pango_layout_set_markup(layout, markup_buf.c_str(), -1);
-                } else if(word.style_bits & BOLD_BIT) {
-                    markup_buf = "<b>";
-                    markup_buf += word.word;
-                    markup_buf += "</b>";
-                    pango_layout_set_markup(layout, markup_buf.c_str(), -1);
-                }
-                if(word.style_bits & TT_BIT) {
-                    markup_buf = "<tt>";
-                    markup_buf += word.word;
-                    markup_buf += "</tt>";
-                    pango_layout_set_markup(layout, markup_buf.c_str(), -1);
-                }
-                if(word.style_bits & SMALLCAPS_BIT) {
-                    markup_buf = "<span variant=\"small-caps\" letter_spacing=\"100\">";
-                    markup_buf += word.word;
-                    markup_buf += "</span>";
-                    pango_layout_set_markup(layout, markup_buf.c_str(), -1);
-                }
+            pango_layout_set_attributes(layout, nullptr);
+            markup_buf.clear();
+            for(auto *it = word.styles.cbegin(); it != word.styles.cend(); ++it) {
+                append_markup_start(markup_buf, *it);
             }
+            auto current_styles = word.styles;
+
+            size_t style_index = 0;
+            for(size_t i = 0; i < word.word.size(); ++i) {
+                while(style_index < word.blob.size() && word.blob[style_index].offset == i) {
+                    const auto &format = word.blob[style_index];
+                    if(current_styles.contains(format.formats)) {
+                        append_markup_end(markup_buf, format.formats);
+                        current_styles.pop(format.formats);
+                    } else {
+                        append_markup_start(markup_buf, format.formats);
+                        current_styles.push(format.formats);
+                    }
+                    ++style_index;
+                }
+                markup_buf += word.word[i];
+            }
+            for(auto *it = current_styles.crbegin(); it != current_styles.crend(); --it) {
+                append_markup_end(markup_buf, *it);
+            }
+            pango_layout_set_markup(layout, markup_buf.c_str(), -1);
             pango_cairo_update_layout(cr, layout);
             pango_cairo_show_layout(cr, layout);
         }
