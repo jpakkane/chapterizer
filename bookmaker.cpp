@@ -573,6 +573,22 @@ void write_chapters(const fs::path &outdir, const std::vector<Chapter> &chapters
                 case italic_character:
                     handle_tag_switch(doc, current_style, tagstack, buf, ITALIC_S, "i");
                     break;
+                case bold_character:
+                    handle_tag_switch(doc, current_style, tagstack, buf, BOLD_S, "b");
+                    break;
+                case tt_character:
+                    handle_tag_switch(doc, current_style, tagstack, buf, TT_S, "tt");
+                    break;
+                case smallcaps_character:
+                    handle_tag_switch(doc,
+                                      current_style,
+                                      tagstack,
+                                      buf,
+                                      SMALLCAPS_S,
+                                      "span",
+                                      "variant",
+                                      "small-caps");
+                    break;
                 default:
                     buf += c;
                 }
