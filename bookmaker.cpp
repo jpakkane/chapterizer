@@ -494,6 +494,34 @@ bool is_stylechar(char c) {
            c == smallcaps_character;
 }
 
+void handle_tag_switch(tinyxml2::XMLDocument &doc,
+                       StyleStack &current_style,
+                       std::stack<tinyxml2::XMLNode *> &tagstack,
+                       std::string &buf,
+                       char style,
+                       const char *tag_name,
+                       const char *attribute = nullptr,
+                       const char *value = nullptr) {
+    if(current_style.contains(style)) {
+        auto ptext = doc.NewText(buf.c_str());
+        buf.clear();
+        tagstack.top()->InsertEndChild(ptext);
+        current_style.pop(style);
+        tagstack.pop();
+    } else {
+        auto ptext = doc.NewText(buf.c_str());
+        buf.clear();
+        auto new_element = doc.NewElement(tag_name);
+        if(attribute) {
+            new_element->SetAttribute(attribute, value);
+        }
+        tagstack.top()->InsertEndChild(ptext);
+        tagstack.top()->InsertEndChild(new_element);
+        tagstack.push(static_cast<tinyxml2::XMLNode *>(new_element));
+        current_style.push(style);
+    }
+}
+
 void write_chapters(const fs::path &outdir, const std::vector<Chapter> &chapters) {
     const int num_chapters = int(chapters.size());
 
@@ -543,21 +571,7 @@ void write_chapters(const fs::path &outdir, const std::vector<Chapter> &chapters
             for(char c : paragraph) {
                 switch(c) {
                 case italic_character:
-                    if(current_style.contains(ITALIC_S)) {
-                        auto ptext = doc.NewText(buf.c_str());
-                        buf.clear();
-                        tagstack.top()->InsertEndChild(ptext);
-                        current_style.pop(ITALIC_S);
-                        tagstack.pop();
-                    } else {
-                        auto ptext = doc.NewText(buf.c_str());
-                        buf.clear();
-                        auto it = doc.NewElement("i");
-                        tagstack.top()->InsertEndChild(ptext);
-                        tagstack.top()->InsertEndChild(it);
-                        tagstack.push(static_cast<tinyxml2::XMLNode *>(it));
-                        current_style.push(ITALIC_S);
-                    }
+                    handle_tag_switch(doc, current_style, tagstack, buf, ITALIC_S, "i");
                     break;
                 default:
                     buf += c;
