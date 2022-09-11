@@ -42,13 +42,16 @@ struct HyphenatedWord {
     void sanity_check() const;
 };
 
+std::string get_visual_string(const std::string &word,
+                              const std::vector<HyphenPoint> hyphen_points);
+
 class WordHyphenator {
 public:
     WordHyphenator();
     ~WordHyphenator();
 
-    HyphenatedWord hyphenate(const std::string &word) const;
-    std::vector<HyphenatedWord> hyphenate(const std::vector<std::string> &words) const;
+    std::vector<HyphenPoint> hyphenate(const std::string &word) const;
+    std::vector<std::vector<HyphenPoint>> hyphenate(const std::vector<std::string> &words) const;
 
 private:
     HyphenDict *dict;

@@ -156,7 +156,7 @@ PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
                              compute_extra_penalties(lines, amounts)};
 }
 
-ParagraphFormatter::ParagraphFormatter(const std::vector<HyphenatedWord> &words_,
+ParagraphFormatter::ParagraphFormatter(const std::vector<EnrichedWord> &words_,
                                        const ChapterParameters &in_params,
                                        const ExtraPenaltyAmounts &ea)
     : words{words_}, params{in_params}, extras(ea) {}

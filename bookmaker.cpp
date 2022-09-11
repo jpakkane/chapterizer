@@ -3,6 +3,7 @@
 #include <chaptercommon.hpp>
 #include <paragraphformatter.hpp>
 #include <wordhyphenator.hpp>
+#include <formatting.hpp>
 
 #include <tinyxml2.h>
 #include <filesystem>
@@ -45,13 +46,11 @@ p {
 )";
 
 bool looks_like_title(const std::string &line) {
-    if(line.empty()) {
+    if(line.size() < 2) {
         return false;
     }
-    if(line.size() < 6 && line.back() == '.' &&
-       (line.front() == 'I' || line.front() == 'V' || line.front() == 'X')) {
+    if(line[0] == '#' && line[1] == ' ')
         return true;
-    }
     return false;
 }
 
@@ -99,8 +98,7 @@ std::vector<Chapter> load_text(const char *fname) {
                     paragraphs.clear();
                 }
                 reading_title = true;
-                title_text = line;
-                title_text += ' ';
+                title_text = line.substr(2);
                 continue;
             } else {
                 paragraph_text += line;
@@ -139,6 +137,54 @@ void render_page_num(
     const double leftmargin = page_num % 2 ? m.inner : m.outer;
     const double xloc = leftmargin + (p.w_mm - m.inner - m.outer) / 2;
     book.render_line_centered(buf, par, mm2pt(xloc), mm2pt(yloc));
+}
+
+template<typename T> void style_change(T &stack, typename T::value_type val) {
+    if(stack.contains(val)) {
+        stack.pop(val);
+        // If the
+    } else {
+        stack.push(val);
+    }
+}
+
+// NOTE: mutates the input words.
+std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::string &word) {
+    std::vector<FormattingChange> changes;
+    std::string buf;
+    const char *word_start = word.c_str();
+    const char *in = word_start;
+
+    while(*in) {
+        auto c = g_utf8_get_char(in);
+
+        switch(c) {
+        case italic_codepoint:
+            style_change(current_style, ITALIC_S);
+            changes.push_back(FormattingChange{size_t(in - word_start), ITALIC_S});
+            break;
+        case bold_codepoint:
+            style_change(current_style, BOLD_S);
+            changes.push_back(FormattingChange{size_t(in - word_start), BOLD_S});
+            break;
+        case tt_codepoint:
+            style_change(current_style, TT_S);
+            changes.push_back(FormattingChange{size_t(in - word_start), TT_S});
+            break;
+        case smallcaps_codepoint:
+            style_change(current_style, SMALLCAPS_S);
+            changes.push_back(FormattingChange{size_t(in - word_start), SMALLCAPS_S});
+            break;
+        default:
+            char tmp[10];
+            const int bytes_written = g_unichar_to_utf8(c, tmp);
+            tmp[bytes_written] = '\0';
+            buf += tmp;
+        }
+        in = g_utf8_next_char(in);
+    }
+    word = buf;
+    return changes;
 }
 
 void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
@@ -189,10 +235,21 @@ void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
         y += title_below_space;
         bool first_paragraph = true;
         for(const auto &p : c.paragraphs) {
+            StyleStack current_style;
             chapter_par.indent = first_paragraph ? 0 : indent;
             auto plain_words = split_to_words(std::string_view(p));
-            auto hyphenated_words = hyphen.hyphenate(plain_words);
-            ParagraphFormatter b(hyphenated_words, chapter_par, extras);
+            std::vector<EnrichedWord> processed_words;
+            for(const auto &word : plain_words) {
+                auto working_word = word;
+                auto start_style = current_style;
+                auto formatting_data = extract_styling(current_style, working_word);
+                auto hyphenation_data = hyphen.hyphenate(working_word);
+                processed_words.emplace_back(EnrichedWord{std::move(working_word),
+                                                          std::move(hyphenation_data),
+                                                          std::move(formatting_data),
+                                                          start_style});
+            }
+            ParagraphFormatter b(processed_words, chapter_par, extras);
             auto lines = b.split_lines();
             size_t line_num = 0;
             for(const auto &line : lines) {
@@ -538,6 +595,7 @@ int main(int argc, char **argv) {
     // printf("%s\n", chapters.front().paragraphs.back().c_str());
     */
     create_pdf("bookout.pdf", chapters);
-    create_epub("war_test.epub", chapters);
+    if(false)
+        create_epub("war_test.epub", chapters);
     return 0;
 }

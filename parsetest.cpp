@@ -127,7 +127,7 @@ enum class LetterFormat : char { None, Italic, Bold, SmallCaps };
 
 struct Formatting {
     size_t offset;
-    int formats;
+    char format;
 };
 
 struct FormattedWord {
@@ -318,12 +318,12 @@ int main() {
             for(size_t i = 0; i < word.word.size(); ++i) {
                 while(style_index < word.blob.size() && word.blob[style_index].offset == i) {
                     const auto &format = word.blob[style_index];
-                    if(current_styles.contains(format.formats)) {
-                        append_markup_end(markup_buf, format.formats);
-                        current_styles.pop(format.formats);
+                    if(current_styles.contains(format.format)) {
+                        append_markup_end(markup_buf, format.format);
+                        current_styles.pop(format.format);
                     } else {
-                        append_markup_start(markup_buf, format.formats);
-                        current_styles.push(format.formats);
+                        append_markup_start(markup_buf, format.format);
+                        current_styles.push(format.format);
                     }
                     ++style_index;
                 }

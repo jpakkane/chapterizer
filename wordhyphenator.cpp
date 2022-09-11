@@ -169,9 +169,9 @@ WordHyphenator::WordHyphenator() {
 
 WordHyphenator::~WordHyphenator() { hnj_hyphen_free(dict); }
 
-HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
+std::vector<HyphenPoint> WordHyphenator::hyphenate(const std::string &word) const {
     assert(word.find(' ') == std::string::npos);
-    HyphenatedWord result;
+    std::vector<HyphenPoint> hyphen_points;
     std::string reconstructed_word;
     reconstructed_word.reserve(word.size());
     // The hyphenation function only deals with lower case single words.
@@ -183,13 +183,13 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
         // Non-word such as a number or other weird character combinations.
         // FIXME to add dashelss hyphenation points for things like
         // 1,000,000.
-        return HyphenatedWord{{}, word};
+        return {};
     }
     const auto subwords = split_at_dashes(word);
     assert(subwords.words.size() == subwords.separators.size() + 1);
     for(size_t ind = 0; ind < subwords.words.size(); ++ind) {
         hyphenate_and_append(reconstructed_word,
-                             result.hyphen_points,
+                             hyphen_points,
                              subwords.words[ind],
                              ind < subwords.separators.size()
                                  ? std::optional<uint32_t>{subwords.separators[ind]}
@@ -197,18 +197,36 @@ HyphenatedWord WordHyphenator::hyphenate(const std::string &word) const {
                              dict);
     }
     assert(reconstructed_word == word);
-    result.word = word;
-    result.sanity_check();
-    return result;
+    HyphenatedWord tmp;
+    tmp.word = word;
+    tmp.hyphen_points = hyphen_points;
+    tmp.sanity_check();
+    return hyphen_points;
 }
 
-std::vector<HyphenatedWord> WordHyphenator::hyphenate(const std::vector<std::string> &words) const {
-    std::vector<HyphenatedWord> hyphs;
+std::vector<std::vector<HyphenPoint>>
+WordHyphenator::hyphenate(const std::vector<std::string> &words) const {
+    std::vector<std::vector<HyphenPoint>> hyphs;
     hyphs.reserve(words.size());
     for(const auto &w : words) {
         hyphs.emplace_back(hyphenate(w));
     }
     return hyphs;
+}
+
+std::string get_visual_string(const std::string &word,
+                              const std::vector<HyphenPoint> hyphen_points) {
+    std::string dashed_word;
+    dashed_word.reserve(word.size() + hyphen_points.size());
+    size_t hyphen_index = 0;
+    for(size_t i = 0; i < word.size(); ++i) {
+        dashed_word += word[i];
+        if(hyphen_index < hyphen_points.size() && i == hyphen_points[hyphen_index].loc) {
+            dashed_word += "⬧";
+            ++hyphen_index;
+        }
+    }
+    return dashed_word;
 }
 
 std::string HyphenatedWord::get_visual_string() const {

@@ -370,7 +370,14 @@ void run_optimization_cb(GtkButton *, gpointer data) {
     ExtraPenaltyAmounts extras = get_penalties(app);
     auto words = get_entry_widget_text_words(app);
     auto hyphenated_words = hyp.hyphenate(words);
-    ParagraphFormatter builder{hyphenated_words, params, extras};
+    std::vector<EnrichedWord> rich_words;
+    rich_words.reserve(hyphenated_words.size());
+    StyleStack empty_style;
+    for(size_t i = 0; i < words.size(); ++i) {
+        rich_words.emplace_back(
+            EnrichedWord{std::move(words[i]), std::move(hyphenated_words[i]), {}, empty_style});
+    }
+    ParagraphFormatter builder{rich_words, params, extras};
     auto new_lines = builder.split_lines();
     std::string collator;
     for(const auto &l : new_lines) {
@@ -390,8 +397,8 @@ void hyphenword_changed_cb(GtkEditable *, gpointer data) {
     auto b = gtk_entry_get_buffer(app->hyp_entry);
     std::string word = gtk_entry_buffer_get_text(b);
     WordHyphenator hyphenator; // Not very efficient, but whatever.
-    auto hyphenatedword = hyphenator.hyphenate(word);
-    auto visual = hyphenatedword.get_visual_string();
+    auto hyphen_points = hyphenator.hyphenate(word);
+    auto visual = get_visual_string(word, hyphen_points);
     gtk_label_set_text(app->hyp_output, visual.c_str());
 }
 

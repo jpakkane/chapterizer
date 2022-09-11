@@ -18,6 +18,7 @@
 
 #include <chaptercommon.hpp>
 #include <wordhyphenator.hpp>
+#include <formatting.hpp>
 #include <variant>
 
 class TextStats;
@@ -100,7 +101,7 @@ PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
 
 class ParagraphFormatter {
 public:
-    ParagraphFormatter(const std::vector<HyphenatedWord> &words,
+    ParagraphFormatter(const std::vector<EnrichedWord> &words,
                        const ChapterParameters &in_params,
                        const ExtraPenaltyAmounts &ea);
 
@@ -126,7 +127,7 @@ private:
     double current_line_width(size_t line_num) const;
 
     std::string build_line(size_t from_split, size_t to_split) const;
-    std::vector<HyphenatedWord> words;
+    std::vector<EnrichedWord> words;
     std::vector<SplitPoint> split_points;
     std::vector<TextLocation> split_locations;
 
