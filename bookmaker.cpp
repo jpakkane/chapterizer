@@ -251,7 +251,7 @@ void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
                                                           start_style});
             }
             ParagraphFormatter b(processed_words, chapter_par, extras);
-            auto lines = b.split_lines();
+            auto lines = b.split_formatted_lines();
             size_t line_num = 0;
             for(const auto &line : lines) {
                 assert(g_utf8_validate(line.c_str(), -1, nullptr));

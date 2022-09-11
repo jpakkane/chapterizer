@@ -146,6 +146,48 @@ std::vector<ExtraPenaltyStatistics> compute_extra_penalties(const std::vector<st
     return penalties;
 }
 
+void toggle_format(StyleStack &current_style, std::string &line, const char format_to_toggle) {
+    if(current_style.contains(format_to_toggle)) {
+        current_style.pop(format_to_toggle);
+        switch(format_to_toggle) {
+        case ITALIC_S:
+            line.append("</i>");
+            break;
+        case BOLD_S:
+            line.append("</b>");
+            break;
+        case TT_S:
+            line.append("</tt>");
+            break;
+        case SMALLCAPS_S:
+            line.append("</span>");
+            break;
+        default:
+            printf("Bad style end bit.\n");
+            std::abort();
+        }
+    } else {
+        current_style.push(format_to_toggle);
+        switch(format_to_toggle) {
+        case ITALIC_S:
+            line.append("<i>");
+            break;
+        case BOLD_S:
+            line.append("<b>");
+            break;
+        case TT_S:
+            line.append("<tt>");
+            break;
+        case SMALLCAPS_S:
+            line.append("<span variant=\"small-caps\" letter_spacing=\"100\">");
+            break;
+        default:
+            printf("Bad style start bit.\n");
+            std::abort();
+        }
+    }
+}
+
 } // namespace
 
 PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
@@ -175,6 +217,14 @@ std::vector<std::string> ParagraphFormatter::split_lines() {
     }
 }
 
+std::vector<std::string> ParagraphFormatter::split_formatted_lines() {
+    precompute();
+    TextStats shaper;
+    best_penalty = 1e100;
+    best_split.clear();
+    return global_split_markup(shaper);
+}
+
 std::vector<LineStats> ParagraphFormatter::simple_split(TextStats &shaper) {
     std::vector<LineStats> lines;
     std::vector<TextLocation> splits;
@@ -185,7 +235,7 @@ std::vector<LineStats> ParagraphFormatter::simple_split(TextStats &shaper) {
         current_split = line_end.end_split;
     }
     const auto total = total_penalty(lines, params, extras);
-    // printf("Total penalty: %.1f\n", total);
+    printf("Total penalty: %.1f\n", total);
     return lines;
 }
 
@@ -196,6 +246,17 @@ ParagraphFormatter::stats_to_lines(const std::vector<LineStats> &linestats) cons
     lines.emplace_back(build_line(0, linestats[0].end_split));
     for(size_t i = 1; i < linestats.size(); ++i) {
         lines.emplace_back(build_line(linestats[i - 1].end_split, linestats[i].end_split));
+    }
+    return lines;
+}
+
+std::vector<std::string>
+ParagraphFormatter::stats_to_markup_lines(const std::vector<LineStats> &linestats) const {
+    std::vector<std::string> lines;
+    lines.reserve(linestats.size());
+    lines.emplace_back(build_line_markup(0, linestats[0].end_split));
+    for(size_t i = 1; i < linestats.size(); ++i) {
+        lines.emplace_back(build_line_markup(linestats[i - 1].end_split, linestats[i].end_split));
     }
     return lines;
 }
@@ -216,6 +277,17 @@ std::vector<std::string> ParagraphFormatter::global_split(const TextStats &shape
     global_split_recursive(shaper, line_stats, current_split);
     // printf("Total penalty: %.2f\n", best_penalty);
     return stats_to_lines(best_split);
+}
+
+std::vector<std::string> ParagraphFormatter::global_split_markup(const TextStats &shaper) {
+    std::vector<std::string> lines;
+    std::vector<TextLocation> splits;
+    size_t current_split = 0;
+    std::vector<LineStats> line_stats;
+
+    global_split_recursive(shaper, line_stats, current_split);
+    // printf("Total penalty: %.2f\n", best_penalty);
+    return stats_to_markup_lines(best_split);
 }
 
 void ParagraphFormatter::global_split_recursive(const TextStats &shaper,
@@ -355,6 +427,134 @@ std::string ParagraphFormatter::build_line(size_t from_split_ind, size_t to_spli
     return line;
 }
 
+std::string ParagraphFormatter::build_line_markup(size_t from_split_ind,
+                                                  size_t to_split_ind) const {
+    assert(to_split_ind >= from_split_ind);
+    std::string line;
+    if(to_split_ind == from_split_ind) {
+        return line;
+    }
+    const auto &from_split = split_points[from_split_ind];
+    const auto &to_split = split_points[to_split_ind];
+    const auto &from_loc = split_locations[from_split_ind];
+    const auto &to_loc = split_locations[to_split_ind];
+
+    StyleStack current_style = determine_style(from_loc);
+    for(auto it = current_style.cbegin(); it != current_style.cend(); ++it) {
+        switch(*it) {
+        case ITALIC_S:
+            line += "<i>";
+            break;
+        case BOLD_S:
+            line += "<b>";
+            break;
+        case TT_S:
+            line += "<tt>";
+            break;
+        case SMALLCAPS_S:
+            line += "<span variant=\"small-caps\" letter_spacing=\"100\">";
+            break;
+        default:
+            std::abort();
+        }
+    }
+
+    bool first_word = true;
+    for(size_t word_index = from_loc.word_index; word_index <= to_loc.word_index; ++word_index) {
+        if(word_index >= words.size()) {
+            continue;
+        }
+        const auto &current_word = words[word_index];
+        if(current_word.word == "disks—like") {
+            printf("Hello, mom.\n");
+        }
+        size_t word_start = -1;
+        size_t word_end = -1;
+        size_t style_point = 0;
+        const bool last_word = word_index == to_loc.word_index;
+        if(first_word) {
+            first_word = false;
+            word_start = from_loc.offset;
+            if(word_start != 0) {
+                ++word_start;
+            }
+        } else {
+            word_start = 0;
+        }
+        if(last_word) {
+            if(std::holds_alternative<WithinWordSplit>(to_split)) {
+                word_end = to_loc.offset + 1;
+            } else {
+                word_end = to_loc.offset;
+            }
+        } else {
+            word_end = current_word.word.length();
+        }
+        assert(word_end >= word_start);
+        while(style_point < current_word.f.size() &&
+              current_word.f[style_point].offset < word_start) {
+            ++style_point;
+        }
+        auto u8_length = next_char_utf8_length(current_word.word.c_str() + word_end);
+        std::string_view view = std::string_view(current_word.word)
+                                    .substr(word_start, word_end - word_start + (u8_length - 1));
+        assert(g_utf8_validate(view.data(), view.length(), nullptr));
+        for(size_t i = 0; i < view.size(); ++i) {
+            while(style_point < current_word.f.size() &&
+                  current_word.f[style_point].offset == word_start + i) {
+                toggle_format(current_style, line, current_word.f[style_point].format);
+                ++style_point;
+            }
+            line += view[i];
+        }
+
+        if(last_word) {
+            if(std::holds_alternative<WithinWordSplit>(to_split)) {
+                const auto &source_loc = std::get<WithinWordSplit>(to_split);
+                if(words[source_loc.word_index].hyphen_points[source_loc.hyphen_index].type ==
+                   SplitType::Regular) {
+                    line += '-';
+                }
+            }
+        }
+        while(style_point < current_word.f.size()) {
+            toggle_format(current_style, line, current_word.f[style_point].format);
+            ++style_point;
+        }
+        if(!last_word) {
+            line += ' ';
+        }
+    }
+
+    for(auto it = current_style.crbegin(); it != current_style.crend(); --it) {
+        switch(*it) {
+        case ITALIC_S:
+            line += "</i>";
+            break;
+        case BOLD_S:
+            line += "</b>";
+            break;
+        case TT_S:
+            line += "</tt>";
+            break;
+        case SMALLCAPS_S:
+            line += "</span>";
+            break;
+        default:
+            std::abort();
+        }
+    }
+    assert(g_utf8_validate(line.c_str(), -1, nullptr));
+    return line;
+}
+
+StyleStack ParagraphFormatter::determine_style(TextLocation t) const {
+    const auto word = words[t.word_index].word;
+    StyleStack style = words[t.word_index].start_style;
+    // FIXME, advance to the actual location.
+    return style;
+}
+
 TextLocation ParagraphFormatter::point_to_location(const SplitPoint &p) const {
     if(std::holds_alternative<BetweenWordSplit>(p)) {
         const auto &r = std::get<BetweenWordSplit>(p);
@@ -424,11 +624,12 @@ std::vector<LineStats> ParagraphFormatter::get_line_end_choices(size_t start_spl
         const auto trial_split = split_point;
         const auto trial_line = build_line(start_split, trial_split);
         const auto trial_width = shaper.text_width(trial_line, params.font);
-        potentials.emplace_back(LineStats{
-            trial_split,
-            trial_width,
-            std::holds_alternative<WithinWordSplit>(
-                split_points[trial_split])}); // FIXME, check if word ends with a dash character.
+        potentials.emplace_back(
+            LineStats{trial_split,
+                      trial_width,
+                      std::holds_alternative<WithinWordSplit>(
+                          split_points[trial_split])}); // FIXME, check if word ends with a dash
+                                                        // character.
     };
 
     if(tightest_split.end_split > start_split + 2) {
