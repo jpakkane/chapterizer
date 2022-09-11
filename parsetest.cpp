@@ -67,6 +67,18 @@ public:
         --size;
     }
 
+    bool operator==(const SmallStack<T, max_elements> &other) const {
+        if(size != other.size) {
+            return false;
+        }
+        for(int i = 0; i < size; ++i) {
+            if(arr[i] != other.arr[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     const T *cbegin() const { return arr; }
     const T *cend() const { return arr + size; }
 
@@ -78,7 +90,7 @@ private:
     int size = 0;
 };
 
-typedef SmallStack<int, 4> StyleStack;
+typedef SmallStack<char, 4> StyleStack;
 
 double mm2pt(const double x) { return x * 2.8346456693; }
 double pt2mm(const double x) { return x / 2.8346456693; }
@@ -97,15 +109,19 @@ const std::vector<std::string> lines{{"Some /italic text/ here."},
                                      {"## Did it reset the numbering?"},
                                      {"This concludes our *broadcast day*."}};
 
-#define ITALIC_BIT 1
-#define BOLD_BIT (1 << 1)
-#define TT_BIT (1 << 2)
-#define SMALLCAPS_BIT (1 << 3)
+const char ITALIC_S = 1;
+const char BOLD_S = (1 << 1);
+const char TT_S = (1 << 2);
+const char SMALLCAPS_S = (1 << 3);
 
 const char italic_char = '/';
 const char bold_char = '*';
 const char tt_char = '`';
 const char smallcaps_char = '|';
+#if 0
+const char superscript_char = '^';
+const char subscript_char = '_';
+#endif
 
 enum class LetterFormat : char { None, Italic, Bold, SmallCaps };
 
@@ -157,20 +173,20 @@ void style_and_append(FormatJiggy &fwords, const std::vector<std::string> in_wor
         for(const char c : word) {
             switch(c) {
             case italic_char:
-                style_change(fwords.styles, ITALIC_BIT);
-                changes.emplace_back(Formatting{buf.size(), ITALIC_BIT});
+                style_change(fwords.styles, ITALIC_S);
+                changes.emplace_back(Formatting{buf.size(), ITALIC_S});
                 break;
             case bold_char:
-                style_change(fwords.styles, BOLD_BIT);
-                changes.emplace_back(Formatting{buf.size(), BOLD_BIT});
+                style_change(fwords.styles, BOLD_S);
+                changes.emplace_back(Formatting{buf.size(), BOLD_S});
                 break;
             case tt_char:
-                style_change(fwords.styles, TT_BIT);
-                changes.emplace_back(Formatting{buf.size(), TT_BIT});
+                style_change(fwords.styles, TT_S);
+                changes.emplace_back(Formatting{buf.size(), TT_S});
                 break;
             case smallcaps_char:
-                style_change(fwords.styles, SMALLCAPS_BIT);
-                changes.emplace_back(Formatting{buf.size(), SMALLCAPS_BIT});
+                style_change(fwords.styles, SMALLCAPS_S);
+                changes.emplace_back(Formatting{buf.size(), SMALLCAPS_S});
                 break;
             default:
                 buf.push_back(c);
@@ -182,16 +198,16 @@ void style_and_append(FormatJiggy &fwords, const std::vector<std::string> in_wor
 
 void append_markup_start(std::string &buf, int style) {
     switch(style) {
-    case ITALIC_BIT:
+    case ITALIC_S:
         buf.append("<i>");
         break;
-    case BOLD_BIT:
+    case BOLD_S:
         buf.append("<b>");
         break;
-    case TT_BIT:
+    case TT_S:
         buf.append("<tt>");
         break;
-    case SMALLCAPS_BIT:
+    case SMALLCAPS_S:
         buf.append("<span variant=\"small-caps\" letter_spacing=\"100\">");
         break;
     default:
@@ -202,16 +218,16 @@ void append_markup_start(std::string &buf, int style) {
 
 void append_markup_end(std::string &buf, int style) {
     switch(style) {
-    case ITALIC_BIT:
+    case ITALIC_S:
         buf.append("</i>");
         break;
-    case BOLD_BIT:
+    case BOLD_S:
         buf.append("</b>");
         break;
-    case TT_BIT:
+    case TT_S:
         buf.append("</tt>");
         break;
-    case SMALLCAPS_BIT:
+    case SMALLCAPS_S:
         buf.append("</span>");
         break;
     default:
