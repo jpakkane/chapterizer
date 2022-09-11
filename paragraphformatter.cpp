@@ -440,24 +440,7 @@ std::string ParagraphFormatter::build_line_markup(size_t from_split_ind,
     const auto &to_loc = split_locations[to_split_ind];
 
     StyleStack current_style = determine_style(from_loc);
-    for(auto it = current_style.cbegin(); it != current_style.cend(); ++it) {
-        switch(*it) {
-        case ITALIC_S:
-            line += "<i>";
-            break;
-        case BOLD_S:
-            line += "<b>";
-            break;
-        case TT_S:
-            line += "<tt>";
-            break;
-        case SMALLCAPS_S:
-            line += "<span variant=\"small-caps\" letter_spacing=\"100\">";
-            break;
-        default:
-            std::abort();
-        }
-    }
+    current_style.write_buildup_markup(line);
 
     bool first_word = true;
     for(size_t word_index = from_loc.word_index; word_index <= to_loc.word_index; ++word_index) {
@@ -526,24 +509,7 @@ std::string ParagraphFormatter::build_line_markup(size_t from_split_ind,
         }
     }
 
-    for(auto it = current_style.crbegin(); it != current_style.crend(); --it) {
-        switch(*it) {
-        case ITALIC_S:
-            line += "</i>";
-            break;
-        case BOLD_S:
-            line += "</b>";
-            break;
-        case TT_S:
-            line += "</tt>";
-            break;
-        case SMALLCAPS_S:
-            line += "</span>";
-            break;
-        default:
-            std::abort();
-        }
-    }
+    current_style.write_teardown_markup(line);
     assert(g_utf8_validate(line.c_str(), -1, nullptr));
     return line;
 }
