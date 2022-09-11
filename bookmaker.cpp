@@ -7,6 +7,7 @@
 
 #include <tinyxml2.h>
 #include <filesystem>
+#include <stack>
 
 #include <glib.h>
 #include <cassert>
@@ -488,15 +489,20 @@ void write_ncx(const char *ofile, const std::vector<Chapter> &chapters) {
     ncx.SaveFile(ofile);
 }
 
+bool is_stylechar(char c) {
+    return c == italic_character || c == bold_character || c == tt_character ||
+           c == smallcaps_character;
+}
+
 void write_chapters(const fs::path &outdir, const std::vector<Chapter> &chapters) {
     const int num_chapters = int(chapters.size());
 
     const int bufsize = 128;
-    char buf[bufsize];
+    char tmpbuf[bufsize];
 
     for(int i = 0; i < num_chapters; i++) {
-        snprintf(buf, bufsize, "chapter%d.xhtml", i + 1);
-        auto ofile = outdir / buf;
+        snprintf(tmpbuf, bufsize, "chapter%d.xhtml", i + 1);
+        auto ofile = outdir / tmpbuf;
         tinyxml2::XMLDocument doc;
         auto decl = doc.NewDeclaration(nullptr);
         doc.InsertFirstChild(decl);
@@ -529,9 +535,42 @@ void write_chapters(const fs::path &outdir, const std::vector<Chapter> &chapters
         body->InsertEndChild(heading);
         heading->SetText(chapters[i].title.c_str());
         for(const auto &paragraph : chapters[i].paragraphs) {
+            StyleStack current_style;
+            std::stack<tinyxml2::XMLNode *> tagstack;
             auto p = doc.NewElement("p");
+            tagstack.push(p);
+            std::string buf;
+            for(char c : paragraph) {
+                switch(c) {
+                case italic_character:
+                    if(current_style.contains(ITALIC_S)) {
+                        auto ptext = doc.NewText(buf.c_str());
+                        buf.clear();
+                        tagstack.top()->InsertEndChild(ptext);
+                        current_style.pop(ITALIC_S);
+                        tagstack.pop();
+                    } else {
+                        auto ptext = doc.NewText(buf.c_str());
+                        buf.clear();
+                        auto it = doc.NewElement("i");
+                        tagstack.top()->InsertEndChild(ptext);
+                        tagstack.top()->InsertEndChild(it);
+                        tagstack.push(static_cast<tinyxml2::XMLNode *>(it));
+                        current_style.push(ITALIC_S);
+                    }
+                    break;
+                default:
+                    buf += c;
+                }
+            }
+            assert(!tagstack.empty());
+            if(!buf.empty()) {
+                auto ending = doc.NewText(buf.c_str());
+                tagstack.top()->InsertEndChild(ending);
+            }
+            tagstack.pop();
+            assert(tagstack.empty());
             body->InsertEndChild(p);
-            p->SetText(paragraph.c_str());
         }
 
         doc.SaveFile(ofile.c_str());
@@ -595,7 +634,6 @@ int main(int argc, char **argv) {
     // printf("%s\n", chapters.front().paragraphs.back().c_str());
     */
     create_pdf("bookout.pdf", chapters);
-    if(false)
-        create_epub("war_test.epub", chapters);
+    create_epub("war_test.epub", chapters);
     return 0;
 }

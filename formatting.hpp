@@ -11,6 +11,11 @@ const char BOLD_S = (1 << 1);
 const char TT_S = (1 << 2);
 const char SMALLCAPS_S = (1 << 3);
 
+const uint32_t italic_character = '/';
+const uint32_t bold_character = '*';
+const uint32_t tt_character = '`';
+const uint32_t smallcaps_character = '|';
+
 const uint32_t italic_codepoint = '/';
 const uint32_t bold_codepoint = '*';
 const uint32_t tt_codepoint = '`';
