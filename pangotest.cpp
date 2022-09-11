@@ -17,8 +17,8 @@
 #include <pango/pangocairo.h>
 #include <cairo-pdf.h>
 
-#include <clocale>
-#include <cassert>
+#include <locale.h>
+#include <assert.h>
 
 double mm2pt(const double x) { return x * 2.8346456693; }
 double pt2mm(const double x) { return x / 2.8346456693; }
@@ -28,67 +28,69 @@ int main() {
     //    cairo_status_t status;
     cairo_surface_t *surface = cairo_pdf_surface_create("pangocairotest.pdf", 595, 842);
     cairo_t *cr = cairo_create(surface);
-    cairo_save(cr);
     // cairo_set_source_rgb(cr, 1.0, 0.2, 0.1);
-    cairo_move_to(cr, 72, 72);
     printf("PANGO_SCALE = %d\n", PANGO_SCALE);
     PangoLayout *layout = pango_cairo_create_layout(cr);
     PangoFontDescription *desc;
     desc = pango_font_description_from_string("Gentium");
     assert(desc);
-    pango_font_description_set_absolute_size(desc, 12 * PANGO_SCALE);
+    pango_font_description_set_absolute_size(desc, 10 * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
-    pango_layout_set_markup(layout, "This is <i>some italic</i> text.", -1);
+    cairo_move_to(cr, 72, 72);
+    pango_layout_set_markup(layout, "This is a line of text.", -1);
+    pango_cairo_update_layout(cr, layout);
+    const auto plain_baseline = pango_layout_get_baseline(layout);
+    pango_cairo_show_layout(cr, layout);
+    pango_layout_set_attributes(layout, NULL);
+
+    cairo_move_to(cr, 72, 72 + 1 * 12);
+    pango_layout_set_markup(layout, "This is a line of text.", -1);
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
+    pango_layout_set_attributes(layout, NULL);
 
-    cairo_move_to(cr, 72, 86);
-    pango_layout_set_markup(layout, "This is <b>some bold</b> text.", -1);
+    pango_layout_set_markup(layout, "This is a <tt>line</tt> of text.", -1);
+    pango_cairo_update_layout(cr, layout);
+    auto current_baseline = pango_layout_get_baseline(layout);
+    cairo_move_to(cr, 72, 72 + 2 * 12 + (plain_baseline - current_baseline) / PANGO_SCALE);
+    pango_cairo_show_layout(cr, layout);
+    pango_layout_set_attributes(layout, NULL);
+
+    cairo_move_to(cr, 72, 72 + 3 * 12);
+    pango_layout_set_markup(layout, "This is a line of text.", -1);
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
+    pango_layout_set_attributes(layout, NULL);
 
-    cairo_move_to(cr, 72, 100);
-    pango_layout_set_markup(layout, "This is <tt>some monospaced</tt> text.", -1);
-    pango_cairo_update_layout(cr, layout);
-    pango_cairo_show_layout(cr, layout);
-
-    cairo_move_to(cr, 72, 116);
+    cairo_move_to(cr, 72, 72 + 4 * 12);
     pango_layout_set_markup(
-        layout,
-        "This is <span variant=\"small-caps\" letter_spacing=\"100\">some Small Caps</span> text.",
-        -1);
+        layout, "This is a <span font=\"Noto Sans Mono\" size=\"6pt\">line</span> of text.", -1);
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
+    pango_layout_set_attributes(layout, NULL);
 
-    cairo_move_to(cr, 72, 132);
+    cairo_move_to(cr, 72, 72 + 5 * 12);
+    pango_layout_set_markup(layout, "This is a line of text.", -1);
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_show_layout(cr, layout);
+    pango_layout_set_attributes(layout, NULL);
+
+    cairo_move_to(cr, 72, 72 + 6 * 12);
     pango_layout_set_markup(
-        layout, "This is <span variant=\"petite-caps\">some Petite Caps</span> text.", -1);
+        layout, "This is a <span font=\"Liberation Mono\">line</span> of text.", -1);
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
+    pango_layout_set_attributes(layout, NULL);
 
-    PangoRectangle ink_rect, logical_rect;
-    pango_layout_get_extents(layout, &ink_rect, &logical_rect);
-    printf("Text width is %.2f mm\n", pt2mm(double(logical_rect.width) / PANGO_SCALE));
-    int w, h;
-    pango_layout_get_size(layout, &w, &h);
-    printf("Size: (%d, %d)\n", w / PANGO_SCALE, h / PANGO_SCALE);
-    g_object_unref(G_OBJECT(layout));
-    //    g_object_unref(G_OBJECT(context));
-    cairo_restore(cr);
-
-    // Image
-    cairo_surface_t *image;
-    image = cairo_image_surface_create_from_png("../1bit.png");
-    //    cairo_rectangle(cr, 100, 100, 100, 100);
-    //    cairo_clip(cr);
-    cairo_translate(cr, 100, 300);
-    cairo_scale(cr, 0.1, 0.1);
-    cairo_set_source_surface(cr, image, 0, 0);
-    cairo_paint(cr);
-    cairo_surface_destroy(image);
+    cairo_move_to(cr, 72, 72 + 7 * 12);
+    pango_layout_set_markup(layout, "This is a line of text.", -1);
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_show_layout(cr, layout);
+    pango_layout_set_attributes(layout, NULL);
     cairo_surface_destroy(surface);
+
     cairo_destroy(cr);
     return 0;
 }
