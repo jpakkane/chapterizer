@@ -48,8 +48,12 @@ public:
         return text_width(s.c_str(), font);
     };
 
+    double markup_width(const char *utf8_text, const FontParameters &font) const;
+
 private:
-    void set_pango_state(const char *utf8_text, const FontParameters &font) const;
+    void set_pango_state(const char *utf8_text,
+                         const FontParameters &font,
+                         bool is_markup = false) const;
 
     cairo_t *cr;
     cairo_surface_t *surface;

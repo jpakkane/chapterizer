@@ -182,6 +182,49 @@ void PdfRenderer::render_line_justified(const std::string &line_text,
 #endif
 }
 
+void PdfRenderer::render_line_justified(const std::vector<std::string> &markup_words,
+                                        const FontParameters &par,
+                                        double line_width_mm,
+                                        double x,
+                                        double y) {
+    setup_pango(par);
+    std::string full_line;
+    for(const auto &w : markup_words) {
+        full_line += w; // Markup words end in spaces (except the last one).
+    }
+
+    pango_layout_set_attributes(layout, nullptr);
+    // Pango aligns by top, we want alignment by baseline.
+    // https://gitlab.gnome.org/GNOME/pango/-/issues/698
+    pango_layout_set_text(layout, "A", 1);
+    const auto desired_baseline = pango_layout_get_baseline(layout) / PANGO_SCALE;
+
+    const double target_width_pt = mm2pt(line_width_mm);
+    pango_layout_set_markup(layout, full_line.c_str(), full_line.length());
+    double text_width_mm = hack.markup_width(full_line.c_str(), fp);
+    const double text_width_pt = mm2pt(text_width_mm);
+    const double num_spaces = double(markup_words.size() - 1);
+    const double space_extra_width =
+        num_spaces > 0 ? (target_width_pt - text_width_pt) / num_spaces : 0.0;
+
+    std::string tmp;
+    for(const auto &markup_word : markup_words) {
+        cairo_move_to(cr, x, y);
+        PangoRectangle r;
+
+        pango_layout_set_attributes(layout, nullptr);
+        pango_layout_set_markup(layout, markup_word.c_str(), -1);
+        const auto current_baseline = pango_layout_get_baseline(layout) / PANGO_SCALE;
+
+        cairo_rel_move_to(cr, 0, desired_baseline - current_baseline);
+        pango_layout_get_extents(layout, nullptr, &r);
+        pango_cairo_update_layout(cr, layout);
+        pango_cairo_show_layout(cr, layout);
+        x += double(r.width) / PANGO_SCALE;
+        x += space_extra_width;
+    }
+}
+
 void PdfRenderer::setup_pango(const FontParameters &par) {
     PangoFontDescription *desc = pango_font_description_from_string(par.name.c_str());
     if(par.type == FontStyle::Bold || par.type == FontStyle::BoldItalic) {
@@ -207,6 +250,22 @@ void PdfRenderer::render_line_as_is(const char *line,
     cairo_move_to(cr, x, y);
     pango_layout_set_attributes(layout, nullptr);
     pango_layout_set_markup(layout, line, -1);
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_show_layout(cr, layout);
+}
+
+void PdfRenderer::render_line_as_is(const std::vector<std::string> markup_words,
+                                    const FontParameters &par,
+                                    double x,
+                                    double y) {
+    std::string full_line;
+    for(const auto &w : markup_words) {
+        full_line += w;
+    }
+    setup_pango(par);
+    cairo_move_to(cr, x, y);
+    pango_layout_set_attributes(layout, nullptr);
+    pango_layout_set_markup(layout, full_line.c_str(), -1);
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
 }

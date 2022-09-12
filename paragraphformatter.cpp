@@ -217,7 +217,7 @@ std::vector<std::string> ParagraphFormatter::split_lines() {
     }
 }
 
-std::vector<std::string> ParagraphFormatter::split_formatted_lines() {
+std::vector<std::vector<std::string>> ParagraphFormatter::split_formatted_lines() {
     precompute();
     TextStats shaper;
     best_penalty = 1e100;
@@ -250,9 +250,9 @@ ParagraphFormatter::stats_to_lines(const std::vector<LineStats> &linestats) cons
     return lines;
 }
 
-std::vector<std::string>
+std::vector<std::vector<std::string>>
 ParagraphFormatter::stats_to_markup_lines(const std::vector<LineStats> &linestats) const {
-    std::vector<std::string> lines;
+    std::vector<std::vector<std::string>> lines;
     lines.reserve(linestats.size());
     lines.emplace_back(build_line_markup(0, linestats[0].end_split));
     for(size_t i = 1; i < linestats.size(); ++i) {
@@ -279,7 +279,8 @@ std::vector<std::string> ParagraphFormatter::global_split(const TextStats &shape
     return stats_to_lines(best_split);
 }
 
-std::vector<std::string> ParagraphFormatter::global_split_markup(const TextStats &shaper) {
+std::vector<std::vector<std::string>>
+ParagraphFormatter::global_split_markup(const TextStats &shaper) {
     std::vector<std::string> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
@@ -427,10 +428,10 @@ std::string ParagraphFormatter::build_line(size_t from_split_ind, size_t to_spli
     return line;
 }
 
-std::string ParagraphFormatter::build_line_markup(size_t from_split_ind,
-                                                  size_t to_split_ind) const {
+std::vector<std::string> ParagraphFormatter::build_line_markup(size_t from_split_ind,
+                                                               size_t to_split_ind) const {
     assert(to_split_ind >= from_split_ind);
-    std::string line;
+    std::vector<std::string> line;
     if(to_split_ind == from_split_ind) {
         return line;
     }
@@ -440,17 +441,16 @@ std::string ParagraphFormatter::build_line_markup(size_t from_split_ind,
     const auto &to_loc = split_locations[to_split_ind];
 
     StyleStack current_style = determine_style(from_loc);
-    current_style.write_buildup_markup(line);
 
     bool first_word = true;
+    std::string markup;
     for(size_t word_index = from_loc.word_index; word_index <= to_loc.word_index; ++word_index) {
+        markup.clear();
         if(word_index >= words.size()) {
             continue;
         }
+        current_style.write_buildup_markup(markup);
         const auto &current_word = words[word_index];
-        if(current_word.word == "disks—like") {
-            printf("Hello, mom.\n");
-        }
         size_t word_start = -1;
         size_t word_end = -1;
         size_t style_point = 0;
@@ -485,10 +485,10 @@ std::string ParagraphFormatter::build_line_markup(size_t from_split_ind,
         for(size_t i = 0; i < view.size(); ++i) {
             while(style_point < current_word.f.size() &&
                   current_word.f[style_point].offset == word_start + i) {
-                toggle_format(current_style, line, current_word.f[style_point].format);
+                toggle_format(current_style, markup, current_word.f[style_point].format);
                 ++style_point;
             }
-            line += view[i];
+            markup += view[i];
         }
 
         if(last_word) {
@@ -496,21 +496,22 @@ std::string ParagraphFormatter::build_line_markup(size_t from_split_ind,
                 const auto &source_loc = std::get<WithinWordSplit>(to_split);
                 if(words[source_loc.word_index].hyphen_points[source_loc.hyphen_index].type ==
                    SplitType::Regular) {
-                    line += '-';
+                    markup += '-';
                 }
             }
         }
         while(style_point < current_word.f.size()) {
-            toggle_format(current_style, line, current_word.f[style_point].format);
+            toggle_format(current_style, markup, current_word.f[style_point].format);
             ++style_point;
         }
         if(!last_word) {
-            line += ' ';
+            markup += ' '; // The space must be inside the marku to get the correct width.
         }
+        current_style.write_teardown_markup(markup);
+        assert(g_utf8_validate(markup.c_str(), -1, nullptr));
+        line.emplace_back(std::move(markup));
     }
 
-    current_style.write_teardown_markup(line);
-    assert(g_utf8_validate(line.c_str(), -1, nullptr));
     return line;
 }
 

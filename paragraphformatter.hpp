@@ -111,7 +111,7 @@ public:
                        const ExtraPenaltyAmounts &ea);
 
     std::vector<std::string> split_lines();
-    std::vector<std::string> split_formatted_lines();
+    std::vector<std::vector<std::string>> split_formatted_lines();
 
 private:
     void precompute();
@@ -126,16 +126,17 @@ private:
 
     std::vector<LineStats> simple_split(TextStats &shaper);
     std::vector<std::string> global_split(const TextStats &shaper);
-    std::vector<std::string> global_split_markup(const TextStats &shaper);
+    std::vector<std::vector<std::string>> global_split_markup(const TextStats &shaper);
     void global_split_recursive(const TextStats &shaper,
                                 std::vector<LineStats> &line_stats,
                                 size_t split_pos);
     std::vector<std::string> stats_to_lines(const std::vector<LineStats> &linestats) const;
-    std::vector<std::string> stats_to_markup_lines(const std::vector<LineStats> &linestats) const;
+    std::vector<std::vector<std::string>>
+    stats_to_markup_lines(const std::vector<LineStats> &linestats) const;
     double current_line_width(size_t line_num) const;
 
     std::string build_line(size_t from_split, size_t to_split) const;
-    std::string build_line_markup(size_t from_split_ind, size_t to_split_ind) const;
+    std::vector<std::string> build_line_markup(size_t from_split_ind, size_t to_split_ind) const;
     std::vector<EnrichedWord> words;
     std::vector<SplitPoint> split_points;
     std::vector<TextLocation> split_locations;

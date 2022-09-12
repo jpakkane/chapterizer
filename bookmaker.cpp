@@ -253,8 +253,7 @@ void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
             ParagraphFormatter b(processed_words, chapter_par, extras);
             auto lines = b.split_formatted_lines();
             size_t line_num = 0;
-            for(const auto &line : lines) {
-                assert(g_utf8_validate(line.c_str(), -1, nullptr));
+            for(const auto &markup_words : lines) {
                 double current_indent = line_num == 0 ? chapter_par.indent : 0;
                 if(y >= bottom_watermark) {
                     render_page_num(book, chapter_par.font, current_page, page, m);
@@ -264,14 +263,14 @@ void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
                     x = current_page % 2 ? m.inner : m.outer;
                 }
                 if(line_num < lines.size() - 1) {
-                    book.render_line_justified(line,
+                    book.render_line_justified(markup_words,
                                                chapter_par.font,
                                                chapter_par.paragraph_width_mm - current_indent,
                                                mm2pt(x + current_indent),
                                                mm2pt(y));
                 } else {
                     book.render_line_as_is(
-                        line.c_str(), chapter_par.font, mm2pt(x + current_indent), mm2pt(y));
+                        markup_words, chapter_par.font, mm2pt(x + current_indent), mm2pt(y));
                 }
                 line_num++;
                 y += pt2mm(chapter_par.line_height_pt);

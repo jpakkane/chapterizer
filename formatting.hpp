@@ -80,7 +80,7 @@ public:
         return true;
     }
 
-    void write_buildup_markup(std::string buf) const {
+    void write_buildup_markup(std::string &buf) const {
         for(int i = 0; i < size; ++i) {
             switch(arr[i]) {
             case ITALIC_S:
@@ -101,7 +101,7 @@ public:
         }
     }
 
-    void write_teardown_markup(std::string buf) const {
+    void write_teardown_markup(std::string &buf) const {
 
         for(int i = size - 1; i >= 0; --i) {
             switch(arr[i]) {
