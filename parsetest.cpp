@@ -48,7 +48,7 @@ struct ReMatchOffsets {
     }
 };
 
-struct Section {
+struct SectionDecl {
     int level;
     ReMatchOffsets off;
 };
@@ -63,7 +63,19 @@ struct NewBlock {};
 
 struct EndOfFile {};
 
-typedef std::variant<Section, PlainLine, NewLine, NewBlock, EndOfFile> line_token;
+typedef std::variant<SectionDecl, PlainLine, NewLine, NewBlock, EndOfFile> line_token;
+
+struct Paragraph {
+    std::string text;
+};
+
+struct Section {
+    int level;
+    std::string text;
+};
+
+// Also needs images, footnotes, unformatted text etc.
+typedef std::variant<Paragraph, Section> DocElement;
 
 class BasicParser {
 public:
@@ -96,7 +108,7 @@ public:
         match_result = try_match(section, GRegexMatchFlags(0));
         if(match_result) {
             match_result->start_pos += 2; // FIXME
-            return Section{1, *match_result};
+            return SectionDecl{1, *match_result};
         }
         match_result = try_match(line, GRegexMatchFlags(0));
         if(match_result) {
@@ -135,8 +147,8 @@ private:
 };
 
 struct Document {
-    std::vector<std::string> paragraphs;
-    std::vector<std::string> sections;
+    // Add metadata entries for things like name, ISBN, authors etc.
+    std::vector<DocElement> elements;
 };
 
 Document parse_file(const char *data, const uintmax_t data_size) {
@@ -156,8 +168,8 @@ Document parse_file(const char *data, const uintmax_t data_size) {
     BasicParser p(data, data_size);
     line_token token = p.next();
     while(!std::holds_alternative<EndOfFile>(token)) {
-        if(std::holds_alternative<Section>(token)) {
-            auto &s = std::get<Section>(token);
+        if(std::holds_alternative<SectionDecl>(token)) {
+            auto &s = std::get<SectionDecl>(token);
             assert(section_text.empty());
             section_text = s.off.get_string(data);
         } else if(std::holds_alternative<PlainLine>(token)) {
@@ -178,11 +190,11 @@ Document parse_file(const char *data, const uintmax_t data_size) {
         } else if(std::holds_alternative<NewBlock>(token)) {
             auto &change = std::get<NewBlock>(token);
             if(!section_text.empty()) {
-                doc.sections.emplace_back(std::move(section_text));
+                doc.elements.emplace_back(Section{1, std::move(section_text)}); // FIXME
                 section_text.clear();
             }
             if(!paragraph_text.empty()) {
-                doc.paragraphs.emplace_back(std::move(paragraph_text));
+                doc.elements.emplace_back(Paragraph{std::move(paragraph_text)});
                 paragraph_text.clear();
             }
         } else {
@@ -209,7 +221,18 @@ int main(int argc, char **argv) {
     assert(data);
     auto document = parse_file(data, fsize);
     close(fd);
-    printf("%d lines\n", (int)document.paragraphs.size());
+    printf("%d elements\n", (int)document.elements.size());
+
+    for(const auto &s : document.elements) {
+        if(std::holds_alternative<Section>(s)) {
+            printf("Section\n");
+        } else if(std::holds_alternative<Paragraph>(s)) {
+            printf("Paragraph\n");
+        } else {
+            printf("Unknown variant type.\n");
+            std::abort();
+        }
+    }
 
     //    cairo_status_t status;
     cairo_surface_t *surface = cairo_pdf_surface_create("parsingtest.pdf", 595, 842);
