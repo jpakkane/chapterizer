@@ -17,6 +17,8 @@
 #include <pango/pangocairo.h>
 #include <cairo-pdf.h>
 #include <glib.h>
+#include <fcntl.h>
+#include <sys/mman.h>
 
 #include <vector>
 #include <string>
@@ -24,241 +26,139 @@
 #include <clocale>
 #include <cassert>
 
-template<typename T, int max_elements> class SmallStack final {
-
-public:
-    typedef T value_type;
-
-    SmallStack() = default;
-
-    bool empty() const { return size == 0; }
-
-    bool contains(T val) const {
-        for(int i = 0; i < size; ++i) {
-            if(arr[i] == val) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    void push(T new_val) {
-        if(contains(new_val)) {
-            printf("Tried to push an element that is already in the stack.\n");
-            std::abort();
-        }
-        if(size >= max_elements) {
-            printf("Stack overflow.\n");
-            std::abort();
-        }
-        arr[size] = new_val;
-        ++size;
-    }
-
-    void pop(T new_val) {
-        if(empty()) {
-            printf("Tried to pop an empty stack.\n");
-            std::abort();
-        }
-        if(arr[size - 1] != new_val) {
-            printf("Tried to pop a different value than is at the end of the stack.\n");
-            std::abort();
-        }
-        --size;
-    }
-
-    bool operator==(const SmallStack<T, max_elements> &other) const {
-        if(size != other.size) {
-            return false;
-        }
-        for(int i = 0; i < size; ++i) {
-            if(arr[i] != other.arr[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    const T *cbegin() const { return arr; }
-    const T *cend() const { return arr + size; }
-
-    const T *crbegin() const { return arr + size - 1; } // FIXME, need to use -- to progress.
-    const T *crend() const { return arr - 1; }
-
-private:
-    T arr[max_elements];
-    int size = 0;
-};
-
-typedef SmallStack<char, 4> StyleStack;
+#include <filesystem>
+#include <optional>
+#include <variant>
 
 double mm2pt(const double x) { return x * 2.8346456693; }
 double pt2mm(const double x) { return x / 2.8346456693; }
 
-const std::vector<std::string> lines{{"Some /italic text/ here."},
-                                     {"The second chapter be *written in bold*."},
-                                     {"The third chapter be `written in typewriter`."},
-                                     {"The fourth chapter be |written in Small Caps|."},
-                                     {"a/b/c*d*e/f*g*h/i."},
-                                     {"Death|death|"},
-                                     {"# This is a top level header"},
-                                     {"Some text with /emphasis/."},
-                                     {"## This is a second level header"},
-                                     {"Again some text."},
-                                     {"# This heading should have a 2."},
-                                     {"## Did it reset the numbering?"},
-                                     {"This concludes our *broadcast day*."}};
+namespace fs = std::filesystem;
 
-const char ITALIC_S = 1;
-const char BOLD_S = (1 << 1);
-const char TT_S = (1 << 2);
-const char SMALLCAPS_S = (1 << 3);
-
-const char italic_char = '/';
-const char bold_char = '*';
-const char tt_char = '`';
-const char smallcaps_char = '|';
-#if 0
-const char superscript_char = '^';
-const char subscript_char = '_';
-#endif
-
-enum class LetterFormat : char { None, Italic, Bold, SmallCaps };
-
-struct Formatting {
-    size_t offset;
-    char format;
+struct ReMatchOffsets {
+    int64_t start_pos;
+    int64_t end_pos;
 };
 
-struct FormattedWord {
-    std::string word;
-    std::vector<Formatting> blob;
-    StyleStack styles;
+struct Section {
+    int level;
+    ReMatchOffsets off;
 };
 
-std::vector<std::string> split_to_words(const char *u8string) {
-    GRegex *re = g_regex_new(" ", GRegexCompileFlags(0), GRegexMatchFlags(0), nullptr);
-    std::vector<std::string> words;
-    gchar **parts = g_regex_split(re, u8string, GRegexMatchFlags(0));
+struct PlainLine {
+    ReMatchOffsets off;
+};
 
-    for(int i = 0; parts[i]; ++i) {
-        if(parts[i][0]) {
-            words.emplace_back(parts[i]);
+struct NewLine {};
+
+struct ChapterChange {};
+
+class BasicParser {
+public:
+    BasicParser(const char *data_, const int64_t data_size_) : data(data_), data_size(data_size_) {
+        whitespace = g_regex_new("^\\s+", GRegexCompileFlags(0), GRegexMatchFlags(0), nullptr);
+        section = g_regex_new("^#+\\s+.*", GRegexCompileFlags(0), GRegexMatchFlags(0), nullptr);
+        line = g_regex_new("^.+", GRegexCompileFlags(0), GRegexMatchFlags(0), nullptr);
+        newline = g_regex_new("^\\n+", G_REGEX_MULTILINE, GRegexMatchFlags(0), nullptr);
+    }
+
+    ~BasicParser() {
+        g_regex_unref(newline);
+        g_regex_unref(section);
+        g_regex_unref(line);
+        g_regex_unref(whitespace);
+    }
+
+    std::optional<std::string> next() {
+        if(offset >= data_size) {
+            return {};
         }
-    }
-    g_regex_unref(re);
-    return words;
-}
 
-struct FormatJiggy {
-    std::vector<FormattedWord> formatted_words;
-    StyleStack styles;
-};
-
-template<typename T> void style_change(T &stack, typename T::value_type val) {
-    if(stack.contains(val)) {
-        stack.pop(val);
-        // If the
-    } else {
-        stack.push(val);
-    }
-}
-
-void style_and_append(FormatJiggy &fwords, const std::vector<std::string> in_words) {
-    std::string buf;
-    for(const auto &word : in_words) {
-        auto start_style = fwords.styles;
-        buf.clear();
-        std::vector<Formatting> changes;
-        for(const char c : word) {
-            switch(c) {
-            case italic_char:
-                style_change(fwords.styles, ITALIC_S);
-                changes.emplace_back(Formatting{buf.size(), ITALIC_S});
-                break;
-            case bold_char:
-                style_change(fwords.styles, BOLD_S);
-                changes.emplace_back(Formatting{buf.size(), BOLD_S});
-                break;
-            case tt_char:
-                style_change(fwords.styles, TT_S);
-                changes.emplace_back(Formatting{buf.size(), TT_S});
-                break;
-            case smallcaps_char:
-                style_change(fwords.styles, SMALLCAPS_S);
-                changes.emplace_back(Formatting{buf.size(), SMALLCAPS_S});
-                break;
-            default:
-                buf.push_back(c);
-            }
+        auto match_result = try_match(newline, G_REGEX_MATCH_ANCHORED);
+        if(match_result) {
+            return "NL";
         }
-        fwords.formatted_words.emplace_back(FormattedWord{buf, std::move(changes), start_style});
-    }
-}
+        match_result = try_match(section, GRegexMatchFlags(0));
+        if(match_result) {
+            return "SEC";
+        }
+        match_result = try_match(line, GRegexMatchFlags(0));
+        if(match_result) {
+            return "LINE";
+        }
 
-void append_markup_start(std::string &buf, int style) {
-    switch(style) {
-    case ITALIC_S:
-        buf.append("<i>");
-        break;
-    case BOLD_S:
-        buf.append("<b>");
-        break;
-    case TT_S:
-        buf.append("<tt>");
-        break;
-    case SMALLCAPS_S:
-        buf.append("<span variant=\"small-caps\" letter_spacing=\"100\">");
-        break;
-    default:
-        printf("Bad style start bit.\n");
+        printf("Parsing failed.");
         std::abort();
     }
-}
 
-void append_markup_end(std::string &buf, int style) {
-    switch(style) {
-    case ITALIC_S:
-        buf.append("</i>");
-        break;
-    case BOLD_S:
-        buf.append("</b>");
-        break;
-    case TT_S:
-        buf.append("</tt>");
-        break;
-    case SMALLCAPS_S:
-        buf.append("</span>");
-        break;
-    default:
-        printf("Bad style end bit.\n");
+private:
+    std::optional<ReMatchOffsets> try_match(GRegex *regex, GRegexMatchFlags flags) {
+        GMatchInfo *minfo = nullptr;
+        if(g_regex_match(regex, data + offset, flags, &minfo)) {
+            gint start_pos, end_pos;
+            g_match_info_fetch_pos(minfo, 0, &start_pos, &end_pos);
+            assert(start_pos == 0);
+            std::string word{data + start_pos, data + end_pos};
+            ReMatchOffsets m;
+            m.start_pos = offset + start_pos;
+            m.end_pos = offset + end_pos;
+            offset += end_pos - start_pos;
+            g_match_info_unref(minfo);
+            return m;
+        }
+        return {};
+    }
+
+    const char *data;
+    int64_t data_size;
+    int64_t offset = 0;
+    GRegex *whitespace;
+    GRegex *section;
+    GRegex *line;
+    GRegex *newline;
+};
+
+int parse_file(const char *data, const uintmax_t data_size) {
+    int result = 0;
+    uintmax_t offset = 0;
+    if(!g_utf8_validate(data, data_size, nullptr)) {
+        printf("Invalid utf-8.\n");
         std::abort();
     }
-}
-
-void set_font(PangoLayout *layout, int level) {
-    PangoFontDescription *desc;
-    switch(level) {
-    case 0:
-        desc = pango_font_description_from_string("Gentium");
-        pango_font_description_set_absolute_size(desc, 10 * PANGO_SCALE);
-        break;
-    case 1:
-        desc = pango_font_description_from_string("Noto sans");
-        pango_font_description_set_absolute_size(desc, 14 * PANGO_SCALE);
-        break;
-    case 2:
-        desc = pango_font_description_from_string("Noto sans");
-        pango_font_description_set_absolute_size(desc, 12 * PANGO_SCALE);
-        break;
+    GError *err = nullptr;
+    if(err) {
+        std::abort();
     }
-    assert(desc);
-    pango_layout_set_font_description(layout, desc);
-    pango_font_description_free(desc);
+
+    std::string section_text;
+    std::string paragraph_text;
+
+    BasicParser p(data, data_size);
+    std::optional<std::string> token = p.next();
+    while(token) {
+        printf("%s\n", token.value().c_str());
+        token = p.next();
+    }
+
+    return result;
 }
 
-int main() {
+int main(int argc, char **argv) {
     setlocale(LC_ALL, "");
+    if(argc != 2) {
+        printf("%s <input file>\n", argv[0]);
+        return 1;
+    }
+    fs::path infile{argv[1]};
+    auto fsize = fs::file_size(infile);
+    int fd = open(argv[1], O_RDONLY);
+    const char *data =
+        static_cast<const char *>(mmap(nullptr, fsize, PROT_READ, MAP_PRIVATE, fd, 0));
+    assert(data);
+    auto document = parse_file(data, fsize);
+    close(fd);
+    printf("%d lines\n", document);
+
     //    cairo_status_t status;
     cairo_surface_t *surface = cairo_pdf_surface_create("parsingtest.pdf", 595, 842);
     cairo_t *cr = cairo_create(surface);
@@ -267,77 +167,7 @@ int main() {
     PangoLayout *layout = pango_cairo_create_layout(cr);
     int line_num = -1;
 
-    int section_number = 0;
-    int subsection_number = 0;
-
     int y = 72;
-
-    for(const auto &line : lines) {
-        int delta_y = 0;
-        pango_layout_set_attributes(layout, nullptr);
-        ++line_num;
-        FormatJiggy jg;
-        style_and_append(jg, split_to_words(line.c_str()));
-        if(jg.formatted_words.empty()) {
-            continue;
-        }
-
-        if(jg.formatted_words.front().word == "#") {
-            ++section_number;
-            subsection_number = 0;
-            set_font(layout, 1);
-            jg.formatted_words.front().word = std::to_string(section_number);
-            delta_y = 16;
-        } else if(jg.formatted_words.front().word == "##") {
-            ++subsection_number;
-            set_font(layout, 2);
-            jg.formatted_words.front().word = std::to_string(section_number);
-            jg.formatted_words.front().word += '.';
-            jg.formatted_words.front().word += std::to_string(subsection_number);
-            delta_y = 14;
-        } else {
-            set_font(layout, 0);
-            delta_y = 12;
-        }
-
-        int word_num = -1;
-        std::string markup_buf;
-        cairo_move_to(cr, 72, y);
-        markup_buf.clear();
-        for(const auto &word : jg.formatted_words) {
-            ++word_num;
-            if(word_num != 0) {
-                markup_buf += ' ';
-            }
-            for(auto *it = word.styles.cbegin(); it != word.styles.cend(); ++it) {
-                append_markup_start(markup_buf, *it);
-            }
-            auto current_styles = word.styles;
-
-            size_t style_index = 0;
-            for(size_t i = 0; i < word.word.size(); ++i) {
-                while(style_index < word.blob.size() && word.blob[style_index].offset == i) {
-                    const auto &format = word.blob[style_index];
-                    if(current_styles.contains(format.format)) {
-                        append_markup_end(markup_buf, format.format);
-                        current_styles.pop(format.format);
-                    } else {
-                        append_markup_start(markup_buf, format.format);
-                        current_styles.push(format.format);
-                    }
-                    ++style_index;
-                }
-                markup_buf += word.word[i];
-            }
-            for(auto *it = current_styles.crbegin(); it != current_styles.crend(); --it) {
-                append_markup_end(markup_buf, *it);
-            }
-        }
-        pango_layout_set_markup(layout, markup_buf.c_str(), -1);
-        pango_cairo_update_layout(cr, layout);
-        pango_cairo_show_layout(cr, layout);
-        y += delta_y;
-    }
 
     cairo_surface_destroy(surface);
     cairo_destroy(cr);
