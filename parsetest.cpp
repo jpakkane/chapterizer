@@ -38,6 +38,14 @@ namespace fs = std::filesystem;
 struct ReMatchOffsets {
     int64_t start_pos;
     int64_t end_pos;
+
+    std::string get_string(const char *original_data) const {
+        gchar *norm =
+            g_utf8_normalize(original_data + start_pos, end_pos - start_pos, G_NORMALIZE_NFC);
+        std::string result{norm};
+        g_free(norm);
+        return result;
+    }
 };
 
 struct Section {
@@ -51,7 +59,11 @@ struct PlainLine {
 
 struct NewLine {};
 
-struct ChapterChange {};
+struct NewBlock {};
+
+struct EndOfFile {};
+
+typedef std::variant<Section, PlainLine, NewLine, NewBlock, EndOfFile> line_token;
 
 class BasicParser {
 public:
@@ -69,22 +81,26 @@ public:
         g_regex_unref(whitespace);
     }
 
-    std::optional<std::string> next() {
+    line_token next() {
         if(offset >= data_size) {
-            return {};
+            return EndOfFile{};
         }
 
         auto match_result = try_match(newline, G_REGEX_MATCH_ANCHORED);
         if(match_result) {
-            return "NL";
+            if(match_result->end_pos - match_result->start_pos > 1) {
+                return NewBlock{};
+            }
+            return NewLine{};
         }
         match_result = try_match(section, GRegexMatchFlags(0));
         if(match_result) {
-            return "SEC";
+            match_result->start_pos += 2; // FIXME
+            return Section{1, *match_result};
         }
         match_result = try_match(line, GRegexMatchFlags(0));
         if(match_result) {
-            return "LINE";
+            return PlainLine{*match_result};
         }
 
         printf("Parsing failed.");
@@ -118,9 +134,13 @@ private:
     GRegex *newline;
 };
 
-int parse_file(const char *data, const uintmax_t data_size) {
-    int result = 0;
-    uintmax_t offset = 0;
+struct Document {
+    std::vector<std::string> paragraphs;
+    std::vector<std::string> sections;
+};
+
+Document parse_file(const char *data, const uintmax_t data_size) {
+    Document doc;
     if(!g_utf8_validate(data, data_size, nullptr)) {
         printf("Invalid utf-8.\n");
         std::abort();
@@ -134,13 +154,45 @@ int parse_file(const char *data, const uintmax_t data_size) {
     std::string paragraph_text;
 
     BasicParser p(data, data_size);
-    std::optional<std::string> token = p.next();
-    while(token) {
-        printf("%s\n", token.value().c_str());
+    line_token token = p.next();
+    while(!std::holds_alternative<EndOfFile>(token)) {
+        if(std::holds_alternative<Section>(token)) {
+            auto &s = std::get<Section>(token);
+            assert(section_text.empty());
+            section_text = s.off.get_string(data);
+        } else if(std::holds_alternative<PlainLine>(token)) {
+            auto &l = std::get<PlainLine>(token);
+            if(!section_text.empty()) {
+                assert(paragraph_text.empty());
+                section_text += ' ';
+                section_text += l.off.get_string(data);
+            } else {
+                if(!paragraph_text.empty()) {
+                    paragraph_text += ' ';
+                }
+                paragraph_text += l.off.get_string(data);
+            }
+        } else if(std::holds_alternative<NewLine>(token)) {
+            auto &nl = std::get<NewLine>(token);
+            (void)nl;
+        } else if(std::holds_alternative<NewBlock>(token)) {
+            auto &change = std::get<NewBlock>(token);
+            if(!section_text.empty()) {
+                doc.sections.emplace_back(std::move(section_text));
+                section_text.clear();
+            }
+            if(!paragraph_text.empty()) {
+                doc.paragraphs.emplace_back(std::move(paragraph_text));
+                paragraph_text.clear();
+            }
+        } else {
+            std::abort();
+        }
         token = p.next();
     }
 
-    return result;
+    // FIXME, add stored data if any.
+    return doc;
 }
 
 int main(int argc, char **argv) {
@@ -157,7 +209,7 @@ int main(int argc, char **argv) {
     assert(data);
     auto document = parse_file(data, fsize);
     close(fd);
-    printf("%d lines\n", document);
+    printf("%d lines\n", (int)document.paragraphs.size());
 
     //    cairo_status_t status;
     cairo_surface_t *surface = cairo_pdf_surface_create("parsingtest.pdf", 595, 842);
@@ -165,9 +217,11 @@ int main(int argc, char **argv) {
     cairo_save(cr);
     // cairo_set_source_rgb(cr, 1.0, 0.2, 0.1);
     PangoLayout *layout = pango_cairo_create_layout(cr);
-    int line_num = -1;
 
-    int y = 72;
+    cairo_move_to(cr, 72, 72);
+    pango_layout_set_text(layout, "Not done yet.", -1);
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_show_layout(cr, layout);
 
     cairo_surface_destroy(surface);
     cairo_destroy(cr);
