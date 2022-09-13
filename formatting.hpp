@@ -142,7 +142,7 @@ struct FormattingChange {
 };
 
 struct EnrichedWord {
-    std::string word;
+    std::string text;
     std::vector<HyphenPoint> hyphen_points;
     std::vector<FormattingChange> f;
     StyleStack start_style;

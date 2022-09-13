@@ -361,7 +361,7 @@ std::string ParagraphFormatter::build_line(size_t from_split_ind, size_t to_spli
     // A single word spans the entire line.
     const bool pathological_single_word = from_loc.word_index == to_loc.word_index;
     if(pathological_single_word) {
-        const auto &bad_word = words[from_loc.word_index].word;
+        const auto &bad_word = words[from_loc.word_index].text;
         auto substr_start = from_loc.offset + 1;
         auto substr_length = to_loc.offset - from_loc.offset;
         if(from_loc.offset == 0) {
@@ -387,10 +387,10 @@ std::string ParagraphFormatter::build_line(size_t from_split_ind, size_t to_spli
 
     // First word.
     if(std::holds_alternative<BetweenWordSplit>(from_split)) {
-        line = words[from_loc.word_index].word;
+        line = words[from_loc.word_index].text;
     } else {
         const auto &word_to_split = words[from_loc.word_index];
-        const auto sv = std::string_view(word_to_split.word);
+        const auto sv = std::string_view(word_to_split.text);
         line = sv.substr(from_loc.offset + 1);
     }
     assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
@@ -403,7 +403,7 @@ std::string ParagraphFormatter::build_line(size_t from_split_ind, size_t to_spli
         // Intermediate words.
         while(current_word_index < to_loc.word_index && current_word_index < words.size()) {
             line += ' ';
-            line += words[current_word_index].word;
+            line += words[current_word_index].text;
             ++current_word_index;
         }
     }
@@ -416,7 +416,7 @@ std::string ParagraphFormatter::build_line(size_t from_split_ind, size_t to_spli
         const auto &source_loc = std::get<WithinWordSplit>(to_split);
         line += ' ';
         const auto &word_to_split = words[to_loc.word_index];
-        const auto sv = std::string_view(word_to_split.word);
+        const auto sv = std::string_view(word_to_split.text);
         line += sv.substr(0, to_loc.offset + 1);
         assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
         if(words[source_loc.word_index].hyphen_points[source_loc.hyphen_index].type ==
@@ -471,15 +471,15 @@ std::vector<std::string> ParagraphFormatter::build_line_markup(size_t from_split
                 word_end = to_loc.offset;
             }
         } else {
-            word_end = current_word.word.length();
+            word_end = current_word.text.length();
         }
         assert(word_end >= word_start);
         while(style_point < current_word.f.size() &&
               current_word.f[style_point].offset < word_start) {
             ++style_point;
         }
-        auto u8_length = next_char_utf8_length(current_word.word.c_str() + word_end);
-        std::string_view view = std::string_view(current_word.word)
+        auto u8_length = next_char_utf8_length(current_word.text.c_str() + word_end);
+        std::string_view view = std::string_view(current_word.text)
                                     .substr(word_start, word_end - word_start + (u8_length - 1));
         assert(g_utf8_validate(view.data(), view.length(), nullptr));
         for(size_t i = 0; i < view.size(); ++i) {
@@ -516,7 +516,7 @@ std::vector<std::string> ParagraphFormatter::build_line_markup(size_t from_split
 }
 
 StyleStack ParagraphFormatter::determine_style(TextLocation t) const {
-    const auto word = words[t.word_index].word;
+    const auto word = words[t.word_index].text;
     StyleStack style = words[t.word_index].start_style;
     // FIXME, advance to the actual location.
     return style;
