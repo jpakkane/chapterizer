@@ -462,9 +462,6 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
         }
         current_style.write_buildup_markup(markup);
         const auto &current_word = words[word_index];
-        if(current_word.text == "Woking") {
-            printf("Hello mom.\n");
-        }
         size_t word_start = -1;
         size_t word_end = -1;
         size_t style_point = 0;
@@ -480,8 +477,7 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
         }
         if(last_word) {
             if(std::holds_alternative<WithinWordSplit>(to_split)) {
-                word_end = to_loc.offset +
-                           next_char_utf8_length(current_word.text.c_str() + to_loc.offset);
+                word_end = to_loc.offset + 1;
             } else {
                 word_end = to_loc.offset;
             }
@@ -493,9 +489,8 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
               current_word.f[style_point].offset < word_start) {
             ++style_point;
         }
-        auto u8_length = next_char_utf8_length(current_word.text.c_str() + word_end);
-        std::string_view view = std::string_view(current_word.text)
-                                    .substr(word_start, word_end - word_start + (u8_length - 1));
+        std::string_view view =
+            std::string_view(current_word.text).substr(word_start, word_end - word_start);
         assert(g_utf8_validate(view.data(), view.length(), nullptr));
         for(size_t i = 0; i < view.size(); ++i) {
             while(style_point < current_word.f.size() &&
