@@ -195,7 +195,7 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
 
 void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
     PageSize page;
-
+    bool debug_draw = true;
     page.w_mm = 110;
     page.h_mm = 175;
     PdfRenderer book(ofilename, mm2pt(page.w_mm), mm2pt(page.h_mm));
@@ -266,6 +266,19 @@ void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
                     ++current_page;
                     y = m.upper;
                     x = current_page % 2 ? m.inner : m.outer;
+                    if(debug_draw) {
+                        if(current_page % 2) {
+                            book.draw_box(mm2pt(m.inner),
+                                          mm2pt(m.upper),
+                                          mm2pt(page.w_mm - m.inner - m.outer),
+                                          mm2pt(page.h_mm - m.upper - m.lower));
+                        } else {
+                            book.draw_box(mm2pt(m.outer),
+                                          mm2pt(m.upper),
+                                          mm2pt(page.w_mm - m.inner - m.outer),
+                                          mm2pt(page.h_mm - m.upper - m.lower));
+                        }
+                    }
                 }
                 if(line_num < lines.size() - 1) {
                     book.render_line_justified(markup_words,

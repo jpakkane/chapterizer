@@ -52,8 +52,9 @@ public:
 
     void new_page();
 
-private:
     void draw_box(double x, double y, double w, double h);
+
+private:
     void draw_grid();
     void setup_pango(const FontParameters &par);
 

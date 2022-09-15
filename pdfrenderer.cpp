@@ -69,6 +69,7 @@ PdfRenderer::PdfRenderer(const char *ofname, int pagew, int pageh) {
 
     //    cairo_select_font_face(cr, "Gentium", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     //    cairo_set_font_size(cr, 10.0);
+    cairo_set_line_width(cr, 0.1);
 }
 
 PdfRenderer::~PdfRenderer() {
