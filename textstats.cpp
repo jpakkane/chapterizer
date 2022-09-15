@@ -54,6 +54,7 @@ void TextStats::set_pango_state(const char *utf8_text,
     }
     pango_layout_set_font_description(layout, desc);
     assert(g_utf8_validate(utf8_text, -1, nullptr));
+    pango_layout_set_attributes(layout, nullptr);
     if(is_markup) {
         pango_layout_set_markup(layout, utf8_text, -1);
     } else {
@@ -63,11 +64,11 @@ void TextStats::set_pango_state(const char *utf8_text,
 }
 
 double TextStats::text_width(const char *utf8_text, const FontParameters &font) const {
-    StyledText k;
+    StyledPlainText k;
     k.text = utf8_text;
     k.font = font;
-    auto f = widths.find(k);
-    if(f != widths.end()) {
+    auto f = plaintext_widths.find(k);
+    if(f != plaintext_widths.end()) {
         return f->second;
     }
     set_pango_state(utf8_text, font);
@@ -75,15 +76,23 @@ double TextStats::text_width(const char *utf8_text, const FontParameters &font) 
     pango_layout_get_extents(layout, &ink_rect, &logical_rect);
     // printf("Text width is %.2f mm\n", double(logical_rect.width) / PANGO_SCALE / 595 * 220);
     const double w_mm = pt2mm(double(logical_rect.width) / PANGO_SCALE);
-    widths[k] = w_mm;
+    plaintext_widths[k] = w_mm;
     return w_mm;
 }
 
 double TextStats::markup_width(const char *utf8_text, const FontParameters &font) const {
+    StyledMarkupText k;
+    k.text = utf8_text;
+    k.font = font;
+    auto f = markup_widths.find(k);
+    if(f != markup_widths.end()) {
+        return f->second;
+    }
     set_pango_state(utf8_text, font, true);
     PangoRectangle ink_rect, logical_rect;
     pango_layout_get_extents(layout, &ink_rect, &logical_rect);
 
     const double w_mm = pt2mm(double(logical_rect.width) / PANGO_SCALE);
+    markup_widths[k] = w_mm;
     return w_mm;
 }

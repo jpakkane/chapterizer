@@ -22,15 +22,34 @@
 #include <string>
 #include <unordered_map>
 
-struct StyledText {
+struct StyledPlainText {
     std::string text;
     FontParameters font;
 
-    bool operator==(const StyledText &o) const noexcept { return text == o.text && font == o.font; }
+    bool operator==(const StyledPlainText &o) const noexcept {
+        return text == o.text && font == o.font;
+    }
 };
 
-template<> struct std::hash<StyledText> {
-    std::size_t operator()(StyledText const &s) const noexcept {
+struct StyledMarkupText {
+    std::string text;
+    FontParameters font;
+
+    bool operator==(const StyledMarkupText &o) const noexcept {
+        return text == o.text && font == o.font;
+    }
+};
+
+template<> struct std::hash<StyledPlainText> {
+    std::size_t operator()(StyledPlainText const &s) const noexcept {
+        auto h1 = std::hash<std::string>{}(s.text);
+        auto h2 = std::hash<FontParameters>{}(s.font);
+        return ((h1 * 13) + h2);
+    }
+};
+
+template<> struct std::hash<StyledMarkupText> {
+    std::size_t operator()(StyledMarkupText const &s) const noexcept {
         auto h1 = std::hash<std::string>{}(s.text);
         auto h2 = std::hash<FontParameters>{}(s.font);
         return ((h1 * 13) + h2);
@@ -58,5 +77,6 @@ private:
     cairo_t *cr;
     cairo_surface_t *surface;
     PangoLayout *layout;
-    mutable std::unordered_map<StyledText, double> widths;
+    mutable std::unordered_map<StyledPlainText, double> plaintext_widths;
+    mutable std::unordered_map<StyledMarkupText, double> markup_widths;
 };

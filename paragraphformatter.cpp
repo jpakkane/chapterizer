@@ -254,9 +254,10 @@ std::vector<std::vector<std::string>>
 ParagraphFormatter::stats_to_markup_lines(const std::vector<LineStats> &linestats) const {
     std::vector<std::vector<std::string>> lines;
     lines.reserve(linestats.size());
-    lines.emplace_back(build_line_markup(0, linestats[0].end_split));
+    lines.emplace_back(build_line_words_markup(0, linestats[0].end_split));
     for(size_t i = 1; i < linestats.size(); ++i) {
-        lines.emplace_back(build_line_markup(linestats[i - 1].end_split, linestats[i].end_split));
+        lines.emplace_back(
+            build_line_words_markup(linestats[i - 1].end_split, linestats[i].end_split));
     }
     return lines;
 }
@@ -428,8 +429,18 @@ std::string ParagraphFormatter::build_line(size_t from_split_ind, size_t to_spli
     return line;
 }
 
-std::vector<std::string> ParagraphFormatter::build_line_markup(size_t from_split_ind,
-                                                               size_t to_split_ind) const {
+std::string ParagraphFormatter::build_line_markup(size_t from_split_ind,
+                                                  size_t to_split_ind) const {
+    std::string line;
+    const auto markup_words = build_line_words_markup(from_split_ind, to_split_ind);
+    for(const auto &w : markup_words) {
+        line += w;
+    }
+    return line;
+}
+
+std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from_split_ind,
+                                                                     size_t to_split_ind) const {
     assert(to_split_ind >= from_split_ind);
     std::vector<std::string> line;
     if(to_split_ind == from_split_ind) {
@@ -451,6 +462,9 @@ std::vector<std::string> ParagraphFormatter::build_line_markup(size_t from_split
         }
         current_style.write_buildup_markup(markup);
         const auto &current_word = words[word_index];
+        if(current_word.text == "Woking") {
+            printf("Hello mom.\n");
+        }
         size_t word_start = -1;
         size_t word_end = -1;
         size_t style_point = 0;
@@ -466,7 +480,8 @@ std::vector<std::string> ParagraphFormatter::build_line_markup(size_t from_split
         }
         if(last_word) {
             if(std::holds_alternative<WithinWordSplit>(to_split)) {
-                word_end = to_loc.offset + 1;
+                word_end = to_loc.offset +
+                           next_char_utf8_length(current_word.text.c_str() + to_loc.offset);
             } else {
                 word_end = to_loc.offset;
             }
@@ -557,8 +572,8 @@ LineStats ParagraphFormatter::compute_closest_line_end(size_t start_split,
         split_points.end(),
         [this, &shaper, start_split, target_line_width_mm](const SplitPoint &p) {
             const auto loc = &p - split_points.data();
-            const auto trial_line = build_line(start_split, loc);
-            const auto trial_width = shaper.text_width(trial_line, params.font);
+            const auto trial_line = build_line_markup(start_split, loc);
+            const auto trial_width = shaper.markup_width(trial_line.c_str(), params.font);
             return trial_width <= target_line_width_mm;
         });
     if(ppoint == split_points.end()) {
@@ -569,8 +584,8 @@ LineStats ParagraphFormatter::compute_closest_line_end(size_t start_split,
         chosen_point = size_t(&(*ppoint) - split_points.data());
     }
 
-    const auto final_line = build_line(start_split, chosen_point);
-    const auto final_width = shaper.text_width(final_line, params.font);
+    const auto final_line = build_line_markup(start_split, chosen_point);
+    const auto final_width = shaper.markup_width(final_line.c_str(), params.font);
     // FIXME, check whether the word ends in a dash.
     return LineStats{chosen_point,
                      final_width,
@@ -589,8 +604,8 @@ std::vector<LineStats> ParagraphFormatter::get_line_end_choices(size_t start_spl
     // Lambdas, yo!
     auto add_point = [&](size_t split_point) {
         const auto trial_split = split_point;
-        const auto trial_line = build_line(start_split, trial_split);
-        const auto trial_width = shaper.text_width(trial_line, params.font);
+        const auto trial_line = build_line_markup(start_split, trial_split);
+        const auto trial_width = shaper.markup_width(trial_line.c_str(), params.font);
         potentials.emplace_back(
             LineStats{trial_split,
                       trial_width,

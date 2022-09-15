@@ -136,7 +136,10 @@ private:
     double current_line_width(size_t line_num) const;
 
     std::string build_line(size_t from_split, size_t to_split) const;
-    std::vector<std::string> build_line_markup(size_t from_split_ind, size_t to_split_ind) const;
+    std::string build_line_markup(size_t from_split_ind, size_t to_split_ind) const;
+    std::vector<std::string> build_line_words_markup(size_t from_split_ind,
+                                                     size_t to_split_ind) const;
+
     std::vector<EnrichedWord> words;
     std::vector<SplitPoint> split_points;
     std::vector<TextLocation> split_locations;

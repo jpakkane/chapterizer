@@ -149,7 +149,7 @@ void PdfRenderer::render_line_justified(const std::string &line_text,
     const double num_spaces = std::count(line_text.begin(), line_text.end(), ' ');
     const double space_extra_width =
         num_spaces > 0 ? (target_width_pt - text_width_pt) / num_spaces : 0.0;
-#if 0
+
     std::string tmp;
     for(size_t i = 0; i < words.size(); ++i) {
         cairo_move_to(cr, x, y);
@@ -173,13 +173,6 @@ void PdfRenderer::render_line_justified(const std::string &line_text,
         cairo_move_to(cr, x, y);
         */
     }
-#else
-    cairo_move_to(cr, x, y);
-    pango_layout_set_attributes(layout, nullptr);
-    pango_layout_set_markup(layout, line_text.c_str(), line_text.length());
-    pango_cairo_update_layout(cr, layout);
-    pango_cairo_show_layout(cr, layout);
-#endif
 }
 
 void PdfRenderer::render_line_justified(const std::vector<std::string> &markup_words,

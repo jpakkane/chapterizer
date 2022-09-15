@@ -155,6 +155,7 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
     std::string buf;
     const char *word_start = word.c_str();
     const char *in = word_start;
+    int num_changes = 0;
 
     while(*in) {
         auto c = g_utf8_get_char(in);
@@ -162,19 +163,23 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
         switch(c) {
         case italic_codepoint:
             style_change(current_style, ITALIC_S);
-            changes.push_back(FormattingChange{size_t(in - word_start), ITALIC_S});
+            changes.push_back(FormattingChange{size_t(in - word_start - num_changes), ITALIC_S});
+            ++num_changes;
             break;
         case bold_codepoint:
             style_change(current_style, BOLD_S);
-            changes.push_back(FormattingChange{size_t(in - word_start), BOLD_S});
+            changes.push_back(FormattingChange{size_t(in - word_start - num_changes), BOLD_S});
+            ++num_changes;
             break;
         case tt_codepoint:
             style_change(current_style, TT_S);
-            changes.push_back(FormattingChange{size_t(in - word_start), TT_S});
+            changes.push_back(FormattingChange{size_t(in - word_start - num_changes), TT_S});
+            ++num_changes;
             break;
         case smallcaps_codepoint:
             style_change(current_style, SMALLCAPS_S);
-            changes.push_back(FormattingChange{size_t(in - word_start), SMALLCAPS_S});
+            changes.push_back(FormattingChange{size_t(in - word_start - num_changes), SMALLCAPS_S});
+            ++num_changes;
             break;
         default:
             char tmp[10];
