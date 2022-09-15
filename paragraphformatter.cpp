@@ -211,9 +211,9 @@ std::vector<std::string> ParagraphFormatter::split_lines() {
     if(false) {
         best_split = simple_split(shaper);
         best_penalty = total_penalty(best_split, params, extras);
-        return stats_to_lines(best_split);
+        std::abort();
     } else {
-        return global_split(shaper);
+        std::abort();
     }
 }
 
@@ -239,17 +239,6 @@ std::vector<LineStats> ParagraphFormatter::simple_split(TextStats &shaper) {
     return lines;
 }
 
-std::vector<std::string>
-ParagraphFormatter::stats_to_lines(const std::vector<LineStats> &linestats) const {
-    std::vector<std::string> lines;
-    lines.reserve(linestats.size());
-    lines.emplace_back(build_line(0, linestats[0].end_split));
-    for(size_t i = 1; i < linestats.size(); ++i) {
-        lines.emplace_back(build_line(linestats[i - 1].end_split, linestats[i].end_split));
-    }
-    return lines;
-}
-
 std::vector<std::vector<std::string>>
 ParagraphFormatter::stats_to_markup_lines(const std::vector<LineStats> &linestats) const {
     std::vector<std::vector<std::string>> lines;
@@ -267,17 +256,6 @@ double ParagraphFormatter::current_line_width(size_t line_num) const {
         return params.paragraph_width_mm - params.indent;
     }
     return params.paragraph_width_mm;
-}
-
-std::vector<std::string> ParagraphFormatter::global_split(const TextStats &shaper) {
-    std::vector<std::string> lines;
-    std::vector<TextLocation> splits;
-    size_t current_split = 0;
-    std::vector<LineStats> line_stats;
-
-    global_split_recursive(shaper, line_stats, current_split);
-    // printf("Total penalty: %.2f\n", best_penalty);
-    return stats_to_lines(best_split);
 }
 
 std::vector<std::vector<std::string>>
@@ -346,87 +324,6 @@ void ParagraphFormatter::precompute() {
     for(size_t i = 0; i < split_points.size(); ++i) {
         state_cache.best_to.emplace_back(std::vector<UpTo>{});
     }
-}
-
-std::string ParagraphFormatter::build_line(size_t from_split_ind, size_t to_split_ind) const {
-    assert(to_split_ind >= from_split_ind);
-    std::string line;
-    if(to_split_ind == from_split_ind) {
-        return line;
-    }
-    const auto &from_split = split_points[from_split_ind];
-    const auto &to_split = split_points[to_split_ind];
-    const auto &from_loc = split_locations[from_split_ind];
-    const auto &to_loc = split_locations[to_split_ind];
-
-    // A single word spans the entire line.
-    const bool pathological_single_word = from_loc.word_index == to_loc.word_index;
-    if(pathological_single_word) {
-        const auto &bad_word = words[from_loc.word_index].text;
-        auto substr_start = from_loc.offset + 1;
-        auto substr_length = to_loc.offset - from_loc.offset;
-        if(from_loc.offset == 0) {
-            // Indices in the middle point to the last character of the leftside word,
-            // because that is how the hyphenator code sets them.
-            // However we also need to point to the "very first" character, which is at
-            // index 0. In that case the "pointed to" character needs to be part of the substring.
-            substr_start -= 1;
-            substr_length += 1;
-        }
-        line = bad_word.substr(substr_start, substr_length);
-        if(std::holds_alternative<WithinWordSplit>(to_split)) {
-            const auto &source_loc = std::get<WithinWordSplit>(to_split);
-            if(words[source_loc.word_index].hyphen_points[source_loc.hyphen_index].type ==
-               SplitType::Regular) {
-                line += '-';
-            }
-        }
-        assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
-        return line;
-    }
-    assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
-
-    // First word.
-    if(std::holds_alternative<BetweenWordSplit>(from_split)) {
-        line = words[from_loc.word_index].text;
-    } else {
-        const auto &word_to_split = words[from_loc.word_index];
-        const auto sv = std::string_view(word_to_split.text);
-        line = sv.substr(from_loc.offset + 1);
-    }
-    assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
-
-    if(from_loc.word_index == to_loc.word_index) {
-        // Pathological case, one word spans the entire line.
-    } else {
-        assert(to_loc.word_index > from_loc.word_index);
-        size_t current_word_index = from_loc.word_index + 1;
-        // Intermediate words.
-        while(current_word_index < to_loc.word_index && current_word_index < words.size()) {
-            line += ' ';
-            line += words[current_word_index].text;
-            ++current_word_index;
-        }
-    }
-    assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
-
-    // Final word.
-    if(std::holds_alternative<BetweenWordSplit>(to_split)) {
-        // Do nothing, I guess?
-    } else {
-        const auto &source_loc = std::get<WithinWordSplit>(to_split);
-        line += ' ';
-        const auto &word_to_split = words[to_loc.word_index];
-        const auto sv = std::string_view(word_to_split.text);
-        line += sv.substr(0, to_loc.offset + 1);
-        assert(g_utf8_validate(line.c_str(), line.size(), nullptr));
-        if(words[source_loc.word_index].hyphen_points[source_loc.hyphen_index].type ==
-           SplitType::Regular) {
-            line += '-';
-        }
-    }
-
-    return line;
 }
 
 std::string ParagraphFormatter::build_line_markup(size_t from_split_ind,

@@ -293,6 +293,7 @@ void package(const char *ofilename, const char *builddir) {
     command += "; zip -r -n .png:.jpg:.tif:.gif ../";
     command += ofilename;
     command += " mimetype META-INF OEBPS";
+    command += " > /dev/null";
 
     // I feel shame.
     if(system(command.c_str()) != 0) {
