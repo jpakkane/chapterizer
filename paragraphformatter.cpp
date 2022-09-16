@@ -357,12 +357,16 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
         if(word_index >= words.size()) {
             continue;
         }
+        if(word_index == to_loc.word_index && to_loc.offset == 0) {
+            continue;
+        }
         current_style.write_buildup_markup(markup);
         const auto &current_word = words[word_index];
         size_t word_start = -1;
         size_t word_end = -1;
         size_t style_point = 0;
-        const bool last_word = word_index == to_loc.word_index;
+        const bool last_word = (word_index == to_loc.word_index) ||
+                               (word_index + 1 == to_loc.word_index && to_loc.offset == 0);
         if(first_word) {
             first_word = false;
             word_start = from_loc.offset;
@@ -372,12 +376,8 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
         } else {
             word_start = 0;
         }
-        if(last_word) {
-            if(std::holds_alternative<WithinWordSplit>(to_split)) {
-                word_end = to_loc.offset + 1;
-            } else {
-                word_end = to_loc.offset;
-            }
+        if(last_word && std::holds_alternative<WithinWordSplit>(to_split)) {
+            word_end = to_loc.offset + 1;
         } else {
             word_end = current_word.text.length();
         }
