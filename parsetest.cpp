@@ -61,22 +61,22 @@ Document parse_file(const char *data, const uintmax_t data_size) {
         if(std::holds_alternative<SectionDecl>(token)) {
             auto &s = std::get<SectionDecl>(token);
             assert(section_text.empty());
-            section_text = s.off.get_normalized_string(data);
+            section_text = get_normalized_string(s.text);
             ++section_number;
         } else if(std::holds_alternative<PlainLine>(token)) {
             auto &l = std::get<PlainLine>(token);
             if(in_codeblock) {
-                codeblock_text.emplace_back(l.off.get_normalized_string(data));
+                codeblock_text.emplace_back(get_normalized_string(l.text));
             } else {
                 if(!section_text.empty()) {
                     assert(paragraph_text.empty());
                     section_text += ' ';
-                    section_text += l.off.get_normalized_string(data);
+                    section_text += get_normalized_string(l.text);
                 } else {
                     if(!paragraph_text.empty()) {
                         paragraph_text += ' ';
                     }
-                    paragraph_text += l.off.get_normalized_string(data);
+                    paragraph_text += get_normalized_string(l.text);
                 }
             }
         } else if(std::holds_alternative<NewLine>(token)) {
@@ -109,6 +109,7 @@ Document parse_file(const char *data, const uintmax_t data_size) {
             in_codeblock = true;
         } else if(std::holds_alternative<EndOfCodeBlock>(token)) {
             doc.elements.emplace_back(CodeBlock{std::move(codeblock_text)});
+            codeblock_text.clear();
             in_codeblock = false;
         } else {
             std::abort();

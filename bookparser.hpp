@@ -3,6 +3,7 @@
 #include <glib.h>
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <optional>
 #include <variant>
@@ -27,21 +28,24 @@ struct ReMatchOffsets {
     }
 };
 
+std::string get_normalized_string(std::string_view v);
+
 struct ReMatchResult {
     re_match minfo;
     int64_t offset_to_match_start;
-    ReMatchOffsets whole_match;
+    std::string_view whole_match;
 
     ReMatchOffsets offsets_for(int group);
+    std::string_view view_for(int group, const char *original_data);
 };
 
 struct SectionDecl {
     int level;
-    ReMatchOffsets off;
+    std::string_view text;
 };
 
 struct PlainLine {
-    ReMatchOffsets off;
+    std::string_view text;
 };
 
 struct NewLine {};
@@ -114,9 +118,9 @@ private:
     std::optional<ReMatchResult> try_match(GRegex *regex, GRegexMatchFlags flags) {
         GMatchInfo *minfo = nullptr;
         if(g_regex_match(regex, data + offset, flags, &minfo)) {
-            ReMatchResult match_info{re_match{minfo}, offset, ReMatchOffsets{0, 0}};
-            match_info.whole_match = match_info.offsets_for(0);
-            offset += match_info.whole_match.end_pos - match_info.whole_match.start_pos;
+            ReMatchResult match_info{re_match{minfo}, offset, std::string_view{}};
+            match_info.whole_match = match_info.view_for(0, data);
+            offset += match_info.whole_match.length();
             return match_info;
         }
         g_match_info_free(minfo);

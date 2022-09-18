@@ -2,11 +2,23 @@
 
 #include <cassert>
 
+std::string get_normalized_string(std::string_view v) {
+    gchar *norm = g_utf8_normalize(v.data(), v.length(), G_NORMALIZE_NFC);
+    std::string result{norm};
+    g_free(norm);
+    return result;
+}
+
 ReMatchOffsets ReMatchResult::offsets_for(int group) {
     gint start_pos, end_pos;
     g_match_info_fetch_pos(minfo.get(), gint(group), &start_pos, &end_pos);
     assert(group != 0 || start_pos == 0);
     return ReMatchOffsets{offset_to_match_start + start_pos, offset_to_match_start + end_pos};
+}
+
+std::string_view ReMatchResult::view_for(int group, const char *original_data) {
+    ReMatchOffsets off = offsets_for(group);
+    return std::string_view(original_data + off.start_pos, off.end_pos - off.start_pos);
 }
 
 line_token LineParser::next() {
@@ -28,12 +40,12 @@ line_token LineParser::next() {
             if(full_line) {
                 return PlainLine{full_line->whole_match};
             }
-            return PlainLine{0, 0}; // Empty line.
+            return PlainLine{std::string_view{}}; // Empty line.
         }
     }
     auto match_result = try_match(newline, GRegexMatchFlags(0));
     if(match_result) {
-        if(match_result->whole_match.end_pos - match_result->whole_match.start_pos > 1) {
+        if(match_result->whole_match.length() > 1) {
             return NewBlock{};
         }
         return NewLine{};
@@ -62,11 +74,10 @@ line_token LineParser::next() {
     match_result = try_match(section, GRegexMatchFlags(0));
     if(match_result) {
         const auto hash_offsets = match_result->offsets_for(1);
-        const auto text_offsets = match_result->offsets_for(2);
         const int depth = hash_offsets.end_pos - hash_offsets.start_pos;
         assert(depth == 1); // Fix eventually.
 
-        return SectionDecl{depth, text_offsets};
+        return SectionDecl{depth, match_result->view_for(2, data)};
     }
     match_result = try_match(line, GRegexMatchFlags(0));
     if(match_result) {
