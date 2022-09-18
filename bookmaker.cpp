@@ -197,7 +197,7 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
     return changes;
 }
 
-void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
+void create_pdf(const char *ofilename, const Document &doc) {
     PageSize page;
     bool debug_draw = true;
     page.w_mm = 110;
@@ -205,17 +205,21 @@ void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
     PdfRenderer book(ofilename, mm2pt(page.w_mm), mm2pt(page.h_mm));
     margins m;
     FontParameters title_font;
-    ChapterParameters chapter_par;
-    chapter_par.font.name = "Gentium";
-    chapter_par.font.point_size = 10;
-    chapter_par.font.type = FontStyle::Regular;
-    chapter_par.indent = 5; // First chapter does not get indented.
-    chapter_par.line_height_pt = 12;
-    chapter_par.paragraph_width_mm = page.w_mm - m.inner - m.outer;
+    ChapterParameters text_par;
+    text_par.font.name = "Gentium";
+    text_par.font.point_size = 10;
+    text_par.font.type = FontStyle::Regular;
+    text_par.indent = 5;
+    text_par.line_height_pt = 12;
+    text_par.paragraph_width_mm = page.w_mm - m.inner - m.outer;
+    ChapterParameters code_par = text_par;
+    code_par.font.name = "Liberation Mono";
+    code_par.font.point_size = 8;
     ExtraPenaltyAmounts extras;
-    const double bottom_watermark = page.h_mm - m.lower - pt2mm(chapter_par.line_height_pt);
+    const double bottom_watermark = page.h_mm - m.lower - pt2mm(text_par.line_height_pt);
     const double title_above_space = 30;
     const double title_below_space = 10;
+    const double different_paragraph_space = 2;
     title_font.name = "Noto sans";
     title_font.point_size = 14;
     title_font.type = FontStyle::Bold;
@@ -224,30 +228,37 @@ void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
     const double indent = 5;
     WordHyphenator hyphen;
     int current_page = 1;
-    bool first_chapter = true;
-    int chapter_num = 0;
-    for(const auto &c : chapters) {
-        printf("Processing chapter %d/%d.\n", ++chapter_num, (int)chapters.size());
-        if(!first_chapter) {
-            render_page_num(book, chapter_par.font, current_page, page, m);
-            book.new_page();
-            ++current_page;
-            if(current_page % 2 == 0) {
+    bool first_paragraph = true;
+    bool first_section = true;
+    for(const auto &e : doc.elements) {
+        if(std::holds_alternative<Section>(e)) {
+            const Section &s = std::get<Section>(e);
+            if(!first_section) {
+                render_page_num(book, text_par.font, current_page, page, m);
                 book.new_page();
                 ++current_page;
+                if(current_page % 2 == 0) {
+                    book.new_page();
+                    ++current_page;
+                }
             }
+            first_section = false;
             y = m.upper;
             x = current_page % 2 ? m.inner : m.outer;
-        }
-        y += title_above_space;
-        book.render_line_as_is(c.title.c_str(), title_font, mm2pt(x), mm2pt(y));
-        y += pt2mm(title_font.point_size + 1);
-        y += title_below_space;
-        bool first_paragraph = true;
-        for(const auto &p : c.paragraphs) {
+            y += title_above_space;
+            assert(s.level == 1);
+            std::string full_title = std::to_string(s.number);
+            full_title += ". ";
+            full_title += s.text;
+            book.render_line_as_is(full_title.c_str(), title_font, mm2pt(x), mm2pt(y));
+            y += pt2mm(title_font.point_size);
+            y += title_below_space;
+            first_paragraph = true;
+        } else if(std::holds_alternative<Paragraph>(e)) {
+            const Paragraph &p = std::get<Paragraph>(e);
             StyleStack current_style;
-            chapter_par.indent = first_paragraph ? 0 : indent;
-            auto plain_words = split_to_words(std::string_view(p));
+            text_par.indent = first_paragraph ? 0 : indent;
+            auto plain_words = split_to_words(std::string_view(p.text));
             std::vector<EnrichedWord> processed_words;
             for(const auto &word : plain_words) {
                 auto working_word = word;
@@ -259,13 +270,13 @@ void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
                                                           std::move(formatting_data),
                                                           start_style});
             }
-            ParagraphFormatter b(processed_words, chapter_par, extras);
+            ParagraphFormatter b(processed_words, text_par, extras);
             auto lines = b.split_formatted_lines();
             size_t line_num = 0;
             for(const auto &markup_words : lines) {
-                double current_indent = line_num == 0 ? chapter_par.indent : 0;
+                double current_indent = line_num == 0 ? text_par.indent : 0;
                 if(y >= bottom_watermark) {
-                    render_page_num(book, chapter_par.font, current_page, page, m);
+                    render_page_num(book, text_par.font, current_page, page, m);
                     book.new_page();
                     ++current_page;
                     y = m.upper;
@@ -286,22 +297,49 @@ void create_pdf(const char *ofilename, std::vector<Chapter> &chapters) {
                 }
                 if(line_num < lines.size() - 1) {
                     book.render_line_justified(markup_words,
-                                               chapter_par.font,
-                                               chapter_par.paragraph_width_mm - current_indent,
+                                               text_par.font,
+                                               text_par.paragraph_width_mm - current_indent,
                                                mm2pt(x + current_indent),
                                                mm2pt(y));
                 } else {
                     book.render_line_as_is(
-                        markup_words, chapter_par.font, mm2pt(x + current_indent), mm2pt(y));
+                        markup_words, text_par.font, mm2pt(x + current_indent), mm2pt(y));
                 }
                 line_num++;
-                y += pt2mm(chapter_par.line_height_pt);
+                y += pt2mm(text_par.line_height_pt);
             }
             first_paragraph = false;
+        } else if(std::holds_alternative<SceneChange>(e)) {
+            y += pt2mm(text_par.line_height_pt);
+            if(y >= bottom_watermark) {
+                render_page_num(book, text_par.font, current_page, page, m);
+                book.new_page();
+                ++current_page;
+                y = m.upper;
+                x = current_page % 2 ? m.inner : m.outer;
+            }
+            first_paragraph = true;
+        } else if(std::holds_alternative<CodeBlock>(e)) {
+            const CodeBlock &cb = std::get<CodeBlock>(e);
+            y += different_paragraph_space;
+            for(const auto &line : cb.raw_lines) {
+                if(y >= bottom_watermark) {
+                    render_page_num(book, text_par.font, current_page, page, m);
+                    book.new_page();
+                    ++current_page;
+                    y = m.upper;
+                    x = current_page % 2 ? m.inner : m.outer;
+                }
+                book.render_line_as_is(line.c_str(), code_par.font, mm2pt(x), mm2pt(y));
+                y += pt2mm(code_par.line_height_pt);
+            }
+            first_paragraph = true;
+            y += different_paragraph_space;
+        } else {
+            std::abort();
         }
-        first_chapter = false;
     }
-    render_page_num(book, chapter_par.font, current_page, page, m);
+    render_page_num(book, text_par.font, current_page, page, m);
 }
 
 void package(const char *ofilename, const char *builddir) {
@@ -690,8 +728,8 @@ void write_chapters(const fs::path &outdir, Document &doc) {
             std::abort();
         }
     }
-    // FIXME, assumes that the last entry is not a section declaration. Which is possible, but very
-    // silly.
+    // FIXME, assumes that the last entry is not a section declaration. Which is possible, but
+    // very silly.
     epubdoc.SaveFile(ofile.c_str());
 }
 
@@ -776,7 +814,7 @@ int main(int argc, char **argv) {
            (int)chapters.front().paragraphs.size());
     // printf("%s\n", chapters.front().paragraphs.back().c_str());
     */
-    // create_pdf("bookout.pdf", chapters);
+    create_pdf("bookout.pdf", doc);
     create_epub("war_test.epub", doc);
     return 0;
 }
