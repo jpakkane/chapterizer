@@ -20,6 +20,7 @@ l = static_library('chap',
     'utils.cpp',
     'fchelpers.cpp',
     'formatting.cpp',
+    'bookparser.cpp',
     dependencies: [hyphen_dep, pangocairo_dep, cairo_dep, fc_dep]
 )
 

@@ -4,7 +4,7 @@
 #include <paragraphformatter.hpp>
 #include <wordhyphenator.hpp>
 #include <formatting.hpp>
-
+#include <bookparser.hpp>
 #include <tinyxml2.h>
 #include <filesystem>
 #include <stack>
@@ -42,6 +42,10 @@ const char csstext[] = R"(h1, h2, h3, h4, h5 {
 p {
   font-family: Serif;
   text-align: justify;
+}
+
+p#preformatted {
+  font-family: Mono;
 }
 
 )";
@@ -315,21 +319,25 @@ void package(const char *ofilename, const char *builddir) {
 }
 
 void generate_epub_manifest(tinyxml2::XMLNode *manifest,
-                            const std::vector<Chapter> &chapters,
+                            const Document &doc,
                             const char *coverfile) {
     auto opf = manifest->GetDocument();
-    const int num_chapters = int(chapters.size());
 
     const int bufsize = 128;
     char buf[bufsize];
-    for(int i = 0; i < num_chapters; i++) {
-        snprintf(buf, bufsize, "chapter%d", i + 1);
+    int chapter = 1;
+    for(const auto &e : doc.elements) {
+        if(!std::holds_alternative<Section>(e)) {
+            continue;
+        }
+        snprintf(buf, bufsize, "chapter%d", chapter);
         auto node = opf->NewElement("item");
         manifest->InsertEndChild(node);
         node->SetAttribute("id", buf);
         strcat(buf, ".xhtml");
         node->SetAttribute("href", buf);
         node->SetAttribute("media-type", "application/xhtml+xml");
+        ++chapter;
     }
 
     auto css = opf->NewElement("item");
@@ -353,21 +361,25 @@ void generate_epub_manifest(tinyxml2::XMLNode *manifest,
     // FIXME add images, fonts and CSS.
 }
 
-void generate_epub_spine(tinyxml2::XMLNode *spine, const std::vector<Chapter> &chapters) {
+void generate_epub_spine(tinyxml2::XMLNode *spine, const Document &doc) {
     auto opf = spine->GetDocument();
-    const int num_chapters = int(chapters.size());
 
     const int bufsize = 128;
     char buf[bufsize];
-    for(int i = 0; i < num_chapters; i++) {
-        snprintf(buf, bufsize, "chapter%d", i + 1);
+    int chapter = 1;
+    for(const auto &e : doc.elements) {
+        if(!std::holds_alternative<Section>(e)) {
+            continue;
+        }
+        snprintf(buf, bufsize, "chapter%d", chapter);
         auto node = opf->NewElement("itemref");
         spine->InsertEndChild(node);
         node->SetAttribute("idref", buf);
+        ++chapter;
     }
 }
 
-void write_opf(const fs::path &ofile, const std::vector<Chapter> &chapters, const char *coverfile) {
+void write_opf(const fs::path &ofile, const Document &doc, const char *coverfile) {
     tinyxml2::XMLDocument opf;
 
     auto decl = opf.NewDeclaration(nullptr);
@@ -409,12 +421,12 @@ void write_opf(const fs::path &ofile, const std::vector<Chapter> &chapters, cons
 
     auto manifest = opf.NewElement("manifest");
     package->InsertEndChild(manifest);
-    generate_epub_manifest(manifest, chapters, coverfile);
+    generate_epub_manifest(manifest, doc, coverfile);
 
     auto spine = opf.NewElement("spine");
     package->InsertEndChild(spine);
     spine->SetAttribute("toc", "ncx");
-    generate_epub_spine(spine, chapters);
+    generate_epub_spine(spine, doc);
 
     if(opf.SaveFile(ofile.c_str()) != tinyxml2::XML_SUCCESS) {
         printf("Writing opf failed.\n");
@@ -422,9 +434,8 @@ void write_opf(const fs::path &ofile, const std::vector<Chapter> &chapters, cons
     }
 }
 
-void write_navmap(tinyxml2::XMLElement *root, const std::vector<Chapter> &chapters) {
+void write_navmap(tinyxml2::XMLElement *root, const Document &doc) {
     auto ncx = root->GetDocument();
-    const int num_chapters = int(chapters.size());
 
     const int bufsize = 128;
     char buf[bufsize];
@@ -432,28 +443,33 @@ void write_navmap(tinyxml2::XMLElement *root, const std::vector<Chapter> &chapte
     auto navmap = ncx->NewElement("navMap");
     root->InsertEndChild(navmap);
 
-    for(int i = 0; i < num_chapters; i++) {
-        snprintf(buf, bufsize, "chapter%d", i + 1);
+    int chapter = 1;
+    for(const auto &e : doc.elements) {
+        if(!std::holds_alternative<Section>(e)) {
+            continue;
+        }
+        snprintf(buf, bufsize, "chapter%d", chapter);
         auto navpoint = ncx->NewElement("navPoint");
         navmap->InsertEndChild(navpoint);
         navpoint->SetAttribute("class", "chapter");
         navpoint->SetAttribute("id", buf);
-        snprintf(buf, bufsize, "%d", i + 1);
+        snprintf(buf, bufsize, "%d", chapter);
         navpoint->SetAttribute("playOrder", buf);
         auto navlabel = ncx->NewElement("navLabel");
         navpoint->InsertEndChild(navlabel);
         auto text = ncx->NewElement("text");
         navlabel->InsertEndChild(text);
-        snprintf(buf, bufsize, "Chapter %d", i + 1);
+        snprintf(buf, bufsize, "Chapter %d", chapter);
         text->SetText(buf);
         auto content = ncx->NewElement("content");
         navpoint->InsertEndChild(content);
-        snprintf(buf, bufsize, "chapter%d.xhtml", i + 1);
+        snprintf(buf, bufsize, "chapter%d.xhtml", chapter);
         content->SetAttribute("src", buf);
+        ++chapter;
     }
 }
 
-void write_ncx(const char *ofile, const std::vector<Chapter> &chapters) {
+void write_ncx(const char *ofile, const Document &doc) {
     tinyxml2::XMLDocument ncx;
 
     auto decl = ncx.NewDeclaration(nullptr);
@@ -503,7 +519,7 @@ void write_ncx(const char *ofile, const std::vector<Chapter> &chapters) {
     docauthor->InsertEndChild(text);
     text->SetText("Wells, HG");
 
-    write_navmap(root, chapters);
+    write_navmap(root, doc);
     ncx.SaveFile(ofile);
 }
 
@@ -540,92 +556,146 @@ void handle_tag_switch(tinyxml2::XMLDocument &doc,
     }
 }
 
-void write_chapters(const fs::path &outdir, const std::vector<Chapter> &chapters) {
-    const int num_chapters = int(chapters.size());
+tinyxml2::XMLElement *write_header(tinyxml2::XMLDocument &epubdoc) {
+    auto decl = epubdoc.NewDeclaration(nullptr);
+    epubdoc.InsertFirstChild(decl);
+    auto doctype = epubdoc.NewUnknown(
+        R"(DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd")");
+    epubdoc.InsertEndChild(doctype);
+    auto html = epubdoc.NewElement("html");
+    epubdoc.InsertEndChild(html);
+    html->SetAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+    html->SetAttribute("xml:lang", "en");
 
-    const int bufsize = 128;
-    char tmpbuf[bufsize];
+    auto head = epubdoc.NewElement("head");
+    html->InsertEndChild(head);
+    auto meta = epubdoc.NewElement("meta");
+    head->InsertEndChild(meta);
+    meta->SetAttribute("http-equiv", "Content-Type");
+    meta->SetAttribute("content", "application/xhtml+xml; charset=utf-8");
+    auto title = epubdoc.NewElement("title");
+    head->InsertEndChild(title);
+    title->SetText("War of the Worlds");
+    auto style = epubdoc.NewElement("link");
+    head->InsertEndChild(style);
+    style->SetAttribute("rel", "stylesheet");
+    style->SetAttribute("href", "book.css");
+    style->SetAttribute("type", "text/css");
 
-    for(int i = 0; i < num_chapters; i++) {
-        snprintf(tmpbuf, bufsize, "chapter%d.xhtml", i + 1);
-        auto ofile = outdir / tmpbuf;
-        tinyxml2::XMLDocument doc;
-        auto decl = doc.NewDeclaration(nullptr);
-        doc.InsertFirstChild(decl);
-        auto doctype = doc.NewUnknown(
-            R"(DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd")");
-        doc.InsertEndChild(doctype);
-        auto html = doc.NewElement("html");
-        doc.InsertEndChild(html);
-        html->SetAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-        html->SetAttribute("xml:lang", "en");
-
-        auto head = doc.NewElement("head");
-        html->InsertEndChild(head);
-        auto meta = doc.NewElement("meta");
-        head->InsertEndChild(meta);
-        meta->SetAttribute("http-equiv", "Content-Type");
-        meta->SetAttribute("content", "application/xhtml+xml; charset=utf-8");
-        auto title = doc.NewElement("title");
-        head->InsertEndChild(title);
-        title->SetText("War of the Worlds");
-        auto style = doc.NewElement("link");
-        head->InsertEndChild(style);
-        style->SetAttribute("rel", "stylesheet");
-        style->SetAttribute("href", "book.css");
-        style->SetAttribute("type", "text/css");
-
-        auto body = doc.NewElement("body");
-        html->InsertEndChild(body);
-        auto heading = doc.NewElement("h2");
-        body->InsertEndChild(heading);
-        heading->SetText(chapters[i].title.c_str());
-        for(const auto &paragraph : chapters[i].paragraphs) {
-            StyleStack current_style;
-            std::stack<tinyxml2::XMLNode *> tagstack;
-            auto p = doc.NewElement("p");
-            tagstack.push(p);
-            std::string buf;
-            for(char c : paragraph) {
-                switch(c) {
-                case italic_character:
-                    handle_tag_switch(doc, current_style, tagstack, buf, ITALIC_S, "i");
-                    break;
-                case bold_character:
-                    handle_tag_switch(doc, current_style, tagstack, buf, BOLD_S, "b");
-                    break;
-                case tt_character:
-                    handle_tag_switch(doc, current_style, tagstack, buf, TT_S, "tt");
-                    break;
-                case smallcaps_character:
-                    handle_tag_switch(doc,
-                                      current_style,
-                                      tagstack,
-                                      buf,
-                                      SMALLCAPS_S,
-                                      "span",
-                                      "variant",
-                                      "small-caps");
-                    break;
-                default:
-                    buf += c;
-                }
-            }
-            assert(!tagstack.empty());
-            if(!buf.empty()) {
-                auto ending = doc.NewText(buf.c_str());
-                tagstack.top()->InsertEndChild(ending);
-            }
-            tagstack.pop();
-            assert(tagstack.empty());
-            body->InsertEndChild(p);
-        }
-
-        doc.SaveFile(ofile.c_str());
-    }
+    auto body = epubdoc.NewElement("body");
+    html->InsertEndChild(body);
+    return body;
 }
 
-void create_epub(const char *ofilename, const std::vector<Chapter> &chapters) {
+void write_paragraph(tinyxml2::XMLDocument &epubdoc,
+                     tinyxml2::XMLElement *body,
+                     const Paragraph &par) {
+    StyleStack current_style;
+    std::stack<tinyxml2::XMLNode *> tagstack;
+    auto p = epubdoc.NewElement("p");
+    tagstack.push(p);
+    std::string buf;
+    for(char c : par.text) {
+        switch(c) {
+        case italic_character:
+            handle_tag_switch(epubdoc, current_style, tagstack, buf, ITALIC_S, "i");
+            break;
+        case bold_character:
+            handle_tag_switch(epubdoc, current_style, tagstack, buf, BOLD_S, "b");
+            break;
+        case tt_character:
+            handle_tag_switch(epubdoc, current_style, tagstack, buf, TT_S, "tt");
+            break;
+        case smallcaps_character:
+            handle_tag_switch(epubdoc,
+                              current_style,
+                              tagstack,
+                              buf,
+                              SMALLCAPS_S,
+                              "span",
+                              "variant",
+                              "small-caps");
+            break;
+        default:
+            buf += c;
+        }
+    }
+    assert(!tagstack.empty());
+    if(!buf.empty()) {
+        auto ending = epubdoc.NewText(buf.c_str());
+        tagstack.top()->InsertEndChild(ending);
+    }
+    tagstack.pop();
+    assert(tagstack.empty());
+    body->InsertEndChild(p);
+}
+
+void write_codeblock(tinyxml2::XMLDocument &epubdoc,
+                     tinyxml2::XMLElement *body,
+                     const CodeBlock &code) {
+    auto p = epubdoc.NewElement("p");
+    p->SetAttribute("id", "preformatted");
+    for(size_t i = 0; i < code.raw_lines.size(); ++i) {
+        auto *textline = epubdoc.NewText(code.raw_lines[i].c_str());
+        p->InsertEndChild(textline);
+        if(i != code.raw_lines.size() - 1) {
+            p->InsertEndChild(epubdoc.NewElement("br"));
+        }
+    }
+    body->InsertEndChild(p);
+}
+
+void write_chapters(const fs::path &outdir, Document &doc) {
+    const int bufsize = 128;
+    char tmpbuf[bufsize];
+    tinyxml2::XMLDocument epubdoc;
+
+    auto ofile = outdir / "__BUG__";
+    int chapter = 1;
+    assert(!doc.elements.empty());
+    if(!std::holds_alternative<Section>(doc.elements.front())) {
+        printf("Document must begin with a section marker.\n");
+        std::abort();
+    }
+    bool first_chapter = true;
+    tinyxml2::XMLElement *body = nullptr;
+
+    for(const auto &e : doc.elements) {
+        if(std::holds_alternative<Paragraph>(e)) {
+            write_paragraph(epubdoc, body, std::get<Paragraph>(e));
+        } else if(std::holds_alternative<Section>(e)) {
+            const auto &sec = std::get<Section>(e);
+            if(first_chapter) {
+                first_chapter = false;
+            } else {
+                epubdoc.SaveFile(ofile.c_str());
+                epubdoc.Clear();
+            }
+            assert(std::holds_alternative<Section>(e));
+            body = write_header(epubdoc);
+            snprintf(tmpbuf, bufsize, "chapter%d.xhtml", chapter);
+            ofile = outdir / tmpbuf;
+            snprintf(tmpbuf, bufsize, "%d. ", chapter);
+            ++chapter;
+            auto heading = epubdoc.NewElement("h2");
+            body->InsertEndChild(heading);
+            heading->SetText((tmpbuf + sec.text).c_str());
+        } else if(std::holds_alternative<CodeBlock>(e)) {
+            write_codeblock(epubdoc, body, std::get<CodeBlock>(e));
+        } else if(std::holds_alternative<SceneChange>(e)) {
+            auto p = epubdoc.NewElement("p");
+            p->SetText(" "); // There may be a smarter way of doing this.
+            body->InsertEndChild(p);
+        } else {
+            std::abort();
+        }
+    }
+    // FIXME, assumes that the last entry is not a section declaration. Which is possible, but very
+    // silly.
+    epubdoc.SaveFile(ofile.c_str());
+}
+
+void create_epub(const char *ofilename, Document &doc) {
     fs::path outdir{"epubtmp"};
     fs::remove_all(outdir);
     auto metadir = outdir / "META-INF";
@@ -660,12 +730,37 @@ void create_epub(const char *ofilename, const std::vector<Chapter> &chapters) {
     fwrite(csstext, 1, strlen(csstext), f);
     fclose(f);
 
-    write_opf(contentfile, chapters, has_cover ? cover_in.c_str() : nullptr);
-    write_ncx(ncxfile.c_str(), chapters);
-    write_chapters(oebpsdir, chapters);
+    write_opf(contentfile, doc, has_cover ? cover_in.c_str() : nullptr);
+    write_ncx(ncxfile.c_str(), doc);
+    write_chapters(oebpsdir, doc);
 
     unlink(ofilename);
     package(ofilename, outdir.c_str());
+}
+
+Document load_document(const char *fname) {
+    Document doc;
+    MMapper map(fname);
+    if(!g_utf8_validate(map.data(), map.size(), nullptr)) {
+        printf("Invalid utf-8.\n");
+        std::abort();
+    }
+    GError *err = nullptr;
+    if(err) {
+        std::abort();
+    }
+
+    LineParser linep(map.data(), map.size());
+    StructureParser strucp;
+
+    line_token token = linep.next();
+    while(!std::holds_alternative<EndOfFile>(token)) {
+        strucp.push(token);
+        token = linep.next();
+    }
+
+    // FIXME, add stored data if any.
+    return strucp.get_document();
 }
 
 int main(int argc, char **argv) {
@@ -673,7 +768,7 @@ int main(int argc, char **argv) {
         printf("%s <input text file>\n", argv[0]);
         return 1;
     }
-    auto chapters = load_text(argv[1]);
+    auto doc = load_document(argv[1]);
     /*
     printf("The file had %d chapters.\n", (int)chapters.size());
     printf("%s: %d paragraphs.\n",
@@ -681,7 +776,7 @@ int main(int argc, char **argv) {
            (int)chapters.front().paragraphs.size());
     // printf("%s\n", chapters.front().paragraphs.back().c_str());
     */
-    create_pdf("bookout.pdf", chapters);
-    create_epub("war_test.epub", chapters);
+    // create_pdf("bookout.pdf", chapters);
+    create_epub("war_test.epub", doc);
     return 0;
 }

@@ -143,6 +143,8 @@ private:
 struct Document {
     // Add metadata entries for things like name, ISBN, authors etc.
     std::vector<DocElement> elements;
+
+    int num_chapters() const;
 };
 
 class StructureParser {

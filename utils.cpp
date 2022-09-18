@@ -17,6 +17,13 @@
 #include "utils.hpp"
 #include <sstream>
 
+#include <cassert>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <filesystem>
+
 double mm2pt(const double x) { return x * 2.8346456693; }
 double pt2mm(const double x) { return x / 2.8346456693; }
 
@@ -67,3 +74,14 @@ std::vector<std::string> split_to_words(std::string_view in_text) {
     }
     return words;
 }
+
+MMapper::MMapper(const char *path) {
+    bufsize = std::filesystem::file_size(path);
+    int fd = open(path, O_RDONLY);
+    assert(fd > 0);
+    buf = static_cast<const char *>(mmap(nullptr, bufsize, PROT_READ, MAP_PRIVATE, fd, 0));
+    assert(buf);
+    close(fd);
+}
+
+MMapper::~MMapper() { munmap((void *)(buf), bufsize); }
