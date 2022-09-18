@@ -395,7 +395,13 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
                 toggle_format(current_style, markup, current_word.f[style_point].format);
                 ++style_point;
             }
-            markup += view[i];
+            if(view[i] == '<') {
+                markup += "&lt;";
+            } else if(view[i] == '>') {
+                markup += "&gt;";
+            } else {
+                markup += view[i];
+            }
         }
 
         if(last_word) {
