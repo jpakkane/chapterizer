@@ -139,3 +139,35 @@ private:
     GRegex *codeblock_start;
     GRegex *codeblock_end;
 };
+
+struct Document {
+    // Add metadata entries for things like name, ISBN, authors etc.
+    std::vector<DocElement> elements;
+};
+
+class StructureParser {
+public:
+    void push(const line_token &l);
+    Document get_document();
+
+private:
+    enum class ParsingState : int {
+        unset,
+        paragraph,
+        section,
+        codeblock,
+    };
+
+    void set_state(ParsingState new_state);
+
+    void build_element();
+
+    std::string pop_lines_to_string();
+
+    Document doc;
+    bool has_finished = false;
+    int section_level = 1; // FIXME
+    int section_number = 0;
+    ParsingState current_state = ParsingState::unset;
+    std::vector<std::string> stored_lines;
+};

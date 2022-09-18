@@ -31,13 +31,6 @@
 
 namespace fs = std::filesystem;
 
-class StructureParser {};
-
-struct Document {
-    // Add metadata entries for things like name, ISBN, authors etc.
-    std::vector<DocElement> elements;
-};
-
 Document parse_file(const char *data, const uintmax_t data_size) {
     Document doc;
     if(!g_utf8_validate(data, data_size, nullptr)) {
@@ -49,76 +42,17 @@ Document parse_file(const char *data, const uintmax_t data_size) {
         std::abort();
     }
 
-    std::string section_text;
-    std::string paragraph_text;
-    std::vector<std::string> codeblock_text;
-    bool in_codeblock = false;
+    LineParser linep(data, data_size);
+    StructureParser strucp;
 
-    LineParser p(data, data_size);
-    line_token token = p.next();
-    int section_number = 0;
+    line_token token = linep.next();
     while(!std::holds_alternative<EndOfFile>(token)) {
-        if(std::holds_alternative<SectionDecl>(token)) {
-            auto &s = std::get<SectionDecl>(token);
-            assert(section_text.empty());
-            section_text = get_normalized_string(s.text);
-            ++section_number;
-        } else if(std::holds_alternative<PlainLine>(token)) {
-            auto &l = std::get<PlainLine>(token);
-            if(in_codeblock) {
-                codeblock_text.emplace_back(get_normalized_string(l.text));
-            } else {
-                if(!section_text.empty()) {
-                    assert(paragraph_text.empty());
-                    section_text += ' ';
-                    section_text += get_normalized_string(l.text);
-                } else {
-                    if(!paragraph_text.empty()) {
-                        paragraph_text += ' ';
-                    }
-                    paragraph_text += get_normalized_string(l.text);
-                }
-            }
-        } else if(std::holds_alternative<NewLine>(token)) {
-            auto &nl = std::get<NewLine>(token);
-            (void)nl;
-        } else if(std::holds_alternative<NewBlock>(token)) {
-            if(!section_text.empty()) {
-                doc.elements.emplace_back(
-                    Section{1, section_number, std::move(section_text)}); // FIXME
-                section_text.clear();
-            }
-            if(!paragraph_text.empty()) {
-                doc.elements.emplace_back(Paragraph{std::move(paragraph_text)});
-                paragraph_text.clear();
-            }
-        } else if(std::holds_alternative<SceneDecl>(token)) {
-            doc.elements.emplace_back(SceneChange{});
-        } else if(std::holds_alternative<StartOfCodeBlock>(token)) {
-            assert(codeblock_text.empty());
-            // FIXME, duplication.
-            if(!section_text.empty()) {
-                doc.elements.emplace_back(
-                    Section{1, section_number, std::move(section_text)}); // FIXME
-                section_text.clear();
-            }
-            if(!paragraph_text.empty()) {
-                doc.elements.emplace_back(Paragraph{std::move(paragraph_text)});
-                paragraph_text.clear();
-            }
-            in_codeblock = true;
-        } else if(std::holds_alternative<EndOfCodeBlock>(token)) {
-            doc.elements.emplace_back(CodeBlock{std::move(codeblock_text)});
-            codeblock_text.clear();
-            in_codeblock = false;
-        } else {
-            std::abort();
-        }
-        token = p.next();
+        strucp.push(token);
+        token = linep.next();
     }
 
     // FIXME, add stored data if any.
-    return doc;
+    return strucp.get_document();
 }
 
 int main(int argc, char **argv) {

@@ -87,3 +87,84 @@ line_token LineParser::next() {
     printf("Parsing failed.");
     std::abort();
 }
+
+std::string StructureParser::pop_lines_to_string() {
+    std::string line;
+    for(const auto &l : stored_lines) {
+        line += l;
+        line += ' ';
+    }
+    line.pop_back();
+    stored_lines.clear();
+    return line;
+}
+
+void StructureParser::build_element() {
+    switch(current_state) {
+    case ParsingState::unset:
+        std::abort();
+    case ParsingState::codeblock:
+        doc.elements.emplace_back(CodeBlock{std::move(stored_lines)});
+        break;
+    case ParsingState::section:
+        doc.elements.emplace_back(Section{1, section_number, pop_lines_to_string()});
+        break;
+    case ParsingState::paragraph:
+        doc.elements.emplace_back(Paragraph{pop_lines_to_string()});
+        break;
+    default:
+        std::abort();
+    }
+}
+
+void StructureParser::set_state(ParsingState new_state) {
+    assert(current_state == ParsingState::unset || (new_state != current_state));
+    if(current_state != ParsingState::unset) {
+        build_element();
+    }
+    assert(stored_lines.empty());
+    current_state = new_state;
+}
+
+void StructureParser::push(const line_token &l) {
+    if(has_finished) {
+        std::abort();
+    }
+    if(std::holds_alternative<PlainLine>(l)) {
+        if(current_state == ParsingState::unset) {
+            set_state(ParsingState::paragraph);
+        }
+        stored_lines.emplace_back(std::get<PlainLine>(l).text);
+        return;
+    }
+
+    if(std::holds_alternative<NewLine>(l)) {
+        return;
+    }
+
+    if(std::holds_alternative<SectionDecl>(l)) {
+        set_state(ParsingState::section);
+        ++section_number;
+        stored_lines.emplace_back(std::get<SectionDecl>(l).text);
+    } else if(std::holds_alternative<StartOfCodeBlock>(l)) {
+        set_state(ParsingState::codeblock);
+    } else if(std::holds_alternative<EndOfCodeBlock>(l)) {
+        set_state(ParsingState::unset);
+    } else if(std::holds_alternative<NewBlock>(l)) {
+        set_state(ParsingState::unset);
+    } else if(std::holds_alternative<SceneDecl>(l)) {
+        set_state(ParsingState::unset);
+        doc.elements.push_back(SceneChange{});
+    } else {
+        std::abort();
+    }
+}
+
+Document StructureParser::get_document() {
+    if(has_finished) {
+        std::abort();
+    }
+    // Get data from pending declarations (i.e. the last paragraph)
+    has_finished = true;
+    return std::move(doc);
+}
