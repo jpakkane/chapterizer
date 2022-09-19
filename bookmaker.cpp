@@ -436,7 +436,7 @@ void write_opf(const fs::path &ofile, const Document &doc, const char *coverfile
 
     auto name = opf.NewElement("dc:title");
     metadata->InsertEndChild(name);
-    name->SetText("War of the Worlds");
+    name->SetText("Book title");
     auto language = opf.NewElement("dc:language");
     language->SetText("en");
     metadata->InsertEndChild(language);
@@ -447,9 +447,9 @@ void write_opf(const fs::path &ofile, const Document &doc, const char *coverfile
     identifier->SetText("123456789X");
     auto creator = opf.NewElement("dc:creator");
     metadata->InsertEndChild(creator);
-    creator->SetAttribute("opf:file-as", "Wells, HG");
+    creator->SetAttribute("opf:file-as", "Name, Author");
     creator->SetAttribute("opf:role", "aut");
-    creator->SetText("HG Wells");
+    creator->SetText("Author Name");
     if(coverfile) {
         auto meta = opf.NewElement("meta");
         metadata->InsertEndChild(meta);
