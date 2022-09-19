@@ -100,10 +100,10 @@ void PdfRenderer::render(const std::vector<std::string> &lines, const double tar
                                   target_width_mm,
                                   left_box_origin_y + i * line_height);
         } else {
-            render_line_as_is(
+            render_markup_as_is(
                 lines[i].c_str(), par, left_box_origin_x, left_box_origin_y + i * line_height);
         }
-        render_line_as_is(
+        render_markup_as_is(
             lines[i].c_str(), par, right_box_origin_x, right_box_origin_y + i * line_height);
     }
     cairo_set_source_rgb(cr, 0, 0, 1.0);
@@ -236,10 +236,22 @@ void PdfRenderer::setup_pango(const FontParameters &par) {
     pango_font_description_free(desc);
 }
 
-void PdfRenderer::render_line_as_is(const char *line,
+void PdfRenderer::render_text_as_is(const char *line,
                                     const FontParameters &par,
                                     double x,
                                     double y) {
+    setup_pango(par);
+    cairo_move_to(cr, x, y);
+    pango_layout_set_attributes(layout, nullptr);
+    pango_layout_set_text(layout, line, -1);
+    pango_cairo_update_layout(cr, layout);
+    pango_cairo_show_layout(cr, layout);
+}
+
+void PdfRenderer::render_markup_as_is(const char *line,
+                                      const FontParameters &par,
+                                      double x,
+                                      double y) {
     setup_pango(par);
     cairo_move_to(cr, x, y);
     pango_layout_set_attributes(layout, nullptr);
@@ -248,10 +260,10 @@ void PdfRenderer::render_line_as_is(const char *line,
     pango_cairo_show_layout(cr, layout);
 }
 
-void PdfRenderer::render_line_as_is(const std::vector<std::string> markup_words,
-                                    const FontParameters &par,
-                                    double x,
-                                    double y) {
+void PdfRenderer::render_markup_as_is(const std::vector<std::string> markup_words,
+                                      const FontParameters &par,
+                                      double x,
+                                      double y) {
     std::string full_line;
     for(const auto &w : markup_words) {
         full_line += w;
@@ -273,7 +285,7 @@ void PdfRenderer::render_line_centered(const char *line,
     pango_layout_set_attributes(layout, nullptr);
     pango_layout_set_text(layout, line, -1);
     pango_layout_get_extents(layout, nullptr, &r);
-    render_line_as_is(line, par, x - (r.width / (2 * PANGO_SCALE)), y);
+    render_markup_as_is(line, par, x - (r.width / (2 * PANGO_SCALE)), y);
 }
 
 void PdfRenderer::new_page() { cairo_surface_show_page(surf); }

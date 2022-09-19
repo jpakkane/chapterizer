@@ -250,7 +250,7 @@ void create_pdf(const char *ofilename, const Document &doc) {
             std::string full_title = std::to_string(s.number);
             full_title += ". ";
             full_title += s.text;
-            book.render_line_as_is(full_title.c_str(), title_font, mm2pt(x), mm2pt(y));
+            book.render_markup_as_is(full_title.c_str(), title_font, mm2pt(x), mm2pt(y));
             y += pt2mm(title_font.point_size);
             y += title_below_space;
             first_paragraph = true;
@@ -302,7 +302,7 @@ void create_pdf(const char *ofilename, const Document &doc) {
                                                mm2pt(x + current_indent),
                                                mm2pt(y));
                 } else {
-                    book.render_line_as_is(
+                    book.render_markup_as_is(
                         markup_words, text_par.font, mm2pt(x + current_indent), mm2pt(y));
                 }
                 line_num++;
@@ -330,7 +330,7 @@ void create_pdf(const char *ofilename, const Document &doc) {
                     y = m.upper;
                     x = current_page % 2 ? m.inner : m.outer;
                 }
-                book.render_line_as_is(line.c_str(), code_par.font, mm2pt(x), mm2pt(y));
+                book.render_text_as_is(line.c_str(), code_par.font, mm2pt(x), mm2pt(y));
                 y += pt2mm(code_par.line_height_pt);
             }
             first_paragraph = true;
