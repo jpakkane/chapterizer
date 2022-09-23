@@ -149,6 +149,7 @@ struct Document {
 
 class StructureParser {
 public:
+    ~StructureParser();
     void push(const line_token &l);
     Document get_document();
 

@@ -804,6 +804,7 @@ Document load_document(const char *fname) {
         strucp.push(token);
         token = linep.next();
     }
+    strucp.push(token);
 
     // FIXME, add stored data if any.
     return strucp.get_document();

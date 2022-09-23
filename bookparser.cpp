@@ -98,6 +98,13 @@ line_token LineParser::next() {
     std::abort();
 }
 
+StructureParser::~StructureParser() {
+    if(!stored_lines.empty()) {
+        printf("Stored lines not fully drained.\n");
+        std::abort();
+    }
+}
+
 std::string StructureParser::pop_lines_to_string() {
     std::string line;
     for(const auto &l : stored_lines) {
@@ -165,6 +172,8 @@ void StructureParser::push(const line_token &l) {
     } else if(std::holds_alternative<SceneDecl>(l)) {
         set_state(ParsingState::unset);
         doc.elements.push_back(SceneChange{});
+    } else if(std::holds_alternative<EndOfFile>(l)) {
+        set_state(ParsingState::unset);
     } else {
         std::abort();
     }
