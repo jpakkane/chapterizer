@@ -50,77 +50,7 @@ p#preformatted {
 
 )";
 
-bool looks_like_title(const std::string &line) {
-    if(line.size() < 2) {
-        return false;
-    }
-    if(line[0] == '#' && line[1] == ' ')
-        return true;
-    return false;
-}
-
 } // namespace
-
-std::vector<Chapter> load_text(const char *fname) {
-    std::vector<Chapter> chapters;
-    std::ifstream ifile(fname);
-
-    bool reading_title = false;
-    int num_lines = 0;
-    std::string title_text;
-    std::string paragraph_text;
-    std::vector<std::string> paragraphs;
-    for(std::string line; std::getline(ifile, line);) {
-        ++num_lines;
-        // FIXME, strip.
-        if(line.empty()) {
-            if(reading_title) {
-                reading_title = false;
-            } else {
-                if(!paragraph_text.empty()) {
-                    paragraphs.emplace_back(std::move(paragraph_text));
-                    paragraph_text.clear();
-                }
-            }
-            continue;
-        }
-        if(!g_utf8_validate(line.c_str(), line.length(), nullptr)) {
-            printf("Line %d not valid UTF-8.\n", num_lines);
-            exit(1);
-        }
-        gchar *normalized_text = g_utf8_normalize(line.c_str(), line.length(), G_NORMALIZE_NFC);
-        line = normalized_text;
-        g_free(normalized_text);
-        if(!reading_title) {
-            if(looks_like_title(line)) {
-                if(!paragraph_text.empty()) {
-                    paragraphs.emplace_back(std::move(paragraph_text));
-                    paragraph_text.clear();
-                }
-                if(!paragraphs.empty()) {
-                    chapters.emplace_back(Chapter{std::move(title_text), std::move(paragraphs)});
-                    title_text.clear();
-                    paragraphs.clear();
-                }
-                reading_title = true;
-                title_text = line.substr(2);
-                continue;
-            } else {
-                paragraph_text += line;
-                paragraph_text += ' ';
-            }
-        } else {
-            title_text += line;
-            title_text += ' ';
-        }
-    }
-    if(!paragraph_text.empty()) {
-        paragraphs.emplace_back(std::move(paragraph_text));
-    }
-    printf("File had %d lines.\n", num_lines);
-    chapters.emplace_back(Chapter{std::move(title_text), std::move(paragraphs)});
-    return chapters;
-}
 
 struct margins {
     double inner = 15;
