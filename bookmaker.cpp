@@ -185,6 +185,11 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
             changes.push_back(FormattingChange{size_t(in - word_start - num_changes), SMALLCAPS_S});
             ++num_changes;
             break;
+        case superscript_codepoint:
+            style_change(current_style, SUPERSCRIPT_S);
+            changes.push_back(FormattingChange{size_t(in - word_start - num_changes), SUPERSCRIPT_S});
+            ++num_changes;
+            break;
         default:
             char tmp[10];
             const int bytes_written = g_unichar_to_utf8(c, tmp);
@@ -643,6 +648,9 @@ void write_paragraph(tinyxml2::XMLDocument &epubdoc,
             break;
         case tt_character:
             handle_tag_switch(epubdoc, current_style, tagstack, buf, TT_S, "tt");
+            break;
+        case superscript_character:
+            handle_tag_switch(epubdoc, current_style, tagstack, buf, SUPERSCRIPT_S, "sup");
             break;
         case smallcaps_character:
             handle_tag_switch(epubdoc,

@@ -162,6 +162,9 @@ void toggle_format(StyleStack &current_style, std::string &line, const char form
         case SMALLCAPS_S:
             line.append("</span>");
             break;
+        case SUPERSCRIPT_S:
+            line.append("</sup>");
+            break;
         default:
             printf("Bad style end bit.\n");
             std::abort();
@@ -180,6 +183,9 @@ void toggle_format(StyleStack &current_style, std::string &line, const char form
             break;
         case SMALLCAPS_S:
             line.append("<span variant=\"small-caps\" letter_spacing=\"100\">");
+            break;
+        case SUPERSCRIPT_S:
+            line.append("<sup>");
             break;
         default:
             printf("Bad style start bit.\n");

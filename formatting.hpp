@@ -10,18 +10,20 @@ const char ITALIC_S = 1;
 const char BOLD_S = (1 << 1);
 const char TT_S = (1 << 2);
 const char SMALLCAPS_S = (1 << 3);
+const char SUPERSCRIPT_S = (1 << 4);
 
 const uint32_t italic_character = '/';
 const uint32_t bold_character = '*';
 const uint32_t tt_character = '`';
 const uint32_t smallcaps_character = '|';
+const uint32_t superscript_character = '^';
 
 const uint32_t italic_codepoint = '/';
 const uint32_t bold_codepoint = '*';
 const uint32_t tt_codepoint = '`';
 const uint32_t smallcaps_codepoint = '|';
+const uint32_t superscript_codepoint = '^';
 #if 0
-const uint32_t superscript_char = '^';
 const uint32_t subscript_char = '_';
 #endif
 
@@ -95,6 +97,9 @@ public:
             case SMALLCAPS_S:
                 buf += "<span variant=\"small-caps\" letter_spacing=\"100\">";
                 break;
+            case SUPERSCRIPT_S:
+                buf += "<sup>";
+                break;
             default:
                 std::abort();
             }
@@ -117,6 +122,8 @@ public:
             case SMALLCAPS_S:
                 buf += "</span>";
                 break;
+            case SUPERSCRIPT_S:
+                buf += "</sup>";
             default:
                 std::abort();
             }
@@ -134,7 +141,7 @@ private:
     int size = 0;
 };
 
-typedef SmallStack<char, 4> StyleStack;
+typedef SmallStack<char, 5> StyleStack;
 
 struct FormattingChange {
     size_t offset;
