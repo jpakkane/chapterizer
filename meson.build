@@ -34,8 +34,6 @@ executable('fttest', 'fttest.cpp', dependencies: [ft_dep, cairo_dep])
 
 executable('pangotest', 'pangotest.cpp', dependencies: pangocairo_dep)
 
-executable('parsetest', 'parsetest.cpp', 'bookparser.cpp', dependencies: pangocairo_dep)
-
 executable('devtool', 'devtool.cpp', link_with: l, dependencies: pangocairo_dep)
 
 executable('bookmaker', 'bookmaker.cpp',
