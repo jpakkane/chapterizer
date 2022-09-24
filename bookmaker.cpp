@@ -64,8 +64,11 @@ struct PageSize {
     int h_mm;
 };
 
-void render_page_num(
-    PdfRenderer &book, FontParameters &par, int page_num, const PageSize &p, const margins &m) {
+void render_page_num(PdfRenderer &book,
+                     const FontParameters &par,
+                     int page_num,
+                     const PageSize &p,
+                     const margins &m) {
     char buf[128];
     snprintf(buf, 128, "%d", page_num);
     const double yloc = p.h_mm - 2 * m.lower / 3;
@@ -117,7 +120,8 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
             break;
         case superscript_codepoint:
             style_change(current_style, SUPERSCRIPT_S);
-            changes.push_back(FormattingChange{size_t(in - word_start - num_changes), SUPERSCRIPT_S});
+            changes.push_back(
+                FormattingChange{size_t(in - word_start - num_changes), SUPERSCRIPT_S});
             ++num_changes;
             break;
         default:
@@ -132,9 +136,74 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
     return changes;
 }
 
+void render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
+                            double &x,
+                            double &y,
+                            const double &bottom_watermark,
+                            int &current_page,
+                            const margins &m,
+                            const PageSize &page,
+                            const ChapterParameters &text_par,
+                            PdfRenderer &book) {
+    const bool debug_draw = true;
+    size_t line_num = 0;
+    for(const auto &markup_words : lines) {
+        double current_indent = line_num == 0 ? text_par.indent : 0;
+        if(y >= bottom_watermark) {
+            render_page_num(book, text_par.font, current_page, page, m);
+            book.new_page();
+            ++current_page;
+            y = m.upper;
+            x = current_page % 2 ? m.inner : m.outer;
+            if(debug_draw) {
+                if(current_page % 2) {
+                    book.draw_box(mm2pt(m.inner),
+                                  mm2pt(m.upper),
+                                  mm2pt(page.w_mm - m.inner - m.outer),
+                                  mm2pt(page.h_mm - m.upper - m.lower));
+                } else {
+                    book.draw_box(mm2pt(m.outer),
+                                  mm2pt(m.upper),
+                                  mm2pt(page.w_mm - m.inner - m.outer),
+                                  mm2pt(page.h_mm - m.upper - m.lower));
+                }
+            }
+        }
+        if(line_num < lines.size() - 1) {
+            book.render_line_justified(markup_words,
+                                       text_par.font,
+                                       text_par.paragraph_width_mm - current_indent,
+                                       mm2pt(x + current_indent),
+                                       mm2pt(y));
+        } else {
+            book.render_markup_as_is(
+                markup_words, text_par.font, mm2pt(x + current_indent), mm2pt(y));
+        }
+        line_num++;
+        y += pt2mm(text_par.line_height_pt);
+    }
+}
+
+std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
+                                                  const WordHyphenator &hyphen) {
+    StyleStack current_style;
+    auto plain_words = split_to_words(std::string_view(text));
+    std::vector<EnrichedWord> processed_words;
+    for(const auto &word : plain_words) {
+        auto working_word = word;
+        auto start_style = current_style;
+        auto formatting_data = extract_styling(current_style, working_word);
+        auto hyphenation_data = hyphen.hyphenate(working_word);
+        processed_words.emplace_back(EnrichedWord{std::move(working_word),
+                                                  std::move(hyphenation_data),
+                                                  std::move(formatting_data),
+                                                  start_style});
+    }
+    return processed_words;
+}
+
 void create_pdf(const char *ofilename, const Document &doc) {
     PageSize page;
-    bool debug_draw = true;
     page.w_mm = 110;
     page.h_mm = 175;
     PdfRenderer book(ofilename, mm2pt(page.w_mm), mm2pt(page.h_mm));
@@ -150,6 +219,10 @@ void create_pdf(const char *ofilename, const Document &doc) {
     ChapterParameters code_par = text_par;
     code_par.font.name = "Liberation Mono";
     code_par.font.point_size = 8;
+    ChapterParameters footnote_par = text_par;
+    footnote_par.font.point_size = 9;
+    footnote_par.line_height_pt = 11;
+    footnote_par.indent = 4;
     ExtraPenaltyAmounts extras;
     const double bottom_watermark = page.h_mm - m.lower - pt2mm(text_par.line_height_pt);
     const double title_above_space = 30;
@@ -193,57 +266,23 @@ void create_pdf(const char *ofilename, const Document &doc) {
             const Paragraph &p = std::get<Paragraph>(e);
             StyleStack current_style;
             text_par.indent = first_paragraph ? 0 : indent;
-            auto plain_words = split_to_words(std::string_view(p.text));
-            std::vector<EnrichedWord> processed_words;
-            for(const auto &word : plain_words) {
-                auto working_word = word;
-                auto start_style = current_style;
-                auto formatting_data = extract_styling(current_style, working_word);
-                auto hyphenation_data = hyphen.hyphenate(working_word);
-                processed_words.emplace_back(EnrichedWord{std::move(working_word),
-                                                          std::move(hyphenation_data),
-                                                          std::move(formatting_data),
-                                                          start_style});
-            }
+            std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text, hyphen);
             ParagraphFormatter b(processed_words, text_par, extras);
             auto lines = b.split_formatted_lines();
-            size_t line_num = 0;
-            for(const auto &markup_words : lines) {
-                double current_indent = line_num == 0 ? text_par.indent : 0;
-                if(y >= bottom_watermark) {
-                    render_page_num(book, text_par.font, current_page, page, m);
-                    book.new_page();
-                    ++current_page;
-                    y = m.upper;
-                    x = current_page % 2 ? m.inner : m.outer;
-                    if(debug_draw) {
-                        if(current_page % 2) {
-                            book.draw_box(mm2pt(m.inner),
-                                          mm2pt(m.upper),
-                                          mm2pt(page.w_mm - m.inner - m.outer),
-                                          mm2pt(page.h_mm - m.upper - m.lower));
-                        } else {
-                            book.draw_box(mm2pt(m.outer),
-                                          mm2pt(m.upper),
-                                          mm2pt(page.w_mm - m.inner - m.outer),
-                                          mm2pt(page.h_mm - m.upper - m.lower));
-                        }
-                    }
-                }
-                if(line_num < lines.size() - 1) {
-                    book.render_line_justified(markup_words,
-                                               text_par.font,
-                                               text_par.paragraph_width_mm - current_indent,
-                                               mm2pt(x + current_indent),
-                                               mm2pt(y));
-                } else {
-                    book.render_markup_as_is(
-                        markup_words, text_par.font, mm2pt(x + current_indent), mm2pt(y));
-                }
-                line_num++;
-                y += pt2mm(text_par.line_height_pt);
-            }
+            render_formatted_lines(
+                lines, x, y, bottom_watermark, current_page, m, page, text_par, book);
             first_paragraph = false;
+        } else if(std::holds_alternative<Footnote>(e)) {
+            const Footnote &f = std::get<Footnote>(e);
+            StyleStack current_style;
+            std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text, hyphen);
+            ParagraphFormatter b(processed_words, footnote_par, extras);
+            auto lines = b.split_formatted_lines();
+            std::string fnum = std::to_string(f.number);
+            fnum += '.';
+            book.render_text_as_is(fnum.c_str(), footnote_par.font, mm2pt(x), mm2pt(y));
+            render_formatted_lines(
+                lines, x, y, bottom_watermark, current_page, m, page, footnote_par, book);
         } else if(std::holds_alternative<SceneChange>(e)) {
             y += pt2mm(text_par.line_height_pt);
             if(y >= bottom_watermark) {
@@ -274,7 +313,6 @@ void create_pdf(const char *ofilename, const Document &doc) {
             std::abort();
         }
     }
-    render_page_num(book, text_par.font, current_page, page, m);
 }
 
 void package(const char *ofilename, const char *builddir) {
@@ -311,6 +349,13 @@ void generate_epub_manifest(tinyxml2::XMLNode *manifest,
         node->SetAttribute("href", buf);
         node->SetAttribute("media-type", "application/xhtml+xml");
         ++chapter;
+    }
+    if(doc.num_footnotes() > 0) {
+        auto node = opf->NewElement("item");
+        manifest->InsertEndChild(node);
+        node->SetAttribute("id", "footnotes");
+        node->SetAttribute("href", "footnotes.xhtml");
+        node->SetAttribute("media-type", "application/xhtml+xml");
     }
 
     auto css = opf->NewElement("item");
@@ -349,6 +394,11 @@ void generate_epub_spine(tinyxml2::XMLNode *spine, const Document &doc) {
         spine->InsertEndChild(node);
         node->SetAttribute("idref", buf);
         ++chapter;
+    }
+    if(doc.num_footnotes() > 0) {
+        auto node = opf->NewElement("itemref");
+        spine->InsertEndChild(node);
+        node->SetAttribute("idref", "footnotes");
     }
 }
 
@@ -440,6 +490,23 @@ void write_navmap(tinyxml2::XMLElement *root, const Document &doc) {
         content->SetAttribute("src", buf);
         ++chapter;
     }
+    if(doc.num_footnotes() > 0) {
+        auto navpoint = ncx->NewElement("navPoint");
+        navpoint->SetAttribute("id", "footnotes");
+        navpoint->SetAttribute("class", "chapter");
+        snprintf(buf, bufsize, "%d", chapter);
+        ++chapter;
+        navpoint->SetAttribute("playOrder", buf);
+        auto navlabel = ncx->NewElement("navLabel");
+        navpoint->InsertEndChild(navlabel);
+        auto text = ncx->NewElement("text");
+        text->SetText("Footnotes");
+        navlabel->InsertEndChild(text);
+        auto content = ncx->NewElement("content");
+        content->SetAttribute("src", "footnotes.xhtml");
+        navpoint->InsertEndChild(content);
+        navmap->InsertEndChild(navpoint);
+    }
 }
 
 void write_ncx(const char *ofile, const Document &doc) {
@@ -484,13 +551,13 @@ void write_ncx(const char *ofile, const Document &doc) {
     root->InsertEndChild(doctitle);
     auto text = ncx.NewElement("text");
     doctitle->InsertEndChild(text);
-    text->SetText("War of the Worlds");
+    text->SetText("Name of the Book");
 
     auto docauthor = ncx.NewElement("docAuthor");
     root->InsertEndChild(docauthor);
     text = ncx.NewElement("text");
     docauthor->InsertEndChild(text);
-    text->SetText("Wells, HG");
+    text->SetText("Author, Name");
 
     write_navmap(root, doc);
     ncx.SaveFile(ofile);
@@ -498,7 +565,7 @@ void write_ncx(const char *ofile, const Document &doc) {
 
 bool is_stylechar(char c) {
     return c == italic_character || c == bold_character || c == tt_character ||
-           c == smallcaps_character;
+           c == smallcaps_character || c == superscript_character;
 }
 
 void handle_tag_switch(tinyxml2::XMLDocument &doc,
@@ -548,7 +615,7 @@ tinyxml2::XMLElement *write_header(tinyxml2::XMLDocument &epubdoc) {
     meta->SetAttribute("content", "application/xhtml+xml; charset=utf-8");
     auto title = epubdoc.NewElement("title");
     head->InsertEndChild(title);
-    title->SetText("War of the Worlds");
+    title->SetText("Name of Book");
     auto style = epubdoc.NewElement("link");
     head->InsertEndChild(style);
     style->SetAttribute("rel", "stylesheet");
@@ -560,15 +627,13 @@ tinyxml2::XMLElement *write_header(tinyxml2::XMLDocument &epubdoc) {
     return body;
 }
 
-void write_paragraph(tinyxml2::XMLDocument &epubdoc,
-                     tinyxml2::XMLElement *body,
-                     const Paragraph &par) {
+tinyxml2::XMLElement *write_block_of_text(tinyxml2::XMLDocument &epubdoc, const std::string &text) {
     StyleStack current_style;
     std::stack<tinyxml2::XMLNode *> tagstack;
     auto p = epubdoc.NewElement("p");
     tagstack.push(p);
     std::string buf;
-    for(char c : par.text) {
+    for(char c : text) {
         switch(c) {
         case italic_character:
             handle_tag_switch(epubdoc, current_style, tagstack, buf, ITALIC_S, "i");
@@ -603,7 +668,13 @@ void write_paragraph(tinyxml2::XMLDocument &epubdoc,
     }
     tagstack.pop();
     assert(tagstack.empty());
-    body->InsertEndChild(p);
+    return p;
+}
+
+void write_paragraph(tinyxml2::XMLDocument &epubdoc,
+                     tinyxml2::XMLElement *body,
+                     const Paragraph &par) {
+    body->InsertEndChild(write_block_of_text(epubdoc, par.text));
 }
 
 void write_codeblock(tinyxml2::XMLDocument &epubdoc,
@@ -619,6 +690,35 @@ void write_codeblock(tinyxml2::XMLDocument &epubdoc,
         }
     }
     body->InsertEndChild(p);
+}
+
+void write_footnotes(const fs::path &outdir, Document &doc) {
+    const auto num_footnotes = doc.num_footnotes();
+    if(num_footnotes == 0) {
+        return;
+    }
+    tinyxml2::XMLDocument epubdoc;
+    tinyxml2::XMLElement *body = write_header(epubdoc);
+    auto heading = epubdoc.NewElement("h2");
+    heading->SetText("Footnotes");
+    body->InsertEndChild(heading);
+    const auto ofile = outdir / "footnotes.xhtml";
+    std::string temphack;
+
+    for(const auto &e : doc.elements) {
+        if(!std::holds_alternative<Footnote>(e)) {
+            continue;
+        }
+        const Footnote &fn = std::get<Footnote>(e);
+        temphack = std::to_string(fn.number);
+        temphack += ". ";
+        temphack += fn.text;
+        // FIXME, add link back.
+        auto p = write_block_of_text(epubdoc, temphack.c_str());
+        p->SetAttribute("class", "footnote");
+        body->InsertEndChild(p);
+    }
+    epubdoc.SaveFile(ofile.c_str());
 }
 
 void write_chapters(const fs::path &outdir, Document &doc) {
@@ -662,6 +762,11 @@ void write_chapters(const fs::path &outdir, Document &doc) {
             auto p = epubdoc.NewElement("p");
             p->SetText(" "); // There may be a smarter way of doing this.
             body->InsertEndChild(p);
+        } else if(std::holds_alternative<Footnote>(e)) {
+            // These contain the footnote text and are not written here.
+            // We just ignore them.
+
+            // FIXME: add links to the footnote file.
         } else {
             std::abort();
         }
@@ -709,6 +814,7 @@ void create_epub(const char *ofilename, Document &doc) {
     write_opf(contentfile, doc, has_cover ? cover_in.c_str() : nullptr);
     write_ncx(ncxfile.c_str(), doc);
     write_chapters(oebpsdir, doc);
+    write_footnotes(oebpsdir, doc);
 
     unlink(ofilename);
     package(ofilename, outdir.c_str());

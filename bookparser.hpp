@@ -30,6 +30,8 @@ struct ReMatchOffsets {
 
 std::string get_normalized_string(std::string_view v);
 
+enum class SpecialBlockType : int { Code, Footnote, Unset };
+
 struct ReMatchResult {
     re_match minfo;
     int64_t offset_to_match_start;
@@ -54,9 +56,11 @@ struct SceneDecl {};
 
 struct NewBlock {};
 
-struct StartOfCodeBlock {};
+struct StartOfSpecialBlock {
+    SpecialBlockType type;
+};
 
-struct EndOfCodeBlock {};
+struct EndOfSpecialBlock {};
 
 struct EndOfFile {};
 
@@ -65,8 +69,8 @@ typedef std::variant<SectionDecl,
                      NewLine,
                      SceneDecl,
                      NewBlock,
-                     StartOfCodeBlock,
-                     EndOfCodeBlock,
+                     StartOfSpecialBlock,
+                     EndOfSpecialBlock,
                      EndOfFile>
     line_token;
 
@@ -84,10 +88,15 @@ struct CodeBlock {
     std::vector<std::string> raw_lines;
 };
 
+struct Footnote {
+    int number;
+    std::string text;
+};
+
 struct SceneChange {};
 
 // Also needs images, footnotes, unformatted text etc.
-typedef std::variant<Paragraph, Section, SceneChange, CodeBlock> DocElement;
+typedef std::variant<Paragraph, Section, SceneChange, CodeBlock, Footnote> DocElement;
 
 class LineParser {
 public:
@@ -98,9 +107,10 @@ public:
         line = g_regex_new(".+", GRegexCompileFlags(0), G_REGEX_MATCH_ANCHORED, nullptr);
         newline = g_regex_new("\\n+", G_REGEX_MULTILINE, G_REGEX_MATCH_ANCHORED, nullptr);
         scene = g_regex_new("#s", GRegexCompileFlags(0), G_REGEX_MATCH_ANCHORED, nullptr);
-        codeblock_start =
+        specialblock_start =
             g_regex_new("```(\\w+)", GRegexCompileFlags(0), G_REGEX_MATCH_ANCHORED, nullptr);
-        codeblock_end = g_regex_new("``` *\n", G_REGEX_MULTILINE, G_REGEX_MATCH_ANCHORED, nullptr);
+        specialblock_end =
+            g_regex_new("``` *\n", G_REGEX_MULTILINE, G_REGEX_MATCH_ANCHORED, nullptr);
     }
 
     ~LineParser() {
@@ -108,8 +118,8 @@ public:
         g_regex_unref(section);
         g_regex_unref(line);
         g_regex_unref(whitespace);
-        g_regex_unref(codeblock_start);
-        g_regex_unref(codeblock_end);
+        g_regex_unref(specialblock_start);
+        g_regex_unref(specialblock_end);
     }
 
     line_token next();
@@ -128,7 +138,7 @@ private:
     }
 
     const char *data;
-    bool parsing_codeblock = false;
+    bool parsing_specialblock = false;
     int64_t data_size;
     int64_t offset = 0;
     GRegex *whitespace;
@@ -136,8 +146,8 @@ private:
     GRegex *line;
     GRegex *newline;
     GRegex *scene;
-    GRegex *codeblock_start;
-    GRegex *codeblock_end;
+    GRegex *specialblock_start;
+    GRegex *specialblock_end;
 };
 
 struct Document {
@@ -145,6 +155,7 @@ struct Document {
     std::vector<DocElement> elements;
 
     int num_chapters() const;
+    int num_footnotes() const;
 };
 
 class StructureParser {
@@ -158,7 +169,7 @@ private:
         unset,
         paragraph,
         section,
-        codeblock,
+        specialblock,
     };
 
     void set_state(ParsingState new_state);
@@ -171,6 +182,8 @@ private:
     bool has_finished = false;
     int section_level = 1; // FIXME
     int section_number = 0;
+    int footnote_number = 0;
     ParsingState current_state = ParsingState::unset;
+    SpecialBlockType current_special = SpecialBlockType::Unset;
     std::vector<std::string> stored_lines;
 };

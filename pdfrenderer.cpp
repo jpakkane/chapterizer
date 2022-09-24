@@ -24,7 +24,6 @@
 #include <algorithm>
 
 static TextStats hack{};
-static const FontParameters fp{"Gentium", 10, FontStyle::Regular};
 
 #include <sstream>
 
@@ -145,7 +144,7 @@ void PdfRenderer::render_line_justified(const std::string &line_text,
     setup_pango(par);
     const auto words = hack_split(line_text);
     const double target_width_pt = mm2pt(line_width_mm);
-    double text_width_mm = hack.text_width(line_text.c_str(), fp);
+    double text_width_mm = hack.text_width(line_text.c_str(), par);
     const double text_width_pt = mm2pt(text_width_mm);
     const double num_spaces = std::count(line_text.begin(), line_text.end(), ' ');
     const double space_extra_width =
@@ -195,7 +194,7 @@ void PdfRenderer::render_line_justified(const std::vector<std::string> &markup_w
 
     const double target_width_pt = mm2pt(line_width_mm);
     pango_layout_set_markup(layout, full_line.c_str(), full_line.length());
-    double text_width_mm = hack.markup_width(full_line.c_str(), fp);
+    double text_width_mm = hack.markup_width(full_line.c_str(), par);
     const double text_width_pt = mm2pt(text_width_mm);
     const double num_spaces = double(markup_words.size() - 1);
     const double space_extra_width =

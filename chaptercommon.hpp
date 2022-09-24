@@ -32,8 +32,8 @@ enum class FontStyle : int {
 };
 
 struct FontParameters {
-    std::string name;       // Fontconfig name as a string.
-    double point_size = 10; // Be careful with comparisons.
+    std::string name;         // Fontconfig name as a string.
+    double point_size = 1000; // Be careful with comparisons.
     FontStyle type = FontStyle::Regular;
 
     bool operator==(const FontParameters &o) const noexcept {

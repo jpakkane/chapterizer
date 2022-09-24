@@ -2,14 +2,18 @@
 
 #include <cassert>
 
+#include <algorithm>
+
 int Document::num_chapters() const {
-    int num_chapters = 0;
-    for(const auto &c : elements) {
-        if(std::holds_alternative<Section>(c)) {
-            ++num_chapters;
-        }
-    }
-    return num_chapters;
+    return std::count_if(elements.begin(), elements.end(), [](const DocElement &e) {
+        return std::holds_alternative<Section>(e);
+    });
+}
+
+int Document::num_footnotes() const {
+    return std::count_if(elements.begin(), elements.end(), [](const DocElement &e) {
+        return std::holds_alternative<Footnote>(e);
+    });
 }
 
 std::string get_normalized_string(std::string_view v) {
@@ -36,11 +40,11 @@ line_token LineParser::next() {
         return EndOfFile{};
     }
 
-    if(parsing_codeblock) {
-        auto block_end = try_match(codeblock_end, GRegexMatchFlags(0));
+    if(parsing_specialblock) {
+        auto block_end = try_match(specialblock_end, GRegexMatchFlags(0));
         if(block_end) {
-            parsing_codeblock = false;
-            return EndOfCodeBlock{};
+            parsing_specialblock = false;
+            return EndOfSpecialBlock{};
         } else {
             auto full_line = try_match(line, GRegexMatchFlags(0));
             auto nl = try_match(newline, GRegexMatchFlags(0));
@@ -60,19 +64,28 @@ line_token LineParser::next() {
         }
         return NewLine{};
     }
-    match_result = try_match(codeblock_start, GRegexMatchFlags(0));
+    match_result = try_match(specialblock_start, GRegexMatchFlags(0));
     if(match_result) {
-        if(parsing_codeblock) {
+        if(parsing_specialblock) {
             printf("Nested codeblocks not supported.\n");
             std::abort();
         }
-        parsing_codeblock = true;
+        parsing_specialblock = true;
         if(!try_match(newline, GRegexMatchFlags(0))) {
             std::abort();
         }
-        return StartOfCodeBlock{};
+        const auto block_name = match_result->view_for(1, data);
+        if(block_name == "code") {
+            return StartOfSpecialBlock{SpecialBlockType::Code};
+        }
+        if(block_name == "footnote") {
+            return StartOfSpecialBlock{SpecialBlockType::Footnote};
+        }
+        std::string tmp{block_name};
+        printf("Unknown special block type: %s\n", tmp.c_str());
+        std::abort();
     }
-    match_result = try_match(codeblock_end, GRegexMatchFlags(0));
+    match_result = try_match(specialblock_end, GRegexMatchFlags(0));
     if(match_result) {
         printf("End of codeblock without start of same.\n");
         std::abort();
@@ -120,8 +133,14 @@ void StructureParser::build_element() {
     switch(current_state) {
     case ParsingState::unset:
         std::abort();
-    case ParsingState::codeblock:
-        doc.elements.emplace_back(CodeBlock{std::move(stored_lines)});
+    case ParsingState::specialblock:
+        if(current_special == SpecialBlockType::Code) {
+            doc.elements.emplace_back(CodeBlock{std::move(stored_lines)});
+        } else if(current_special == SpecialBlockType::Footnote) {
+            doc.elements.emplace_back(Footnote{footnote_number, pop_lines_to_string()});
+        } else {
+            std::abort();
+        }
         break;
     case ParsingState::section:
         doc.elements.emplace_back(Section{1, section_number, pop_lines_to_string()});
@@ -141,6 +160,9 @@ void StructureParser::set_state(ParsingState new_state) {
     }
     assert(stored_lines.empty());
     current_state = new_state;
+    if(current_state == ParsingState::specialblock) {
+        current_special = SpecialBlockType::Unset;
+    }
 }
 
 void StructureParser::push(const line_token &l) {
@@ -163,9 +185,14 @@ void StructureParser::push(const line_token &l) {
         set_state(ParsingState::section);
         ++section_number;
         stored_lines.emplace_back(std::get<SectionDecl>(l).text);
-    } else if(std::holds_alternative<StartOfCodeBlock>(l)) {
-        set_state(ParsingState::codeblock);
-    } else if(std::holds_alternative<EndOfCodeBlock>(l)) {
+    } else if(std::holds_alternative<StartOfSpecialBlock>(l)) {
+        set_state(ParsingState::specialblock);
+        const auto new_special = std::get<StartOfSpecialBlock>(l).type;
+        current_special = new_special;
+        if(new_special == SpecialBlockType::Footnote) {
+            ++footnote_number;
+        }
+    } else if(std::holds_alternative<EndOfSpecialBlock>(l)) {
         set_state(ParsingState::unset);
     } else if(std::holds_alternative<NewBlock>(l)) {
         set_state(ParsingState::unset);
