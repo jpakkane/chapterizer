@@ -29,8 +29,6 @@ public:
     explicit PdfRenderer(const char *ofname, int pagew = 595, int pageh = 842);
     ~PdfRenderer();
 
-    void render(const std::vector<std::string> &lines, const double target_width_mm);
-
     void render_line_justified(const std::string &text,
                                const FontParameters &par,
                                double line_width_mm,

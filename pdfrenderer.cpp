@@ -56,12 +56,6 @@ PdfRenderer::PdfRenderer(const char *ofname, int pagew, int pageh) {
     layout = pango_cairo_create_layout(cr);
     PangoContext *context = pango_layout_get_context(layout);
     pango_context_set_round_glyph_positions(context, FALSE);
-    PangoFontDescription *desc;
-    desc = pango_font_description_from_string("Gentium");
-    assert(desc);
-    pango_font_description_set_absolute_size(desc, 10 * PANGO_SCALE);
-    pango_layout_set_font_description(layout, desc);
-    pango_font_description_free(desc);
 
     // Can't use scale to draw in millimeters because it also scales text size.
     // cairo_scale(cr, 595.0 / 21.0, 595.0 / 21.0);
@@ -75,41 +69,6 @@ PdfRenderer::~PdfRenderer() {
     g_object_unref(G_OBJECT(layout));
     cairo_destroy(cr);
     cairo_surface_destroy(surf);
-}
-
-void PdfRenderer::render(const std::vector<std::string> &lines, const double target_width_mm) {
-    draw_grid();
-    const double line_height = 12.0;
-    const double target_width_pt = mm2pt(target_width_mm);
-    cairo_set_source_rgb(cr, 0, 0, 0);
-    const double left_box_origin_x = mm2pt(20);
-    const double left_box_origin_y = mm2pt(20);
-    const double right_box_origin_x = mm2pt(20 + 10 + target_width_mm);
-    const double right_box_origin_y = mm2pt(20);
-    FontParameters par;
-    par.name = "Gentium";
-    par.point_size = 10;
-    par.type = FontStyle::Regular;
-
-    for(size_t i = 0; i < lines.size(); ++i) {
-        if(i < lines.size() - 1) {
-            render_line_justified(lines[i],
-                                  par,
-                                  left_box_origin_x,
-                                  target_width_mm,
-                                  left_box_origin_y + i * line_height);
-        } else {
-            render_markup_as_is(
-                lines[i].c_str(), par, left_box_origin_x, left_box_origin_y + i * line_height);
-        }
-        render_markup_as_is(
-            lines[i].c_str(), par, right_box_origin_x, right_box_origin_y + i * line_height);
-    }
-    cairo_set_source_rgb(cr, 0, 0, 1.0);
-    cairo_set_line_width(cr, 0.5);
-    const double box_height = line_height * lines.size();
-    draw_box(left_box_origin_x, left_box_origin_y, target_width_pt, box_height);
-    draw_box(right_box_origin_x, right_box_origin_y, target_width_pt, box_height);
 }
 
 void PdfRenderer::draw_grid() {
