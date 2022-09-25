@@ -176,7 +176,7 @@ void write_codeblock(tinyxml2::XMLDocument &epubdoc,
 
 } // namespace
 
-Epub::Epub(Document &d) : doc(d) {}
+Epub::Epub(const Document &d) : doc(d) {}
 
 void Epub::generate(const char *ofilename) {
     fs::path outdir{"epubtmp"};

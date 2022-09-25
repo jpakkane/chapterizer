@@ -6,7 +6,7 @@
 
 class Epub {
 public:
-    explicit Epub(Document &d);
+    explicit Epub(const Document &d);
 
     void generate(const char *ofilename);
 
@@ -19,5 +19,5 @@ private:
     void generate_epub_manifest(tinyxml2::XMLNode *manifest, const char *coverfile);
     void generate_spine(tinyxml2::XMLNode *spine);
 
-    Document &doc;
+    const Document &doc;
 };
