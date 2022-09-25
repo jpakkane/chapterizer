@@ -50,8 +50,8 @@ std::vector<std::string> hack_split(const std::string &in_text) {
 }
 } // namespace
 
-PdfRenderer::PdfRenderer(const char *ofname, int pagew, int pageh) {
-    surf = cairo_pdf_surface_create(ofname, pagew, pageh);
+PdfRenderer::PdfRenderer(const char *ofname, Point pagew, Point pageh) {
+    surf = cairo_pdf_surface_create(ofname, pagew.v, pageh.v);
     cr = cairo_create(surf);
     layout = pango_cairo_create_layout(cr);
     PangoContext *context = pango_layout_get_context(layout);
@@ -214,14 +214,14 @@ void PdfRenderer::render_markup_as_is(const char *line,
 
 void PdfRenderer::render_markup_as_is(const std::vector<std::string> markup_words,
                                       const FontParameters &par,
-                                      double x,
-                                      double y) {
+                                      Point x,
+                                      Point y) {
     std::string full_line;
     for(const auto &w : markup_words) {
         full_line += w;
     }
     setup_pango(par);
-    cairo_move_to(cr, x, y);
+    cairo_move_to(cr, x.v, y.v);
     pango_layout_set_attributes(layout, nullptr);
     pango_layout_set_markup(layout, full_line.c_str(), -1);
     pango_cairo_update_layout(cr, layout);

@@ -27,7 +27,7 @@
 
 class PdfRenderer {
 public:
-    explicit PdfRenderer(const char *ofname, int pagew = 595, int pageh = 842);
+    explicit PdfRenderer(const char *ofname, Point pagew, Point pageh);
     ~PdfRenderer();
 
     void render_line_justified(const std::string &text,
@@ -47,8 +47,8 @@ public:
     void render_markup_as_is(const char *line, const FontParameters &par, Point x, Point y);
     void render_markup_as_is(const std::vector<std::string> markup_words,
                              const FontParameters &par,
-                             double x,
-                             double y);
+                             Point x,
+                             Point y);
     void render_line_centered(const char *line, const FontParameters &par, Point x, Point y);
 
     void new_page();

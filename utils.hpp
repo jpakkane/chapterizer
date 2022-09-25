@@ -98,7 +98,16 @@ public:
         return *this;
     }
 
+    Millimeter &operator+=(const Millimeter &p) {
+        v += p.v;
+        return *this;
+    }
+
+    Millimeter operator+(const Millimeter &o) const { return Millimeter{v + o.v}; }
+
     Millimeter operator-(const Millimeter &o) const { return Millimeter{v - o.v}; }
+
+    Millimeter operator*(const double o) const { return Millimeter{v * o}; }
 
     Millimeter operator/(const double o) const { return Millimeter{v / o}; }
 
@@ -106,7 +115,11 @@ public:
 
     bool operator<=(const Millimeter &o) const { return v <= o.v; }
 
+    bool operator>=(const Millimeter &o) const { return v >= o.v; }
+
     bool operator>(const Millimeter &o) const { return v > o.v; }
 
     Point topt() const { return Point::from_value(mm2pt(v)); }
 };
+
+inline Millimeter operator*(const double mul, const Millimeter &p) { return p * mul; }

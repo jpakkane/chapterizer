@@ -89,11 +89,6 @@ struct LinePenaltyStatistics {
     double penalty;
 };
 
-struct MarkupLine {
-    std::vector<std::string> markup_words;
-    int total_width;
-};
-
 typedef std::variant<BetweenWordSplit, WithinWordSplit> SplitPoint;
 
 struct PenaltyStatistics {

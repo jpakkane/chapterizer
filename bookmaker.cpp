@@ -53,15 +53,15 @@ p#preformatted {
 } // namespace
 
 struct margins {
-    double inner = 15;
-    double outer = 10;
-    double upper = 10;
-    double lower = 20;
+    Millimeter inner = Millimeter::from_value(15);
+    Millimeter outer = Millimeter::from_value(10);
+    Millimeter upper = Millimeter::from_value(10);
+    Millimeter lower = Millimeter::from_value(20);
 };
 
 struct PageSize {
-    int w_mm;
-    int h_mm;
+    Millimeter w;
+    Millimeter h;
 };
 
 void render_page_num(PdfRenderer &book,
@@ -71,9 +71,9 @@ void render_page_num(PdfRenderer &book,
                      const margins &m) {
     char buf[128];
     snprintf(buf, 128, "%d", page_num);
-    const Millimeter yloc = Millimeter::from_value(p.h_mm - 2 * m.lower / 3);
-    const double leftmargin = page_num % 2 ? m.inner : m.outer;
-    const Millimeter xloc = Millimeter::from_value(leftmargin + (p.w_mm - m.inner - m.outer) / 2);
+    const Millimeter yloc = p.h - 2.0 * m.lower / 3.0;
+    const Millimeter leftmargin = page_num % 2 ? m.inner : m.outer;
+    const Millimeter xloc = leftmargin + (p.w - m.inner - m.outer) / 2;
     book.render_line_centered(buf, par, xloc.topt(), yloc.topt());
 }
 
@@ -137,9 +137,9 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
 }
 
 void render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
-                            double &x,
-                            double &y,
-                            const double &bottom_watermark,
+                            Millimeter &x,
+                            Millimeter &y,
+                            const Millimeter &bottom_watermark,
                             int &current_page,
                             const margins &m,
                             const PageSize &page,
@@ -157,15 +157,15 @@ void render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
             x = current_page % 2 ? m.inner : m.outer;
             if(debug_draw) {
                 if(current_page % 2) {
-                    book.draw_box(Millimeter::from_value(m.inner).topt(),
-                                  Millimeter::from_value(m.upper).topt(),
-                                  Millimeter::from_value(page.w_mm - m.inner - m.outer).topt(),
-                                  Millimeter::from_value(page.h_mm - m.upper - m.lower).topt());
+                    book.draw_box(m.inner.topt(),
+                                  m.upper.topt(),
+                                  (page.w - m.inner - m.outer).topt(),
+                                  (page.h - m.upper - m.lower).topt());
                 } else {
-                    book.draw_box(Millimeter::from_value(m.outer).topt(),
-                                  Millimeter::from_value(m.upper).topt(),
-                                  Millimeter::from_value(page.w_mm - m.inner - m.outer).topt(),
-                                  Millimeter::from_value(page.h_mm - m.upper - m.lower).topt());
+                    book.draw_box(m.outer.topt(),
+                                  m.upper.topt(),
+                                  (page.w - m.inner - m.outer).topt(),
+                                  (page.h - m.upper - m.lower).topt());
                 }
             }
         }
@@ -173,14 +173,16 @@ void render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
             book.render_line_justified(markup_words,
                                        text_par.font,
                                        text_par.paragraph_width_mm - current_indent,
-                                       Millimeter::from_value(x + current_indent).topt(),
-                                       Millimeter::from_value(y).topt());
+                                       (x + Millimeter::from_value(current_indent)).topt(),
+                                       y.topt());
         } else {
-            book.render_markup_as_is(
-                markup_words, text_par.font, mm2pt(x + current_indent), mm2pt(y));
+            book.render_markup_as_is(markup_words,
+                                     text_par.font,
+                                     (x + Millimeter::from_value(current_indent)).topt(),
+                                     y.topt());
         }
         line_num++;
-        y += pt2mm(text_par.line_height_pt);
+        y += Point::from_value(text_par.line_height_pt).tomm();
     }
 }
 
@@ -204,9 +206,9 @@ std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
 
 void create_pdf(const char *ofilename, const Document &doc) {
     PageSize page;
-    page.w_mm = 110;
-    page.h_mm = 175;
-    PdfRenderer book(ofilename, mm2pt(page.w_mm), mm2pt(page.h_mm));
+    page.w = Millimeter::from_value(110);
+    page.h = Millimeter::from_value(175);
+    PdfRenderer book(ofilename, page.w.topt(), page.h.topt());
     margins m;
     FontParameters title_font;
     ChapterParameters text_par;
@@ -215,7 +217,7 @@ void create_pdf(const char *ofilename, const Document &doc) {
     text_par.font.type = FontStyle::Regular;
     text_par.indent = 5;
     text_par.line_height_pt = 12;
-    text_par.paragraph_width_mm = page.w_mm - m.inner - m.outer;
+    text_par.paragraph_width_mm = (page.w - m.inner - m.outer).v;
     ChapterParameters code_par = text_par;
     code_par.font.name = "Liberation Mono";
     code_par.font.size = Point::from_value(8);
@@ -224,15 +226,16 @@ void create_pdf(const char *ofilename, const Document &doc) {
     footnote_par.line_height_pt = 11;
     footnote_par.indent = 4;
     ExtraPenaltyAmounts extras;
-    const double bottom_watermark = page.h_mm - m.lower - pt2mm(text_par.line_height_pt);
-    const double title_above_space = 30;
-    const double title_below_space = 10;
-    const double different_paragraph_space = 2;
+    const Millimeter bottom_watermark =
+        page.h - m.lower - Point::from_value(text_par.line_height_pt).tomm();
+    const Millimeter title_above_space = Millimeter::from_value(30);
+    const Millimeter title_below_space = Millimeter::from_value(10);
+    const Millimeter different_paragraph_space = Millimeter::from_value(2);
     title_font.name = "Noto sans";
     title_font.size = Point::from_value(14);
     title_font.type = FontStyle::Bold;
-    double x = m.inner;
-    double y = m.upper;
+    Millimeter x = m.inner;
+    Millimeter y = m.upper;
     const double indent = 5;
     WordHyphenator hyphen;
     int current_page = 1;
@@ -258,11 +261,8 @@ void create_pdf(const char *ofilename, const Document &doc) {
             std::string full_title = std::to_string(s.number);
             full_title += ". ";
             full_title += s.text;
-            book.render_markup_as_is(full_title.c_str(),
-                                     title_font,
-                                     Millimeter::from_value(x).topt(),
-                                     Millimeter::from_value(y).topt());
-            y += title_font.size.tomm().v;
+            book.render_markup_as_is(full_title.c_str(), title_font, x.topt(), y.topt());
+            y += title_font.size.tomm();
             y += title_below_space;
             first_paragraph = true;
         } else if(std::holds_alternative<Paragraph>(e)) {
@@ -283,14 +283,11 @@ void create_pdf(const char *ofilename, const Document &doc) {
             auto lines = b.split_formatted_lines();
             std::string fnum = std::to_string(f.number);
             fnum += '.';
-            book.render_text_as_is(fnum.c_str(),
-                                   footnote_par.font,
-                                   Millimeter::from_value(x).topt(),
-                                   Millimeter::from_value(y).topt());
+            book.render_text_as_is(fnum.c_str(), footnote_par.font, x.topt(), y.topt());
             render_formatted_lines(
                 lines, x, y, bottom_watermark, current_page, m, page, footnote_par, book);
         } else if(std::holds_alternative<SceneChange>(e)) {
-            y += pt2mm(text_par.line_height_pt);
+            y += Point::from_value(text_par.line_height_pt).tomm();
             if(y >= bottom_watermark) {
                 render_page_num(book, text_par.font, current_page, page, m);
                 book.new_page();
@@ -310,11 +307,8 @@ void create_pdf(const char *ofilename, const Document &doc) {
                     y = m.upper;
                     x = current_page % 2 ? m.inner : m.outer;
                 }
-                book.render_text_as_is(line.c_str(),
-                                       code_par.font,
-                                       Millimeter::from_value(x).topt(),
-                                       Millimeter::from_value(y).topt());
-                y += pt2mm(code_par.line_height_pt);
+                book.render_text_as_is(line.c_str(), code_par.font, x.topt(), y.topt());
+                y += Point::from_value(code_par.line_height_pt).tomm();
             }
             first_paragraph = true;
             y += different_paragraph_space;
