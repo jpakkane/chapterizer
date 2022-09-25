@@ -17,6 +17,7 @@
 #pragma once
 
 #include <chaptercommon.hpp>
+#include <utils.hpp>
 
 #include <cairo.h>
 #include <pango/pangocairo.h>
@@ -31,9 +32,9 @@ public:
 
     void render_line_justified(const std::string &text,
                                const FontParameters &par,
-                               double line_width_mm,
-                               double x,
-                               double y);
+                               Millimeter line_width_mm,
+                               Point x,
+                               Point y);
 
     void render_line_justified(const std::vector<std::string> &markup_words,
                                const FontParameters &par,

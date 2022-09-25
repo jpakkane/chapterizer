@@ -38,3 +38,54 @@ private:
     const char *buf;
     int64_t bufsize;
 };
+
+struct Millimeter;
+
+struct Point {
+private:
+    explicit Point(double d) : v(d){};
+
+public:
+    double v;
+
+    Point() : v(0.0){};
+    Point(const Point &d) : v(d.v){};
+
+    static Point from_value(double d) { return Point{d}; }
+
+    Point &operator=(const Point &p) {
+        v = p.v;
+        return *this;
+    }
+
+    Point &operator+=(const Point &p) {
+        v += p.v;
+        return *this;
+    }
+
+    Millimeter tomm() const;
+};
+
+struct Millimeter {
+private:
+    explicit Millimeter(double d) : v(d){};
+
+public:
+    double v;
+
+    Millimeter() : v(0.0) {}
+    Millimeter(const Millimeter &d) : v(d.v){};
+
+    static Millimeter from_value(double mm) { return Millimeter{mm}; }
+
+    Millimeter &operator=(const Millimeter &p) {
+        v = p.v;
+        return *this;
+    }
+
+    Millimeter operator-(const Millimeter &o) const { return Millimeter{v - o.v}; }
+
+    Millimeter operator/(const double o) const { return Millimeter{v / o}; }
+
+    Point topt() const { return Point::from_value(mm2pt(v)); }
+};

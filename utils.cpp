@@ -85,3 +85,5 @@ MMapper::MMapper(const char *path) {
 }
 
 MMapper::~MMapper() { munmap((void *)(buf), bufsize); }
+
+Millimeter Point::tomm() const { return Millimeter::from_value(pt2mm(v)); }

@@ -96,22 +96,20 @@ void PdfRenderer::draw_box(double x, double y, double w, double h) {
 
 void PdfRenderer::render_line_justified(const std::string &line_text,
                                         const FontParameters &par,
-                                        double line_width_mm,
-                                        double x,
-                                        double y) {
+                                        Millimeter line_width,
+                                        Point x,
+                                        Point y) {
     assert(line_text.find('\n') == std::string::npos);
     setup_pango(par);
     const auto words = hack_split(line_text);
-    const double target_width_pt = mm2pt(line_width_mm);
-    double text_width_mm = hack.text_width(line_text.c_str(), par);
-    const double text_width_pt = mm2pt(text_width_mm);
+    Millimeter text_width = Millimeter::from_value(hack.text_width(line_text.c_str(), par));
     const double num_spaces = std::count(line_text.begin(), line_text.end(), ' ');
-    const double space_extra_width =
-        num_spaces > 0 ? (target_width_pt - text_width_pt) / num_spaces : 0.0;
+    const Point space_extra_width{num_spaces > 0 ? ((line_width - text_width) / num_spaces).topt()
+                                                 : Point{}};
 
     std::string tmp;
     for(size_t i = 0; i < words.size(); ++i) {
-        cairo_move_to(cr, x, y);
+        cairo_move_to(cr, x.v, y.v);
         PangoRectangle r;
 
         tmp = words[i];
@@ -121,7 +119,7 @@ void PdfRenderer::render_line_justified(const std::string &line_text,
         pango_layout_get_extents(layout, nullptr, &r);
         pango_cairo_update_layout(cr, layout);
         pango_cairo_show_layout(cr, layout);
-        x += double(r.width) / PANGO_SCALE;
+        x += Point::from_value(double(r.width) / PANGO_SCALE);
         x += space_extra_width;
 
         /*
