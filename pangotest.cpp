@@ -20,16 +20,11 @@
 #include <locale.h>
 #include <assert.h>
 
-double mm2pt(const double x) { return x * 2.8346456693; }
-double pt2mm(const double x) { return x / 2.8346456693; }
-
 int main() {
     setlocale(LC_ALL, "");
     //    cairo_status_t status;
     cairo_surface_t *surface = cairo_pdf_surface_create("pangocairotest.pdf", 595, 842);
     cairo_t *cr = cairo_create(surface);
-    // cairo_set_source_rgb(cr, 1.0, 0.2, 0.1);
-    printf("PANGO_SCALE = %d\n", PANGO_SCALE);
     PangoLayout *layout = pango_cairo_create_layout(cr);
     PangoFontDescription *desc;
     desc = pango_font_description_from_string("Gentium");
