@@ -58,3 +58,10 @@ struct ChapterParameters {
     Millimeter indent; // Of first line.
     FontParameters font;
 };
+
+struct FontStyles {
+    FontParameters basic;
+    FontParameters heading;
+    FontParameters code;
+    FontParameters footnote;
+};

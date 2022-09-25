@@ -208,29 +208,35 @@ void create_pdf(const char *ofilename, const Document &doc) {
     page.h = Millimeter::from_value(175);
     PdfRenderer book(ofilename, page.w.topt(), page.h.topt());
     margins m;
-    FontParameters title_font;
+    FontStyles font_styles;
+    font_styles.basic.name = "Gentium";
+    font_styles.basic.size = Point::from_value(10);
+    font_styles.code.name = "Liberation Mono";
+    font_styles.code.size = Point::from_value(8);
+    font_styles.footnote.size = Point::from_value(9);
+    font_styles.heading.name = "Noto sans";
+    font_styles.heading.size = Point::from_value(14);
+    font_styles.heading.type = FontStyle::Bold;
+
     ChapterParameters text_par;
-    text_par.font.name = "Gentium";
-    text_par.font.size = Point::from_value(10);
-    text_par.font.type = FontStyle::Regular;
     text_par.indent = Millimeter::from_value(5);
     text_par.line_height = Point::from_value(12);
     text_par.paragraph_width = page.w - m.inner - m.outer;
+    text_par.font = font_styles.basic;
+
     ChapterParameters code_par = text_par;
-    code_par.font.name = "Liberation Mono";
-    code_par.font.size = Point::from_value(8);
+    code_par.font = font_styles.code;
+
     ChapterParameters footnote_par = text_par;
-    footnote_par.font.size = Point::from_value(9);
+    footnote_par.font = font_styles.footnote;
     footnote_par.line_height = Point::from_value(11);
     footnote_par.indent = Millimeter::from_value(4);
+
     ExtraPenaltyAmounts extras;
     const Millimeter bottom_watermark = page.h - m.lower - text_par.line_height.tomm();
     const Millimeter title_above_space = Millimeter::from_value(30);
     const Millimeter title_below_space = Millimeter::from_value(10);
     const Millimeter different_paragraph_space = Millimeter::from_value(2);
-    title_font.name = "Noto sans";
-    title_font.size = Point::from_value(14);
-    title_font.type = FontStyle::Bold;
     Millimeter x = m.inner;
     Millimeter y = m.upper;
     const Millimeter indent = Millimeter::from_value(5);
@@ -258,8 +264,8 @@ void create_pdf(const char *ofilename, const Document &doc) {
             std::string full_title = std::to_string(s.number);
             full_title += ". ";
             full_title += s.text;
-            book.render_markup_as_is(full_title.c_str(), title_font, x.topt(), y.topt());
-            y += title_font.size.tomm();
+            book.render_markup_as_is(full_title.c_str(), font_styles.heading, x.topt(), y.topt());
+            y += font_styles.heading.size.tomm();
             y += title_below_space;
             first_paragraph = true;
         } else if(std::holds_alternative<Paragraph>(e)) {
