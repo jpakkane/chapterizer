@@ -52,6 +52,9 @@ std::vector<std::string> hack_split(const std::string &in_text) {
 
 PdfRenderer::PdfRenderer(const char *ofname, Point pagew, Point pageh) {
     surf = cairo_pdf_surface_create(ofname, pagew.v, pageh.v);
+    cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_TITLE, "Name of the book");
+    cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_AUTHOR, "Author Name");
+    cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_CREATOR, "Superpdf from Outer Space!");
     cr = cairo_create(surf);
     layout = pango_cairo_create_layout(cr);
     PangoContext *context = pango_layout_get_context(layout);
