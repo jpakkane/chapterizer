@@ -1,5 +1,7 @@
 #pragma once
 
+#include <utils.hpp>
+
 #include <functional>
 #include <string>
 #include <cmath>
@@ -32,18 +34,18 @@ enum class FontStyle : int {
 };
 
 struct FontParameters {
-    std::string name;         // Fontconfig name as a string.
-    double point_size = 1000; // Be careful with comparisons.
+    std::string name;                     // Fontconfig name as a string.
+    Point size = Point::from_value(1000); // Be careful with comparisons.
     FontStyle type = FontStyle::Regular;
 
     bool operator==(const FontParameters &o) const noexcept {
-        return name == o.name && (fabs(point_size - o.point_size) < 0.05) && type == o.type;
+        return name == o.name && (fabs((size - o.size).v) < 0.05) && type == o.type;
     }
 };
 
 template<> struct std::hash<FontParameters> {
     std::size_t operator()(FontParameters const &s) const noexcept {
-        auto h1 = std::hash<int>{}(int(10 * s.point_size));
+        auto h1 = std::hash<int>{}(int(10 * s.size.v));
         auto h2 = std::hash<int>{}(int(s.type));
         auto h3 = std::hash<std::string>{}(s.name);
         return ((h1 * 13) + h2) * 13 + h3;

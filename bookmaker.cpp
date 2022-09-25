@@ -211,16 +211,16 @@ void create_pdf(const char *ofilename, const Document &doc) {
     FontParameters title_font;
     ChapterParameters text_par;
     text_par.font.name = "Gentium";
-    text_par.font.point_size = 10;
+    text_par.font.size = Point::from_value(10);
     text_par.font.type = FontStyle::Regular;
     text_par.indent = 5;
     text_par.line_height_pt = 12;
     text_par.paragraph_width_mm = page.w_mm - m.inner - m.outer;
     ChapterParameters code_par = text_par;
     code_par.font.name = "Liberation Mono";
-    code_par.font.point_size = 8;
+    code_par.font.size = Point::from_value(8);
     ChapterParameters footnote_par = text_par;
-    footnote_par.font.point_size = 9;
+    footnote_par.font.size = Point::from_value(9);
     footnote_par.line_height_pt = 11;
     footnote_par.indent = 4;
     ExtraPenaltyAmounts extras;
@@ -229,7 +229,7 @@ void create_pdf(const char *ofilename, const Document &doc) {
     const double title_below_space = 10;
     const double different_paragraph_space = 2;
     title_font.name = "Noto sans";
-    title_font.point_size = 14;
+    title_font.size = Point::from_value(14);
     title_font.type = FontStyle::Bold;
     double x = m.inner;
     double y = m.upper;
@@ -262,7 +262,7 @@ void create_pdf(const char *ofilename, const Document &doc) {
                                      title_font,
                                      Millimeter::from_value(x).topt(),
                                      Millimeter::from_value(y).topt());
-            y += pt2mm(title_font.point_size);
+            y += title_font.size.tomm().v;
             y += title_below_space;
             first_paragraph = true;
         } else if(std::holds_alternative<Paragraph>(e)) {

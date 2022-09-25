@@ -186,7 +186,7 @@ void PdfRenderer::setup_pango(const FontParameters &par) {
     } else {
         pango_font_description_set_style(desc, PANGO_STYLE_NORMAL);
     }
-    pango_font_description_set_absolute_size(desc, par.point_size * PANGO_SCALE);
+    pango_font_description_set_absolute_size(desc, par.size.v * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 }

@@ -101,8 +101,8 @@ struct App {
 };
 
 struct Outdents {
-    double left;
-    double right;
+    Point left;
+    Point right;
 };
 
 /*
@@ -113,8 +113,8 @@ static void quitfunc(GtkButton *, gpointer user_data) {
 */
 double mm2screenpt(double mm) { return mm / 25.4 * 72; }
 
-Outdents compute_outdents(const std::string &s, double point_size) {
-    Outdents r{0, 0};
+Outdents compute_outdents(const std::string &s, Point point_size) {
+    Outdents r;
     if(s.size() < 2) {
         return r;
     }
@@ -225,7 +225,7 @@ ChapterParameters get_params(App *app) {
     auto *tmp = gtk_combo_box_text_get_active_text(app->fonts);
     par.font.name = tmp;
     g_free(tmp);
-    par.font.point_size = gtk_spin_button_get_value(app->ptsize);
+    par.font.size = Point::from_value(gtk_spin_button_get_value(app->ptsize));
     par.font.type = (FontStyle)gtk_combo_box_get_active(GTK_COMBO_BOX(app->font_style));
     par.paragraph_width_mm = gtk_spin_button_get_value(app->chapter_width);
     par.line_height_pt = gtk_spin_button_get_value(app->row_height);
@@ -265,7 +265,7 @@ double populate_line_store(App *app,
                            TEXT_LINE_COLUMN,
                            workarea.c_str(),
                            DELTA_LINE_COLUMN,
-                           stats.delta,
+                           stats.delta.v,
                            PENALTY_LINE_COLUMN,
                            stats.penalty,
                            -1);
@@ -440,18 +440,18 @@ void connect_stuffs(App *app) {
 
 void render_line_justified(cairo_t *cr,
                            PangoLayout *layout,
-                           double point_size,
+                           Point size,
                            const std::string &line_text,
-                           double x,
-                           double y,
-                           double chapter_width_pt) {
+                           Point x,
+                           Point y,
+                           Point chapter_width) {
     assert(!line_text.empty());
     const auto words = split_to_words(std::string_view(line_text));
     assert(!words.empty());
     const int num_spaces = int(words.size() - 1);
-    double text_width_pt = 0.0;
+    Point text_width;
     cairo_move_to(cr, -1000, -1000);
-    const auto outdents = compute_outdents(line_text, point_size);
+    const auto outdents = compute_outdents(line_text, size);
     const auto total_outdent = outdents.left + outdents.right;
     // Measure the total width of printed words.
     for(const auto &word : words) {
@@ -459,22 +459,22 @@ void render_line_justified(cairo_t *cr,
         pango_layout_set_text(layout, word.c_str(), -1);
         pango_layout_get_extents(layout, nullptr, &r);
         pango_cairo_update_layout(cr, layout);
-        text_width_pt += double(r.width) / PANGO_SCALE;
+        text_width += Point::from_value(double(r.width) / PANGO_SCALE);
     }
-    const double space_extra_width_pt =
-        num_spaces > 0 ? (chapter_width_pt - text_width_pt + total_outdent) / num_spaces : 0.0;
+    const Point space_extra_width =
+        num_spaces > 0 ? (chapter_width - text_width + total_outdent) / num_spaces : Point{};
 
     x -= outdents.left;
     for(size_t i = 0; i < words.size(); ++i) {
-        cairo_move_to(cr, x, y);
+        cairo_move_to(cr, x.v, y.v);
         PangoRectangle r;
 
         pango_layout_set_text(layout, words[i].c_str(), -1);
         pango_layout_get_extents(layout, nullptr, &r);
         pango_cairo_update_layout(cr, layout);
         pango_cairo_show_layout(cr, layout);
-        x += double(r.width) / PANGO_SCALE;
-        x += space_extra_width_pt;
+        x += Point::from_value(double(r.width) / PANGO_SCALE);
+        x += space_extra_width;
     }
 }
 
@@ -506,7 +506,7 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     } else {
         pango_font_description_set_style(desc, PANGO_STYLE_NORMAL);
     }
-    pango_font_description_set_absolute_size(desc, cp.font.point_size * PANGO_SCALE);
+    pango_font_description_set_absolute_size(desc, cp.font.size.v * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
@@ -535,13 +535,14 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
         if(gtk_toggle_button_get_active(a->justify)) {
             for(size_t i = 0; i < text.size() - 1; ++i) {
                 double indent = i == 0 ? zoom_ratio * mm2screenpt(cp.indent) : 0;
-                render_line_justified(cr,
-                                      layout,
-                                      cp.font.point_size,
-                                      text[i],
-                                      (xoff + indent) / zoom_ratio,
-                                      yoff / zoom_ratio + cp.line_height_pt * i,
-                                      (parwid - indent) / zoom_ratio);
+                render_line_justified(
+                    cr,
+                    layout,
+                    cp.font.size,
+                    text[i],
+                    Point::from_value((xoff + indent) / zoom_ratio),
+                    Point::from_value((yoff / zoom_ratio + cp.line_height_pt * i)),
+                    Point::from_value((parwid - indent) / zoom_ratio));
             }
             render_line_as_is(cr,
                               layout,

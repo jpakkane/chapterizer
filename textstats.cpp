@@ -41,7 +41,7 @@ void TextStats::set_pango_state(const char *utf8_text,
                                 bool is_markup) const {
     auto *desc = pango_font_description_from_string(font.name.c_str());
     assert(desc);
-    pango_font_description_set_absolute_size(desc, font.point_size * PANGO_SCALE);
+    pango_font_description_set_absolute_size(desc, font.size.v * PANGO_SCALE);
     if(font.type == FontStyle::Bold || font.type == FontStyle::BoldItalic) {
         pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
     } else {

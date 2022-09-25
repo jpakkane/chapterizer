@@ -46,7 +46,7 @@ private:
     explicit Point(double d) : v(d){};
 
 public:
-    double v;
+    double v = 0.0;
 
     Point() : v(0.0){};
     Point(const Point &d) : v(d.v){};
@@ -63,21 +63,30 @@ public:
         return *this;
     }
 
+    Point &operator-=(const Point &p) {
+        v -= p.v;
+        return *this;
+    }
+
     Point operator-(const Point &p) const { return Point{v - p.v}; }
 
     Point operator+(const Point &p) const { return Point{v + p.v}; }
 
     Point operator/(const double div) const { return Point{v / div}; }
 
+    Point operator*(const double &mul) const { return Point{v * mul}; }
+
     Millimeter tomm() const;
 };
+
+inline Point operator*(const double mul, const Point &p) { return p * mul; }
 
 struct Millimeter {
 private:
     explicit Millimeter(double d) : v(d){};
 
 public:
-    double v;
+    double v = 0.0;
 
     Millimeter() : v(0.0) {}
     Millimeter(const Millimeter &d) : v(d.v){};

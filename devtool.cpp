@@ -25,7 +25,7 @@ int main(int, char **) {
     TextStats s;
     FontParameters p;
     p.name = "Gentium";
-    p.point_size = 10;
+    p.size = Point::from_value(10);
     p.type = FontStyle::Regular;
     printf("%s\n%.2fmm\n", text, s.text_width(text, p).v);
     return 0;
