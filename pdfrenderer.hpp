@@ -38,7 +38,7 @@ public:
 
     void render_line_justified(const std::vector<std::string> &markup_words,
                                const FontParameters &par,
-                               double line_width_mm,
+                               Millimeter line_width,
                                Point x,
                                Point y);
 

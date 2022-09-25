@@ -148,7 +148,7 @@ void render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
     const bool debug_draw = true;
     size_t line_num = 0;
     for(const auto &markup_words : lines) {
-        double current_indent = line_num == 0 ? text_par.indent : 0;
+        Millimeter current_indent = line_num == 0 ? text_par.indent : Millimeter{};
         if(y >= bottom_watermark) {
             render_page_num(book, text_par.font, current_page, page, m);
             book.new_page();
@@ -172,17 +172,15 @@ void render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
         if(line_num < lines.size() - 1) {
             book.render_line_justified(markup_words,
                                        text_par.font,
-                                       text_par.paragraph_width_mm - current_indent,
-                                       (x + Millimeter::from_value(current_indent)).topt(),
+                                       text_par.paragraph_width - current_indent,
+                                       (x + current_indent).topt(),
                                        y.topt());
         } else {
-            book.render_markup_as_is(markup_words,
-                                     text_par.font,
-                                     (x + Millimeter::from_value(current_indent)).topt(),
-                                     y.topt());
+            book.render_markup_as_is(
+                markup_words, text_par.font, (x + current_indent).topt(), y.topt());
         }
         line_num++;
-        y += Point::from_value(text_par.line_height_pt).tomm();
+        y += text_par.line_height.tomm();
     }
 }
 
@@ -215,19 +213,18 @@ void create_pdf(const char *ofilename, const Document &doc) {
     text_par.font.name = "Gentium";
     text_par.font.size = Point::from_value(10);
     text_par.font.type = FontStyle::Regular;
-    text_par.indent = 5;
-    text_par.line_height_pt = 12;
-    text_par.paragraph_width_mm = (page.w - m.inner - m.outer).v;
+    text_par.indent = Millimeter::from_value(5);
+    text_par.line_height = Point::from_value(12);
+    text_par.paragraph_width = page.w - m.inner - m.outer;
     ChapterParameters code_par = text_par;
     code_par.font.name = "Liberation Mono";
     code_par.font.size = Point::from_value(8);
     ChapterParameters footnote_par = text_par;
     footnote_par.font.size = Point::from_value(9);
-    footnote_par.line_height_pt = 11;
-    footnote_par.indent = 4;
+    footnote_par.line_height = Point::from_value(11);
+    footnote_par.indent = Millimeter::from_value(4);
     ExtraPenaltyAmounts extras;
-    const Millimeter bottom_watermark =
-        page.h - m.lower - Point::from_value(text_par.line_height_pt).tomm();
+    const Millimeter bottom_watermark = page.h - m.lower - text_par.line_height.tomm();
     const Millimeter title_above_space = Millimeter::from_value(30);
     const Millimeter title_below_space = Millimeter::from_value(10);
     const Millimeter different_paragraph_space = Millimeter::from_value(2);
@@ -236,7 +233,7 @@ void create_pdf(const char *ofilename, const Document &doc) {
     title_font.type = FontStyle::Bold;
     Millimeter x = m.inner;
     Millimeter y = m.upper;
-    const double indent = 5;
+    const Millimeter indent = Millimeter::from_value(5);
     WordHyphenator hyphen;
     int current_page = 1;
     bool first_paragraph = true;
@@ -268,7 +265,7 @@ void create_pdf(const char *ofilename, const Document &doc) {
         } else if(std::holds_alternative<Paragraph>(e)) {
             const Paragraph &p = std::get<Paragraph>(e);
             StyleStack current_style;
-            text_par.indent = first_paragraph ? 0 : indent;
+            text_par.indent = first_paragraph ? Millimeter::from_value(0) : indent;
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text, hyphen);
             ParagraphFormatter b(processed_words, text_par, extras);
             auto lines = b.split_formatted_lines();
@@ -287,7 +284,7 @@ void create_pdf(const char *ofilename, const Document &doc) {
             render_formatted_lines(
                 lines, x, y, bottom_watermark, current_page, m, page, footnote_par, book);
         } else if(std::holds_alternative<SceneChange>(e)) {
-            y += Point::from_value(text_par.line_height_pt).tomm();
+            y += text_par.line_height.tomm();
             if(y >= bottom_watermark) {
                 render_page_num(book, text_par.font, current_page, page, m);
                 book.new_page();
@@ -308,7 +305,7 @@ void create_pdf(const char *ofilename, const Document &doc) {
                     x = current_page % 2 ? m.inner : m.outer;
                 }
                 book.render_text_as_is(line.c_str(), code_par.font, x.topt(), y.topt());
-                y += Point::from_value(code_par.line_height_pt).tomm();
+                y += code_par.line_height.tomm();
             }
             first_paragraph = true;
             y += different_paragraph_space;

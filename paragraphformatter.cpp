@@ -40,10 +40,10 @@ std::vector<LinePenaltyStatistics> compute_line_penalties(const std::vector<std:
     TextStats shaper;
     std::vector<LinePenaltyStatistics> penalties;
     penalties.reserve(lines.size());
-    Millimeter indent = Millimeter::from_value(par.indent);
+    Millimeter indent = par.indent;
     for(const auto &line : lines) {
         const Millimeter w = shaper.text_width(line, par.font);
-        const Millimeter delta = w - (Millimeter::from_value(par.paragraph_width_mm) - indent);
+        const Millimeter delta = w - (par.paragraph_width - indent);
         indent = Millimeter::from_value(0);
         penalties.emplace_back(LinePenaltyStatistics{delta, pow(delta.v, 2)});
     }
@@ -92,10 +92,9 @@ double total_penalty(const std::vector<LineStats> &lines,
                      const ExtraPenaltyAmounts &amounts) {
     double total = 0;
     double last_line_penalty = 0;
-    Millimeter indent = Millimeter::from_value(params.indent);
+    Millimeter indent = params.indent;
     for(const auto &l : lines) {
-        last_line_penalty =
-            line_penalty(l, Millimeter::from_value(params.paragraph_width_mm) - indent);
+        last_line_penalty = line_penalty(l, params.paragraph_width - indent);
         indent = Millimeter::from_value(0);
         total += last_line_penalty;
     }
@@ -255,9 +254,9 @@ ParagraphFormatter::stats_to_markup_lines(const std::vector<LineStats> &linestat
 
 Millimeter ParagraphFormatter::current_line_width(size_t line_num) const {
     if(line_num == 0) {
-        return Millimeter::from_value(params.paragraph_width_mm - params.indent);
+        return params.paragraph_width - params.indent;
     }
-    return Millimeter::from_value(params.paragraph_width_mm);
+    return params.paragraph_width;
 }
 
 std::vector<std::vector<std::string>>

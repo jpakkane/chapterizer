@@ -134,7 +134,7 @@ void PdfRenderer::render_line_justified(const std::string &line_text,
 
 void PdfRenderer::render_line_justified(const std::vector<std::string> &markup_words,
                                         const FontParameters &par,
-                                        double line_width_mm,
+                                        Millimeter line_width,
                                         Point x,
                                         Point y) {
     setup_pango(par);
@@ -149,7 +149,7 @@ void PdfRenderer::render_line_justified(const std::vector<std::string> &markup_w
     pango_layout_set_text(layout, "A", 1);
     const auto desired_baseline = pango_layout_get_baseline(layout) / PANGO_SCALE;
 
-    const Point target_width = Point::from_value(mm2pt(line_width_mm));
+    const Point target_width = line_width.topt();
     pango_layout_set_markup(layout, full_line.c_str(), full_line.length());
     const Point text_width = hack.markup_width(full_line.c_str(), par).topt();
     const double num_spaces = double(markup_words.size() - 1);
