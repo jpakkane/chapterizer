@@ -3,41 +3,15 @@
 #include <chaptercommon.hpp>
 #include <paragraphformatter.hpp>
 #include <wordhyphenator.hpp>
-#include <formatting.hpp>
 #include <bookparser.hpp>
 
 #include <cassert>
 
 namespace {
-struct margins {
-    Millimeter inner = Millimeter::from_value(15);
-    Millimeter outer = Millimeter::from_value(10);
-    Millimeter upper = Millimeter::from_value(10);
-    Millimeter lower = Millimeter::from_value(20);
-};
-
-struct PageSize {
-    Millimeter w;
-    Millimeter h;
-};
-
-void render_page_num(PdfRenderer &book,
-                     const FontParameters &par,
-                     int page_num,
-                     const PageSize &p,
-                     const margins &m) {
-    char buf[128];
-    snprintf(buf, 128, "%d", page_num);
-    const Millimeter yloc = p.h - 2.0 * m.lower / 3.0;
-    const Millimeter leftmargin = page_num % 2 ? m.inner : m.outer;
-    const Millimeter xloc = leftmargin + (p.w - m.inner - m.outer) / 2;
-    book.render_line_centered(buf, par, xloc.topt(), yloc.topt());
-}
 
 template<typename T> void style_change(T &stack, typename T::value_type val) {
     if(stack.contains(val)) {
         stack.pop(val);
-        // If the
     } else {
         stack.push(val);
     }
@@ -93,79 +67,11 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
     return changes;
 }
 
-void render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
-                            Millimeter &x,
-                            Millimeter &y,
-                            const Millimeter &bottom_watermark,
-                            int &current_page,
-                            const margins &m,
-                            const PageSize &page,
-                            const ChapterParameters &text_par,
-                            PdfRenderer &book) {
-    const bool debug_draw = true;
-    size_t line_num = 0;
-    for(const auto &markup_words : lines) {
-        Millimeter current_indent = line_num == 0 ? text_par.indent : Millimeter{};
-        if(y >= bottom_watermark) {
-            render_page_num(book, text_par.font, current_page, page, m);
-            book.new_page();
-            ++current_page;
-            y = m.upper;
-            x = current_page % 2 ? m.inner : m.outer;
-            if(debug_draw) {
-                if(current_page % 2) {
-                    book.draw_box(m.inner.topt(),
-                                  m.upper.topt(),
-                                  (page.w - m.inner - m.outer).topt(),
-                                  (page.h - m.upper - m.lower).topt());
-                } else {
-                    book.draw_box(m.outer.topt(),
-                                  m.upper.topt(),
-                                  (page.w - m.inner - m.outer).topt(),
-                                  (page.h - m.upper - m.lower).topt());
-                }
-            }
-        }
-        if(line_num < lines.size() - 1) {
-            book.render_line_justified(markup_words,
-                                       text_par.font,
-                                       text_par.paragraph_width - current_indent,
-                                       (x + current_indent).topt(),
-                                       y.topt());
-        } else {
-            book.render_markup_as_is(
-                markup_words, text_par.font, (x + current_indent).topt(), y.topt());
-        }
-        line_num++;
-        y += text_par.line_height.tomm();
-    }
-}
+} // namespace
 
-std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
-                                                  const WordHyphenator &hyphen) {
-    StyleStack current_style;
-    auto plain_words = split_to_words(std::string_view(text));
-    std::vector<EnrichedWord> processed_words;
-    for(const auto &word : plain_words) {
-        auto working_word = word;
-        auto start_style = current_style;
-        auto formatting_data = extract_styling(current_style, working_word);
-        auto hyphenation_data = hyphen.hyphenate(working_word);
-        processed_words.emplace_back(EnrichedWord{std::move(working_word),
-                                                  std::move(hyphenation_data),
-                                                  std::move(formatting_data),
-                                                  start_style});
-    }
-    return processed_words;
-}
-
-void create_pdf(const char *ofilename, const Document &doc) {
-    PageSize page;
+Paginator::Paginator(const Document &d) : doc(d) {
     page.w = Millimeter::from_value(110);
     page.h = Millimeter::from_value(175);
-    PdfRenderer book(ofilename, page.w.topt(), page.h.topt());
-    margins m;
-    FontStyles font_styles;
     font_styles.basic.name = "Gentium";
     font_styles.basic.size = Point::from_value(10);
     font_styles.code.name = "Liberation Mono";
@@ -174,6 +80,10 @@ void create_pdf(const char *ofilename, const Document &doc) {
     font_styles.heading.name = "Noto sans";
     font_styles.heading.size = Point::from_value(14);
     font_styles.heading.type = FontStyle::Bold;
+}
+
+void Paginator::generate_pdf(const char *outfile) {
+    rend.reset(new PdfRenderer(outfile, page.w.topt(), page.h.topt()));
 
     ChapterParameters text_par;
     text_par.indent = Millimeter::from_value(5);
@@ -197,19 +107,17 @@ void create_pdf(const char *ofilename, const Document &doc) {
     Millimeter x = m.inner;
     Millimeter y = m.upper;
     const Millimeter indent = Millimeter::from_value(5);
-    WordHyphenator hyphen;
-    int current_page = 1;
     bool first_paragraph = true;
     bool first_section = true;
     for(const auto &e : doc.elements) {
         if(std::holds_alternative<Section>(e)) {
             const Section &s = std::get<Section>(e);
             if(!first_section) {
-                render_page_num(book, text_par.font, current_page, page, m);
-                book.new_page();
+                render_page_num(text_par.font);
+                rend->new_page();
                 ++current_page;
                 if(current_page % 2 == 0) {
-                    book.new_page();
+                    rend->new_page();
                     ++current_page;
                 }
             }
@@ -221,7 +129,7 @@ void create_pdf(const char *ofilename, const Document &doc) {
             std::string full_title = std::to_string(s.number);
             full_title += ". ";
             full_title += s.text;
-            book.render_markup_as_is(full_title.c_str(), font_styles.heading, x.topt(), y.topt());
+            rend->render_markup_as_is(full_title.c_str(), font_styles.heading, x.topt(), y.topt());
             y += font_styles.heading.size.tomm();
             y += title_below_space;
             first_paragraph = true;
@@ -229,28 +137,26 @@ void create_pdf(const char *ofilename, const Document &doc) {
             const Paragraph &p = std::get<Paragraph>(e);
             StyleStack current_style;
             text_par.indent = first_paragraph ? Millimeter::from_value(0) : indent;
-            std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text, hyphen);
+            std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
             ParagraphFormatter b(processed_words, text_par, extras);
             auto lines = b.split_formatted_lines();
-            render_formatted_lines(
-                lines, x, y, bottom_watermark, current_page, m, page, text_par, book);
+            render_formatted_lines(lines, x, y, bottom_watermark, text_par);
             first_paragraph = false;
         } else if(std::holds_alternative<Footnote>(e)) {
             const Footnote &f = std::get<Footnote>(e);
             StyleStack current_style;
-            std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text, hyphen);
+            std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text);
             ParagraphFormatter b(processed_words, footnote_par, extras);
             auto lines = b.split_formatted_lines();
             std::string fnum = std::to_string(f.number);
             fnum += '.';
-            book.render_text_as_is(fnum.c_str(), footnote_par.font, x.topt(), y.topt());
-            render_formatted_lines(
-                lines, x, y, bottom_watermark, current_page, m, page, footnote_par, book);
+            rend->render_text_as_is(fnum.c_str(), footnote_par.font, x.topt(), y.topt());
+            render_formatted_lines(lines, x, y, bottom_watermark, footnote_par);
         } else if(std::holds_alternative<SceneChange>(e)) {
             y += text_par.line_height.tomm();
             if(y >= bottom_watermark) {
-                render_page_num(book, text_par.font, current_page, page, m);
-                book.new_page();
+                render_page_num(text_par.font);
+                rend->new_page();
                 ++current_page;
                 y = m.upper;
                 x = current_page % 2 ? m.inner : m.outer;
@@ -261,13 +167,13 @@ void create_pdf(const char *ofilename, const Document &doc) {
             y += different_paragraph_space;
             for(const auto &line : cb.raw_lines) {
                 if(y >= bottom_watermark) {
-                    render_page_num(book, text_par.font, current_page, page, m);
-                    book.new_page();
+                    render_page_num(text_par.font);
+                    rend->new_page();
                     ++current_page;
                     y = m.upper;
                     x = current_page % 2 ? m.inner : m.outer;
                 }
-                book.render_text_as_is(line.c_str(), code_par.font, x.topt(), y.topt());
+                rend->render_text_as_is(line.c_str(), code_par.font, x.topt(), y.topt());
                 y += code_par.line_height.tomm();
             }
             first_paragraph = true;
@@ -278,8 +184,72 @@ void create_pdf(const char *ofilename, const Document &doc) {
     }
 }
 
-} // namespace
+void Paginator::render_page_num(const FontParameters &par) {
+    char buf[128];
+    snprintf(buf, 128, "%d", current_page);
+    const Millimeter yloc = page.h - 2.0 * m.lower / 3.0;
+    const Millimeter leftmargin = current_page % 2 ? m.inner : m.outer;
+    const Millimeter xloc = leftmargin + (page.w - m.inner - m.outer) / 2;
+    rend->render_line_centered(buf, par, xloc.topt(), yloc.topt());
+}
 
-Paginator::Paginator(const Document &d) : doc(d) {}
+void Paginator::render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
+                                       Millimeter &x,
+                                       Millimeter &y,
+                                       const Millimeter &bottom_watermark,
+                                       const ChapterParameters &text_par) {
+    const bool debug_draw = true;
+    size_t line_num = 0;
+    for(const auto &markup_words : lines) {
+        Millimeter current_indent = line_num == 0 ? text_par.indent : Millimeter{};
+        if(y >= bottom_watermark) {
+            render_page_num(text_par.font);
+            rend->new_page();
+            ++current_page;
+            y = m.upper;
+            x = current_page % 2 ? m.inner : m.outer;
+            if(debug_draw) {
+                if(current_page % 2) {
+                    rend->draw_box(m.inner.topt(),
+                                   m.upper.topt(),
+                                   (page.w - m.inner - m.outer).topt(),
+                                   (page.h - m.upper - m.lower).topt());
+                } else {
+                    rend->draw_box(m.outer.topt(),
+                                   m.upper.topt(),
+                                   (page.w - m.inner - m.outer).topt(),
+                                   (page.h - m.upper - m.lower).topt());
+                }
+            }
+        }
+        if(line_num < lines.size() - 1) {
+            rend->render_line_justified(markup_words,
+                                        text_par.font,
+                                        text_par.paragraph_width - current_indent,
+                                        (x + current_indent).topt(),
+                                        y.topt());
+        } else {
+            rend->render_markup_as_is(
+                markup_words, text_par.font, (x + current_indent).topt(), y.topt());
+        }
+        line_num++;
+        y += text_par.line_height.tomm();
+    }
+}
 
-void Paginator::generate_pdf(const char *outfile) { create_pdf(outfile, doc); }
+std::vector<EnrichedWord> Paginator::text_to_formatted_words(const std::string &text) {
+    StyleStack current_style;
+    auto plain_words = split_to_words(std::string_view(text));
+    std::vector<EnrichedWord> processed_words;
+    for(const auto &word : plain_words) {
+        auto working_word = word;
+        auto start_style = current_style;
+        auto formatting_data = extract_styling(current_style, working_word);
+        auto hyphenation_data = hyphen.hyphenate(working_word);
+        processed_words.emplace_back(EnrichedWord{std::move(working_word),
+                                                  std::move(hyphenation_data),
+                                                  std::move(formatting_data),
+                                                  start_style});
+    }
+    return processed_words;
+}
