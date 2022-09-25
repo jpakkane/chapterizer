@@ -24,14 +24,6 @@ l = static_library('chap',
     dependencies: [hyphen_dep, pangocairo_dep, cairo_dep, fc_dep]
 )
 
-#executable('chapterizer',
-#    'main.cpp',
-#    link_with: l,
-#    dependencies: [pangocairo_dep],
-#)
-
-executable('fttest', 'fttest.cpp', dependencies: [ft_dep, cairo_dep])
-
 executable('pangotest', 'pangotest.cpp', dependencies: pangocairo_dep)
 
 executable('bookmaker', 'bookmaker.cpp',
