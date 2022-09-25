@@ -52,6 +52,7 @@ public:
     void render_line_centered(const char *line, const FontParameters &par, Point x, Point y);
 
     void new_page();
+    int page_num() const { return pages; }
 
     void draw_box(Point x, Point y, Point w, Point h);
 
@@ -59,6 +60,7 @@ private:
     void draw_grid();
     void setup_pango(const FontParameters &par);
 
+    int pages = 1;
     cairo_t *cr;
     cairo_surface_t *surf;
     PangoLayout *layout;

@@ -243,4 +243,7 @@ void PdfRenderer::render_line_centered(const char *line,
     render_markup_as_is(line, par, x - Point::from_value(r.width / (2 * PANGO_SCALE)), y);
 }
 
-void PdfRenderer::new_page() { cairo_surface_show_page(surf); }
+void PdfRenderer::new_page() {
+    cairo_surface_show_page(surf);
+    ++pages;
+}
