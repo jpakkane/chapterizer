@@ -93,5 +93,11 @@ public:
 
     Millimeter operator/(const double o) const { return Millimeter{v / o}; }
 
+    bool operator<(const Millimeter &o) const { return v < o.v; }
+
+    bool operator<=(const Millimeter &o) const { return v <= o.v; }
+
+    bool operator>(const Millimeter &o) const { return v > o.v; }
+
     Point topt() const { return Point::from_value(mm2pt(v)); }
 };

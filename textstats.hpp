@@ -17,6 +17,7 @@
 #pragma once
 
 #include <chaptercommon.hpp>
+#include <utils.hpp>
 
 #include <pango/pangocairo.h>
 #include <string>
@@ -61,13 +62,13 @@ public:
     TextStats();
     ~TextStats();
 
-    double text_width(const char *utf8_text, const FontParameters &font) const;
+    Millimeter text_width(const char *utf8_text, const FontParameters &font) const;
 
-    double text_width(const std::string &s, const FontParameters &font) const {
+    Millimeter text_width(const std::string &s, const FontParameters &font) const {
         return text_width(s.c_str(), font);
     };
 
-    double markup_width(const char *utf8_text, const FontParameters &font) const;
+    Millimeter markup_width(const char *utf8_text, const FontParameters &font) const;
 
 private:
     void set_pango_state(const char *utf8_text,
@@ -77,6 +78,6 @@ private:
     cairo_t *cr;
     cairo_surface_t *surface;
     PangoLayout *layout;
-    mutable std::unordered_map<StyledPlainText, double> plaintext_widths;
-    mutable std::unordered_map<StyledMarkupText, double> markup_widths;
+    mutable std::unordered_map<StyledPlainText, Millimeter> plaintext_widths;
+    mutable std::unordered_map<StyledMarkupText, Millimeter> markup_widths;
 };

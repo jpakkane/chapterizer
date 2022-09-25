@@ -63,7 +63,7 @@ void TextStats::set_pango_state(const char *utf8_text,
     pango_font_description_free(desc);
 }
 
-double TextStats::text_width(const char *utf8_text, const FontParameters &font) const {
+Millimeter TextStats::text_width(const char *utf8_text, const FontParameters &font) const {
     StyledPlainText k;
     k.text = utf8_text;
     k.font = font;
@@ -75,12 +75,12 @@ double TextStats::text_width(const char *utf8_text, const FontParameters &font) 
     PangoRectangle ink_rect, logical_rect;
     pango_layout_get_extents(layout, &ink_rect, &logical_rect);
     // printf("Text width is %.2f mm\n", double(logical_rect.width) / PANGO_SCALE / 595 * 220);
-    const double w_mm = pt2mm(double(logical_rect.width) / PANGO_SCALE);
-    plaintext_widths[k] = w_mm;
-    return w_mm;
+    Millimeter w = Point::from_value(double(logical_rect.width) / PANGO_SCALE).tomm();
+    plaintext_widths[k] = w;
+    return w;
 }
 
-double TextStats::markup_width(const char *utf8_text, const FontParameters &font) const {
+Millimeter TextStats::markup_width(const char *utf8_text, const FontParameters &font) const {
     StyledMarkupText k;
     k.text = utf8_text;
     k.font = font;
@@ -92,7 +92,7 @@ double TextStats::markup_width(const char *utf8_text, const FontParameters &font
     PangoRectangle ink_rect, logical_rect;
     pango_layout_get_extents(layout, &ink_rect, &logical_rect);
 
-    const double w_mm = pt2mm(double(logical_rect.width) / PANGO_SCALE);
-    markup_widths[k] = w_mm;
-    return w_mm;
+    Millimeter w = Point::from_value(double(logical_rect.width) / PANGO_SCALE).tomm();
+    markup_widths[k] = w;
+    return w;
 }

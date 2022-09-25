@@ -19,6 +19,7 @@
 #include <chaptercommon.hpp>
 #include <wordhyphenator.hpp>
 #include <formatting.hpp>
+#include <utils.hpp>
 #include <variant>
 
 class TextStats;
@@ -60,7 +61,7 @@ struct TextLocation {
 
 struct LineStats {
     size_t end_split;
-    double text_width;
+    Millimeter text_width;
     // int num_spaces;
     bool ends_in_dash;
 };
@@ -84,7 +85,7 @@ struct SplitStates {
 };
 
 struct LinePenaltyStatistics {
-    double delta; // mm
+    Millimeter delta;
     double penalty;
 };
 
@@ -131,7 +132,7 @@ private:
                                 size_t split_pos);
     std::vector<std::vector<std::string>>
     stats_to_markup_lines(const std::vector<LineStats> &linestats) const;
-    double current_line_width(size_t line_num) const;
+    Millimeter current_line_width(size_t line_num) const;
 
     std::string build_line_markup(size_t from_split_ind, size_t to_split_ind) const;
     std::vector<std::string> build_line_words_markup(size_t from_split_ind,

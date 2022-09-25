@@ -27,6 +27,6 @@ int main(int, char **) {
     p.name = "Gentium";
     p.point_size = 10;
     p.type = FontStyle::Regular;
-    printf("%s\n%.2fmm\n", text, s.text_width(text, p));
+    printf("%s\n%.2fmm\n", text, s.text_width(text, p).v);
     return 0;
 }

@@ -102,7 +102,7 @@ void PdfRenderer::render_line_justified(const std::string &line_text,
     assert(line_text.find('\n') == std::string::npos);
     setup_pango(par);
     const auto words = hack_split(line_text);
-    Millimeter text_width = Millimeter::from_value(hack.text_width(line_text.c_str(), par));
+    Millimeter text_width = hack.text_width(line_text.c_str(), par);
     const double num_spaces = std::count(line_text.begin(), line_text.end(), ' ');
     const Point space_extra_width{num_spaces > 0 ? ((line_width - text_width) / num_spaces).topt()
                                                  : Point{}};
@@ -151,8 +151,7 @@ void PdfRenderer::render_line_justified(const std::vector<std::string> &markup_w
 
     const Point target_width = Point::from_value(mm2pt(line_width_mm));
     pango_layout_set_markup(layout, full_line.c_str(), full_line.length());
-    const Point text_width =
-        Millimeter::from_value(hack.markup_width(full_line.c_str(), par)).topt();
+    const Point text_width = hack.markup_width(full_line.c_str(), par).topt();
     const double num_spaces = double(markup_words.size() - 1);
     const Point space_extra_width =
         num_spaces > 0 ? (target_width - text_width) / num_spaces : Point();
