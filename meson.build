@@ -21,6 +21,7 @@ l = static_library('chap',
     'fchelpers.cpp',
     'formatting.cpp',
     'bookparser.cpp',
+    'epub.cpp',
     dependencies: [hyphen_dep, pangocairo_dep, cairo_dep, fc_dep]
 )
 

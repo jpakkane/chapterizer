@@ -18,6 +18,11 @@ const uint32_t tt_character = '`';
 const uint32_t smallcaps_character = '|';
 const uint32_t superscript_character = '^';
 
+inline bool is_stylechar(char c) {
+    return c == italic_character || c == bold_character || c == tt_character ||
+           c == smallcaps_character || c == superscript_character;
+}
+
 const uint32_t italic_codepoint = '/';
 const uint32_t bold_codepoint = '*';
 const uint32_t tt_codepoint = '`';
