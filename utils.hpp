@@ -63,6 +63,12 @@ public:
         return *this;
     }
 
+    Point operator-(const Point &p) const { return Point{v - p.v}; }
+
+    Point operator+(const Point &p) const { return Point{v + p.v}; }
+
+    Point operator/(const double div) const { return Point{v / div}; }
+
     Millimeter tomm() const;
 };
 

@@ -71,10 +71,10 @@ void render_page_num(PdfRenderer &book,
                      const margins &m) {
     char buf[128];
     snprintf(buf, 128, "%d", page_num);
-    const double yloc = p.h_mm - 2 * m.lower / 3;
+    const Millimeter yloc = Millimeter::from_value(p.h_mm - 2 * m.lower / 3);
     const double leftmargin = page_num % 2 ? m.inner : m.outer;
-    const double xloc = leftmargin + (p.w_mm - m.inner - m.outer) / 2;
-    book.render_line_centered(buf, par, mm2pt(xloc), mm2pt(yloc));
+    const Millimeter xloc = Millimeter::from_value(leftmargin + (p.w_mm - m.inner - m.outer) / 2);
+    book.render_line_centered(buf, par, xloc.topt(), yloc.topt());
 }
 
 template<typename T> void style_change(T &stack, typename T::value_type val) {
@@ -157,15 +157,15 @@ void render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
             x = current_page % 2 ? m.inner : m.outer;
             if(debug_draw) {
                 if(current_page % 2) {
-                    book.draw_box(mm2pt(m.inner),
-                                  mm2pt(m.upper),
-                                  mm2pt(page.w_mm - m.inner - m.outer),
-                                  mm2pt(page.h_mm - m.upper - m.lower));
+                    book.draw_box(Millimeter::from_value(m.inner).topt(),
+                                  Millimeter::from_value(m.upper).topt(),
+                                  Millimeter::from_value(page.w_mm - m.inner - m.outer).topt(),
+                                  Millimeter::from_value(page.h_mm - m.upper - m.lower).topt());
                 } else {
-                    book.draw_box(mm2pt(m.outer),
-                                  mm2pt(m.upper),
-                                  mm2pt(page.w_mm - m.inner - m.outer),
-                                  mm2pt(page.h_mm - m.upper - m.lower));
+                    book.draw_box(Millimeter::from_value(m.outer).topt(),
+                                  Millimeter::from_value(m.upper).topt(),
+                                  Millimeter::from_value(page.w_mm - m.inner - m.outer).topt(),
+                                  Millimeter::from_value(page.h_mm - m.upper - m.lower).topt());
                 }
             }
         }
@@ -173,8 +173,8 @@ void render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
             book.render_line_justified(markup_words,
                                        text_par.font,
                                        text_par.paragraph_width_mm - current_indent,
-                                       mm2pt(x + current_indent),
-                                       mm2pt(y));
+                                       Millimeter::from_value(x + current_indent).topt(),
+                                       Millimeter::from_value(y).topt());
         } else {
             book.render_markup_as_is(
                 markup_words, text_par.font, mm2pt(x + current_indent), mm2pt(y));
@@ -258,7 +258,10 @@ void create_pdf(const char *ofilename, const Document &doc) {
             std::string full_title = std::to_string(s.number);
             full_title += ". ";
             full_title += s.text;
-            book.render_markup_as_is(full_title.c_str(), title_font, mm2pt(x), mm2pt(y));
+            book.render_markup_as_is(full_title.c_str(),
+                                     title_font,
+                                     Millimeter::from_value(x).topt(),
+                                     Millimeter::from_value(y).topt());
             y += pt2mm(title_font.point_size);
             y += title_below_space;
             first_paragraph = true;
@@ -280,7 +283,10 @@ void create_pdf(const char *ofilename, const Document &doc) {
             auto lines = b.split_formatted_lines();
             std::string fnum = std::to_string(f.number);
             fnum += '.';
-            book.render_text_as_is(fnum.c_str(), footnote_par.font, mm2pt(x), mm2pt(y));
+            book.render_text_as_is(fnum.c_str(),
+                                   footnote_par.font,
+                                   Millimeter::from_value(x).topt(),
+                                   Millimeter::from_value(y).topt());
             render_formatted_lines(
                 lines, x, y, bottom_watermark, current_page, m, page, footnote_par, book);
         } else if(std::holds_alternative<SceneChange>(e)) {
@@ -304,7 +310,10 @@ void create_pdf(const char *ofilename, const Document &doc) {
                     y = m.upper;
                     x = current_page % 2 ? m.inner : m.outer;
                 }
-                book.render_text_as_is(line.c_str(), code_par.font, mm2pt(x), mm2pt(y));
+                book.render_text_as_is(line.c_str(),
+                                       code_par.font,
+                                       Millimeter::from_value(x).topt(),
+                                       Millimeter::from_value(y).topt());
                 y += pt2mm(code_par.line_height_pt);
             }
             first_paragraph = true;
