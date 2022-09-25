@@ -3,11 +3,9 @@
 
 #include <cassert>
 
-#include <filesystem>
 #include <stack>
 
 namespace fs = std::filesystem;
-#include <tinyxml2.h>
 
 namespace {
 
@@ -52,241 +50,7 @@ void package(const char *ofilename, const char *builddir) {
     }
 }
 
-void generate_epub_manifest(tinyxml2::XMLNode *manifest,
-                            const Document &doc,
-                            const char *coverfile) {
-    auto opf = manifest->GetDocument();
-
-    const int bufsize = 128;
-    char buf[bufsize];
-    int chapter = 1;
-    for(const auto &e : doc.elements) {
-        if(!std::holds_alternative<Section>(e)) {
-            continue;
-        }
-        snprintf(buf, bufsize, "chapter%d", chapter);
-        auto node = opf->NewElement("item");
-        manifest->InsertEndChild(node);
-        node->SetAttribute("id", buf);
-        strcat(buf, ".xhtml");
-        node->SetAttribute("href", buf);
-        node->SetAttribute("media-type", "application/xhtml+xml");
-        ++chapter;
-    }
-    if(doc.num_footnotes() > 0) {
-        auto node = opf->NewElement("item");
-        manifest->InsertEndChild(node);
-        node->SetAttribute("id", "footnotes");
-        node->SetAttribute("href", "footnotes.xhtml");
-        node->SetAttribute("media-type", "application/xhtml+xml");
-    }
-
-    auto css = opf->NewElement("item");
-    manifest->InsertEndChild(css);
-    css->SetAttribute("id", "stylesheet");
-    css->SetAttribute("href", "book.css");
-    css->SetAttribute("media-type", "text/css");
-
-    if(coverfile) {
-        auto item = opf->NewElement("item");
-        manifest->InsertEndChild(item);
-        item->SetAttribute("href", coverfile);
-        item->SetAttribute("id", "coverpic");
-        item->SetAttribute("media-type", "image/png");
-    }
-    auto ncx = opf->NewElement("item");
-    manifest->InsertEndChild(ncx);
-    ncx->SetAttribute("id", "ncx");
-    ncx->SetAttribute("href", "toc.ncx");
-    ncx->SetAttribute("media-type", "application/x-dtbncx+xml");
-    // FIXME add images, fonts and CSS.
-}
-
-void generate_epub_spine(tinyxml2::XMLNode *spine, const Document &doc) {
-    auto opf = spine->GetDocument();
-
-    const int bufsize = 128;
-    char buf[bufsize];
-    int chapter = 1;
-    for(const auto &e : doc.elements) {
-        if(!std::holds_alternative<Section>(e)) {
-            continue;
-        }
-        snprintf(buf, bufsize, "chapter%d", chapter);
-        auto node = opf->NewElement("itemref");
-        spine->InsertEndChild(node);
-        node->SetAttribute("idref", buf);
-        ++chapter;
-    }
-    if(doc.num_footnotes() > 0) {
-        auto node = opf->NewElement("itemref");
-        spine->InsertEndChild(node);
-        node->SetAttribute("idref", "footnotes");
-    }
-}
-
-void write_opf(const fs::path &ofile, const Document &doc, const char *coverfile) {
-    tinyxml2::XMLDocument opf;
-
-    auto decl = opf.NewDeclaration(nullptr);
-    opf.InsertFirstChild(decl);
-    auto package = opf.NewElement("package");
-    package->SetAttribute("version", "2.0");
-    package->SetAttribute("xmlns", "http://www.idpf.org/2007/opf");
-    package->SetAttribute("unique-identifier", "id");
-
-    opf.InsertEndChild(package);
-
-    auto metadata = opf.NewElement("metadata");
-    package->InsertFirstChild(metadata);
-    metadata->SetAttribute("xmlns:dc", "http://purl.org/dc/elements/1.1/");
-    metadata->SetAttribute("xmlns:opf", "http://www.idpf.org/2007/opf");
-
-    auto name = opf.NewElement("dc:title");
-    metadata->InsertEndChild(name);
-    name->SetText("Book title");
-    auto language = opf.NewElement("dc:language");
-    language->SetText("en");
-    metadata->InsertEndChild(language);
-    auto identifier = opf.NewElement("dc:identifier");
-    metadata->InsertEndChild(identifier);
-    identifier->SetAttribute("id", "BookId");
-    identifier->SetAttribute("opf:scheme", "ISBN");
-    identifier->SetText("123456789X");
-    auto creator = opf.NewElement("dc:creator");
-    metadata->InsertEndChild(creator);
-    creator->SetAttribute("opf:file-as", "Name, Author");
-    creator->SetAttribute("opf:role", "aut");
-    creator->SetText("Author Name");
-    if(coverfile) {
-        auto meta = opf.NewElement("meta");
-        metadata->InsertEndChild(meta);
-        meta->SetAttribute("name", "cover");
-        meta->SetAttribute("content", "coverpic");
-    }
-
-    auto manifest = opf.NewElement("manifest");
-    package->InsertEndChild(manifest);
-    generate_epub_manifest(manifest, doc, coverfile);
-
-    auto spine = opf.NewElement("spine");
-    package->InsertEndChild(spine);
-    spine->SetAttribute("toc", "ncx");
-    generate_epub_spine(spine, doc);
-
-    if(opf.SaveFile(ofile.c_str()) != tinyxml2::XML_SUCCESS) {
-        printf("Writing opf failed.\n");
-        std::abort();
-    }
-}
-
-void write_navmap(tinyxml2::XMLElement *root, const Document &doc) {
-    auto ncx = root->GetDocument();
-
-    const int bufsize = 128;
-    char buf[bufsize];
-
-    auto navmap = ncx->NewElement("navMap");
-    root->InsertEndChild(navmap);
-
-    int chapter = 1;
-    for(const auto &e : doc.elements) {
-        if(!std::holds_alternative<Section>(e)) {
-            continue;
-        }
-        snprintf(buf, bufsize, "chapter%d", chapter);
-        auto navpoint = ncx->NewElement("navPoint");
-        navmap->InsertEndChild(navpoint);
-        navpoint->SetAttribute("class", "chapter");
-        navpoint->SetAttribute("id", buf);
-        snprintf(buf, bufsize, "%d", chapter);
-        navpoint->SetAttribute("playOrder", buf);
-        auto navlabel = ncx->NewElement("navLabel");
-        navpoint->InsertEndChild(navlabel);
-        auto text = ncx->NewElement("text");
-        navlabel->InsertEndChild(text);
-        snprintf(buf, bufsize, "Chapter %d", chapter);
-        text->SetText(buf);
-        auto content = ncx->NewElement("content");
-        navpoint->InsertEndChild(content);
-        snprintf(buf, bufsize, "chapter%d.xhtml", chapter);
-        content->SetAttribute("src", buf);
-        ++chapter;
-    }
-    if(doc.num_footnotes() > 0) {
-        auto navpoint = ncx->NewElement("navPoint");
-        navpoint->SetAttribute("id", "footnotes");
-        navpoint->SetAttribute("class", "chapter");
-        snprintf(buf, bufsize, "%d", chapter);
-        ++chapter;
-        navpoint->SetAttribute("playOrder", buf);
-        auto navlabel = ncx->NewElement("navLabel");
-        navpoint->InsertEndChild(navlabel);
-        auto text = ncx->NewElement("text");
-        text->SetText("Footnotes");
-        navlabel->InsertEndChild(text);
-        auto content = ncx->NewElement("content");
-        content->SetAttribute("src", "footnotes.xhtml");
-        navpoint->InsertEndChild(content);
-        navmap->InsertEndChild(navpoint);
-    }
-}
-
-void write_ncx(const char *ofile, const Document &doc) {
-    tinyxml2::XMLDocument ncx;
-
-    auto decl = ncx.NewDeclaration(nullptr);
-    ncx.InsertFirstChild(decl);
-    auto doctype = ncx.NewUnknown(
-        R"(DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd")");
-    ncx.InsertEndChild(doctype);
-
-    auto root = ncx.NewElement("ncx");
-    ncx.InsertEndChild(root);
-    root->SetAttribute("version", "2005-1");
-    root->SetAttribute("xml:lang", "en");
-    root->SetAttribute("xmlns", "http://www.daisy.org/z3986/2005/ncx/");
-
-    auto head = ncx.NewElement("head");
-    root->InsertEndChild(head);
-
-    auto meta = ncx.NewElement("meta");
-    head->InsertEndChild(meta);
-    meta->SetAttribute("name", "dtb:uid");
-    meta->SetAttribute("content", "123456789X");
-
-    meta = ncx.NewElement("meta");
-    head->InsertEndChild(meta);
-    meta->SetAttribute("name", "dtb:depth");
-    meta->SetAttribute("content", "1");
-
-    meta = ncx.NewElement("meta");
-    head->InsertEndChild(meta);
-    meta->SetAttribute("name", "dtb:totalPageCount");
-    meta->SetAttribute("content", "0");
-
-    meta = ncx.NewElement("meta");
-    head->InsertEndChild(meta);
-    meta->SetAttribute("name", "dtb:maxPageNumber");
-    meta->SetAttribute("content", "0");
-
-    auto doctitle = ncx.NewElement("docTitle");
-    root->InsertEndChild(doctitle);
-    auto text = ncx.NewElement("text");
-    doctitle->InsertEndChild(text);
-    text->SetText("Name of the Book");
-
-    auto docauthor = ncx.NewElement("docAuthor");
-    root->InsertEndChild(docauthor);
-    text = ncx.NewElement("text");
-    docauthor->InsertEndChild(text);
-    text->SetText("Author, Name");
-
-    write_navmap(root, doc);
-    ncx.SaveFile(ofile);
-}
-
-void handle_tag_switch(tinyxml2::XMLDocument &doc,
+void handle_tag_switch(tinyxml2::XMLDocument &epubdoc,
                        StyleStack &current_style,
                        std::stack<tinyxml2::XMLNode *> &tagstack,
                        std::string &buf,
@@ -295,15 +59,15 @@ void handle_tag_switch(tinyxml2::XMLDocument &doc,
                        const char *attribute = nullptr,
                        const char *value = nullptr) {
     if(current_style.contains(style)) {
-        auto ptext = doc.NewText(buf.c_str());
+        auto ptext = epubdoc.NewText(buf.c_str());
         buf.clear();
         tagstack.top()->InsertEndChild(ptext);
         current_style.pop(style);
         tagstack.pop();
     } else {
-        auto ptext = doc.NewText(buf.c_str());
+        auto ptext = epubdoc.NewText(buf.c_str());
         buf.clear();
-        auto new_element = doc.NewElement(tag_name);
+        auto new_element = epubdoc.NewElement(tag_name);
         if(attribute) {
             new_element->SetAttribute(attribute, value);
         }
@@ -410,36 +174,164 @@ void write_codeblock(tinyxml2::XMLDocument &epubdoc,
     body->InsertEndChild(p);
 }
 
-void write_footnotes(const fs::path &outdir, Document &doc) {
-    const auto num_footnotes = doc.num_footnotes();
-    if(num_footnotes == 0) {
-        return;
-    }
-    tinyxml2::XMLDocument epubdoc;
-    tinyxml2::XMLElement *body = write_header(epubdoc);
-    auto heading = epubdoc.NewElement("h2");
-    heading->SetText("Footnotes");
-    body->InsertEndChild(heading);
-    const auto ofile = outdir / "footnotes.xhtml";
-    std::string temphack;
+} // namespace
 
-    for(const auto &e : doc.elements) {
-        if(!std::holds_alternative<Footnote>(e)) {
-            continue;
-        }
-        const Footnote &fn = std::get<Footnote>(e);
-        temphack = std::to_string(fn.number);
-        temphack += ". ";
-        temphack += fn.text;
-        // FIXME, add link back.
-        auto p = write_block_of_text(epubdoc, temphack.c_str());
-        p->SetAttribute("class", "footnote");
-        body->InsertEndChild(p);
+Epub::Epub(Document &d) : doc(d) {}
+
+void Epub::generate(const char *ofilename) {
+    fs::path outdir{"epubtmp"};
+    fs::remove_all(outdir);
+    auto metadir = outdir / "META-INF";
+    auto oebpsdir = outdir / "OEBPS";
+    auto mimefile = outdir / "mimetype";
+    auto containerfile = metadir / "container.xml";
+    auto contentfile = oebpsdir / "content.opf";
+    auto ncxfile = oebpsdir / "toc.ncx";
+    auto cssfile = oebpsdir / "book.css";
+
+    fs::path cover_in{"cover.png"};
+    fs::path cover_out = oebpsdir / cover_in;
+    bool has_cover = false;
+
+    fs::create_directories(metadir);
+    fs::create_directory(oebpsdir);
+
+    if(fs::exists(cover_in)) {
+        has_cover = true;
+        fs::copy(cover_in, cover_out);
     }
-    epubdoc.SaveFile(ofile.c_str());
+
+    FILE *f = fopen(mimefile.c_str(), "w");
+    fwrite(mimetext, 1, strlen(mimetext), f);
+    fclose(f);
+
+    f = fopen(containerfile.c_str(), "w");
+    fwrite(containertext, 1, strlen(containertext), f);
+    fclose(f);
+
+    f = fopen(cssfile.c_str(), "w");
+    fwrite(csstext, 1, strlen(csstext), f);
+    fclose(f);
+
+    write_opf(contentfile, has_cover ? cover_in.c_str() : nullptr);
+    write_ncx(ncxfile.c_str());
+    write_chapters(oebpsdir);
+    write_footnotes(oebpsdir);
+
+    unlink(ofilename);
+    package(ofilename, outdir.c_str());
 }
 
-void write_chapters(const fs::path &outdir, Document &doc) {
+void Epub::write_opf(const fs::path &ofile, const char *coverfile) {
+    tinyxml2::XMLDocument opf;
+
+    auto decl = opf.NewDeclaration(nullptr);
+    opf.InsertFirstChild(decl);
+    auto package = opf.NewElement("package");
+    package->SetAttribute("version", "2.0");
+    package->SetAttribute("xmlns", "http://www.idpf.org/2007/opf");
+    package->SetAttribute("unique-identifier", "id");
+
+    opf.InsertEndChild(package);
+
+    auto metadata = opf.NewElement("metadata");
+    package->InsertFirstChild(metadata);
+    metadata->SetAttribute("xmlns:dc", "http://purl.org/dc/elements/1.1/");
+    metadata->SetAttribute("xmlns:opf", "http://www.idpf.org/2007/opf");
+
+    auto name = opf.NewElement("dc:title");
+    metadata->InsertEndChild(name);
+    name->SetText("Book title");
+    auto language = opf.NewElement("dc:language");
+    language->SetText("en");
+    metadata->InsertEndChild(language);
+    auto identifier = opf.NewElement("dc:identifier");
+    metadata->InsertEndChild(identifier);
+    identifier->SetAttribute("id", "BookId");
+    identifier->SetAttribute("opf:scheme", "ISBN");
+    identifier->SetText("123456789X");
+    auto creator = opf.NewElement("dc:creator");
+    metadata->InsertEndChild(creator);
+    creator->SetAttribute("opf:file-as", "Name, Author");
+    creator->SetAttribute("opf:role", "aut");
+    creator->SetText("Author Name");
+    if(coverfile) {
+        auto meta = opf.NewElement("meta");
+        metadata->InsertEndChild(meta);
+        meta->SetAttribute("name", "cover");
+        meta->SetAttribute("content", "coverpic");
+    }
+
+    auto manifest = opf.NewElement("manifest");
+    package->InsertEndChild(manifest);
+    generate_epub_manifest(manifest, coverfile);
+
+    auto spine = opf.NewElement("spine");
+    package->InsertEndChild(spine);
+    spine->SetAttribute("toc", "ncx");
+    generate_spine(spine);
+
+    if(opf.SaveFile(ofile.c_str()) != tinyxml2::XML_SUCCESS) {
+        printf("Writing opf failed.\n");
+        std::abort();
+    }
+}
+
+void Epub::write_ncx(const char *ofile) {
+    tinyxml2::XMLDocument ncx;
+
+    auto decl = ncx.NewDeclaration(nullptr);
+    ncx.InsertFirstChild(decl);
+    auto doctype = ncx.NewUnknown(
+        R"(DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd")");
+    ncx.InsertEndChild(doctype);
+
+    auto root = ncx.NewElement("ncx");
+    ncx.InsertEndChild(root);
+    root->SetAttribute("version", "2005-1");
+    root->SetAttribute("xml:lang", "en");
+    root->SetAttribute("xmlns", "http://www.daisy.org/z3986/2005/ncx/");
+
+    auto head = ncx.NewElement("head");
+    root->InsertEndChild(head);
+
+    auto meta = ncx.NewElement("meta");
+    head->InsertEndChild(meta);
+    meta->SetAttribute("name", "dtb:uid");
+    meta->SetAttribute("content", "123456789X");
+
+    meta = ncx.NewElement("meta");
+    head->InsertEndChild(meta);
+    meta->SetAttribute("name", "dtb:depth");
+    meta->SetAttribute("content", "1");
+
+    meta = ncx.NewElement("meta");
+    head->InsertEndChild(meta);
+    meta->SetAttribute("name", "dtb:totalPageCount");
+    meta->SetAttribute("content", "0");
+
+    meta = ncx.NewElement("meta");
+    head->InsertEndChild(meta);
+    meta->SetAttribute("name", "dtb:maxPageNumber");
+    meta->SetAttribute("content", "0");
+
+    auto doctitle = ncx.NewElement("docTitle");
+    root->InsertEndChild(doctitle);
+    auto text = ncx.NewElement("text");
+    doctitle->InsertEndChild(text);
+    text->SetText("Name of the Book");
+
+    auto docauthor = ncx.NewElement("docAuthor");
+    root->InsertEndChild(docauthor);
+    text = ncx.NewElement("text");
+    docauthor->InsertEndChild(text);
+    text->SetText("Author, Name");
+
+    write_navmap(root);
+    ncx.SaveFile(ofile);
+}
+
+void Epub::write_chapters(const fs::path &outdir) {
     const int bufsize = 128;
     char tmpbuf[bufsize];
     tinyxml2::XMLDocument epubdoc;
@@ -494,52 +386,154 @@ void write_chapters(const fs::path &outdir, Document &doc) {
     epubdoc.SaveFile(ofile.c_str());
 }
 
-void create_epub(const char *ofilename, Document &doc) {
-    fs::path outdir{"epubtmp"};
-    fs::remove_all(outdir);
-    auto metadir = outdir / "META-INF";
-    auto oebpsdir = outdir / "OEBPS";
-    auto mimefile = outdir / "mimetype";
-    auto containerfile = metadir / "container.xml";
-    auto contentfile = oebpsdir / "content.opf";
-    auto ncxfile = oebpsdir / "toc.ncx";
-    auto cssfile = oebpsdir / "book.css";
-
-    fs::path cover_in{"cover.png"};
-    fs::path cover_out = oebpsdir / cover_in;
-    bool has_cover = false;
-
-    fs::create_directories(metadir);
-    fs::create_directory(oebpsdir);
-
-    if(fs::exists(cover_in)) {
-        has_cover = true;
-        fs::copy(cover_in, cover_out);
+void Epub::write_footnotes(const fs::path &outdir) {
+    const auto num_footnotes = doc.num_footnotes();
+    if(num_footnotes == 0) {
+        return;
     }
+    tinyxml2::XMLDocument epubdoc;
+    tinyxml2::XMLElement *body = write_header(epubdoc);
+    auto heading = epubdoc.NewElement("h2");
+    heading->SetText("Footnotes");
+    body->InsertEndChild(heading);
+    const auto ofile = outdir / "footnotes.xhtml";
+    std::string temphack;
 
-    FILE *f = fopen(mimefile.c_str(), "w");
-    fwrite(mimetext, 1, strlen(mimetext), f);
-    fclose(f);
-
-    f = fopen(containerfile.c_str(), "w");
-    fwrite(containertext, 1, strlen(containertext), f);
-    fclose(f);
-
-    f = fopen(cssfile.c_str(), "w");
-    fwrite(csstext, 1, strlen(csstext), f);
-    fclose(f);
-
-    write_opf(contentfile, doc, has_cover ? cover_in.c_str() : nullptr);
-    write_ncx(ncxfile.c_str(), doc);
-    write_chapters(oebpsdir, doc);
-    write_footnotes(oebpsdir, doc);
-
-    unlink(ofilename);
-    package(ofilename, outdir.c_str());
+    for(const auto &e : doc.elements) {
+        if(!std::holds_alternative<Footnote>(e)) {
+            continue;
+        }
+        const Footnote &fn = std::get<Footnote>(e);
+        temphack = std::to_string(fn.number);
+        temphack += ". ";
+        temphack += fn.text;
+        // FIXME, add link back.
+        auto p = write_block_of_text(epubdoc, temphack.c_str());
+        p->SetAttribute("class", "footnote");
+        body->InsertEndChild(p);
+    }
+    epubdoc.SaveFile(ofile.c_str());
 }
 
-} // namespace
+void Epub::write_navmap(tinyxml2::XMLElement *root) {
+    auto ncx = root->GetDocument();
 
-Epub::Epub(Document &d) : doc(d) {}
+    const int bufsize = 128;
+    char buf[bufsize];
 
-void Epub::generate(const char *ofilename) { create_epub(ofilename, doc); }
+    auto navmap = ncx->NewElement("navMap");
+    root->InsertEndChild(navmap);
+
+    int chapter = 1;
+    for(const auto &e : doc.elements) {
+        if(!std::holds_alternative<Section>(e)) {
+            continue;
+        }
+        snprintf(buf, bufsize, "chapter%d", chapter);
+        auto navpoint = ncx->NewElement("navPoint");
+        navmap->InsertEndChild(navpoint);
+        navpoint->SetAttribute("class", "chapter");
+        navpoint->SetAttribute("id", buf);
+        snprintf(buf, bufsize, "%d", chapter);
+        navpoint->SetAttribute("playOrder", buf);
+        auto navlabel = ncx->NewElement("navLabel");
+        navpoint->InsertEndChild(navlabel);
+        auto text = ncx->NewElement("text");
+        navlabel->InsertEndChild(text);
+        snprintf(buf, bufsize, "Chapter %d", chapter);
+        text->SetText(buf);
+        auto content = ncx->NewElement("content");
+        navpoint->InsertEndChild(content);
+        snprintf(buf, bufsize, "chapter%d.xhtml", chapter);
+        content->SetAttribute("src", buf);
+        ++chapter;
+    }
+    if(doc.num_footnotes() > 0) {
+        auto navpoint = ncx->NewElement("navPoint");
+        navpoint->SetAttribute("id", "footnotes");
+        navpoint->SetAttribute("class", "chapter");
+        snprintf(buf, bufsize, "%d", chapter);
+        ++chapter;
+        navpoint->SetAttribute("playOrder", buf);
+        auto navlabel = ncx->NewElement("navLabel");
+        navpoint->InsertEndChild(navlabel);
+        auto text = ncx->NewElement("text");
+        text->SetText("Footnotes");
+        navlabel->InsertEndChild(text);
+        auto content = ncx->NewElement("content");
+        content->SetAttribute("src", "footnotes.xhtml");
+        navpoint->InsertEndChild(content);
+        navmap->InsertEndChild(navpoint);
+    }
+}
+
+void Epub::generate_epub_manifest(tinyxml2::XMLNode *manifest, const char *coverfile) {
+    auto opf = manifest->GetDocument();
+
+    const int bufsize = 128;
+    char buf[bufsize];
+    int chapter = 1;
+    for(const auto &e : doc.elements) {
+        if(!std::holds_alternative<Section>(e)) {
+            continue;
+        }
+        snprintf(buf, bufsize, "chapter%d", chapter);
+        auto node = opf->NewElement("item");
+        manifest->InsertEndChild(node);
+        node->SetAttribute("id", buf);
+        strcat(buf, ".xhtml");
+        node->SetAttribute("href", buf);
+        node->SetAttribute("media-type", "application/xhtml+xml");
+        ++chapter;
+    }
+    if(doc.num_footnotes() > 0) {
+        auto node = opf->NewElement("item");
+        manifest->InsertEndChild(node);
+        node->SetAttribute("id", "footnotes");
+        node->SetAttribute("href", "footnotes.xhtml");
+        node->SetAttribute("media-type", "application/xhtml+xml");
+    }
+
+    auto css = opf->NewElement("item");
+    manifest->InsertEndChild(css);
+    css->SetAttribute("id", "stylesheet");
+    css->SetAttribute("href", "book.css");
+    css->SetAttribute("media-type", "text/css");
+
+    if(coverfile) {
+        auto item = opf->NewElement("item");
+        manifest->InsertEndChild(item);
+        item->SetAttribute("href", coverfile);
+        item->SetAttribute("id", "coverpic");
+        item->SetAttribute("media-type", "image/png");
+    }
+    auto ncx = opf->NewElement("item");
+    manifest->InsertEndChild(ncx);
+    ncx->SetAttribute("id", "ncx");
+    ncx->SetAttribute("href", "toc.ncx");
+    ncx->SetAttribute("media-type", "application/x-dtbncx+xml");
+    // FIXME add images, fonts and CSS.
+}
+
+void Epub::generate_spine(tinyxml2::XMLNode *spine) {
+    auto opf = spine->GetDocument();
+
+    const int bufsize = 128;
+    char buf[bufsize];
+    int chapter = 1;
+    for(const auto &e : doc.elements) {
+        if(!std::holds_alternative<Section>(e)) {
+            continue;
+        }
+        snprintf(buf, bufsize, "chapter%d", chapter);
+        auto node = opf->NewElement("itemref");
+        spine->InsertEndChild(node);
+        node->SetAttribute("idref", buf);
+        ++chapter;
+    }
+    if(doc.num_footnotes() > 0) {
+        auto node = opf->NewElement("itemref");
+        spine->InsertEndChild(node);
+        node->SetAttribute("idref", "footnotes");
+    }
+}
