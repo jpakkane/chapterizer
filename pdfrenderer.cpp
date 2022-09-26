@@ -52,7 +52,6 @@ std::vector<std::string> hack_split(const std::string &in_text) {
 
 PdfRenderer::PdfRenderer(const char *ofname, Point pagew, Point pageh) {
     surf = cairo_pdf_surface_create(ofname, pagew.v, pageh.v);
-    printf("Pagew: %d\n", (int)pagew.v);
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_TITLE, "Name of the book");
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_AUTHOR, "Author Name");
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_CREATOR, "Superpdf from Outer Space!");
@@ -70,6 +69,9 @@ PdfRenderer::PdfRenderer(const char *ofname, Point pagew, Point pageh) {
 }
 
 PdfRenderer::~PdfRenderer() {
+    for(auto &it : loaded_images) {
+        cairo_surface_destroy(it.second);
+    }
     g_object_unref(G_OBJECT(layout));
     cairo_destroy(cr);
     cairo_surface_destroy(surf);
@@ -255,4 +257,30 @@ void PdfRenderer::draw_line(Point x0, Point y0, Point x1, Point y1, Point thickn
     cairo_move_to(cr, x0.v, y0.v);
     cairo_line_to(cr, x1.v, y1.v);
     cairo_stroke(cr);
+}
+
+ImageInfo PdfRenderer::get_image(const std::string &path) {
+    ImageInfo result;
+    auto it = loaded_images.find(path);
+    if(it != loaded_images.end()) {
+        result.surf = it->second;
+    } else {
+        result.surf = cairo_image_surface_create_from_png(path.c_str());
+        assert(cairo_surface_status(result.surf) == CAIRO_STATUS_SUCCESS);
+        loaded_images[path] = result.surf;
+    }
+    result.w = cairo_image_surface_get_width(result.surf);
+    result.h = cairo_image_surface_get_height(result.surf);
+    return result;
+}
+
+void PdfRenderer::draw_image(
+    const ImageInfo &image, Millimeter x, Millimeter y, Millimeter w, Millimeter h) {
+    cairo_save(cr);
+    cairo_rectangle(cr, x.topt().v, y.topt().v, w.topt().v, h.topt().v);
+    cairo_translate(cr, x.topt().v, y.topt().v);
+    cairo_scale(cr, w.topt().v / image.w, h.topt().v / image.h);
+    cairo_set_source_surface(cr, image.surf, 0, 0);
+    cairo_fill(cr);
+    cairo_restore(cr);
 }

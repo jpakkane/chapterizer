@@ -25,6 +25,11 @@
 #include <vector>
 #include <string>
 
+struct ImageInfo {
+    cairo_surface_t *surf;
+    int w, h;
+};
+
 class PdfRenderer {
 public:
     explicit PdfRenderer(const char *ofname, Point pagew, Point pageh);
@@ -58,6 +63,10 @@ public:
 
     void draw_line(Point x0, Point y0, Point x1, Point y1, Point thickness);
 
+    ImageInfo get_image(const std::string &path);
+
+    void draw_image(const ImageInfo &image, Millimeter x, Millimeter y, Millimeter w, Millimeter h);
+
 private:
     void draw_grid();
     void setup_pango(const FontParameters &par);
@@ -66,4 +75,5 @@ private:
     cairo_t *cr;
     cairo_surface_t *surf;
     PangoLayout *layout;
+    std::unordered_map<std::string, cairo_surface_t *> loaded_images;
 };

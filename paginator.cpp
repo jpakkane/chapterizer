@@ -223,6 +223,14 @@ void Paginator::generate_pdf(const char *outfile) {
             first_paragraph = true;
             rel_y += different_paragraph_space;
             heights.whitespace_height += different_paragraph_space;
+        } else if(std::holds_alternative<Figure>(e)) {
+            const Figure &cb = std::get<Figure>(e);
+            auto image = rend->get_image(cb.file);
+            const Millimeter display_width = textblock_width();
+            const Millimeter display_height = display_width * image.h / image.w;
+            rend->draw_image(image, current_left_margin(), m.upper, display_width, display_height);
+            // printf("Image is %d PPI\n", int(image.w / display_width.v * 25.4));
+            //  heights.figure_height += display_height;
         } else {
             std::abort();
         }

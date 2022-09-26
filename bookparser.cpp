@@ -90,9 +90,22 @@ line_token LineParser::next() {
         printf("End of codeblock without start of same.\n");
         std::abort();
     }
-    match_result = try_match(scene, GRegexMatchFlags(0));
+    match_result = try_match(directive, GRegexMatchFlags(0));
     if(match_result) {
-        return SceneDecl{};
+        auto dir_name = match_result->view_for(1, data);
+        if(dir_name == "s") {
+            return SceneDecl{};
+        } else if(dir_name == "figure") {
+            auto fname = match_result->view_for(2, data);
+            while(!fname.empty() && fname.front() == ' ') {
+                fname.remove_prefix(1);
+            }
+            return FigureDecl{std::string{fname}};
+        } else {
+            std::string tmp{dir_name};
+            printf("Unknown directive '%s'.\n", tmp.c_str());
+            std::abort();
+        }
     }
     match_result = try_match(section, GRegexMatchFlags(0));
     if(match_result) {
@@ -199,6 +212,9 @@ void StructureParser::push(const line_token &l) {
     } else if(std::holds_alternative<SceneDecl>(l)) {
         set_state(ParsingState::unset);
         doc.elements.push_back(SceneChange{});
+    } else if(std::holds_alternative<FigureDecl>(l)) {
+        set_state(ParsingState::unset);
+        doc.elements.push_back(Figure{std::get<FigureDecl>(l).fname});
     } else if(std::holds_alternative<EndOfFile>(l)) {
         set_state(ParsingState::unset);
     } else {

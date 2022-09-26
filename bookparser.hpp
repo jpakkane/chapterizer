@@ -54,6 +54,10 @@ struct NewLine {};
 
 struct SceneDecl {};
 
+struct FigureDecl {
+    std::string fname;
+};
+
 struct NewBlock {};
 
 struct StartOfSpecialBlock {
@@ -68,6 +72,7 @@ typedef std::variant<SectionDecl,
                      PlainLine,
                      NewLine,
                      SceneDecl,
+                     FigureDecl,
                      NewBlock,
                      StartOfSpecialBlock,
                      EndOfSpecialBlock,
@@ -93,10 +98,14 @@ struct Footnote {
     std::string text;
 };
 
+struct Figure {
+    std::string file;
+};
+
 struct SceneChange {};
 
 // Also needs images, footnotes, unformatted text etc.
-typedef std::variant<Paragraph, Section, SceneChange, CodeBlock, Footnote> DocElement;
+typedef std::variant<Paragraph, Section, SceneChange, CodeBlock, Footnote, Figure> DocElement;
 
 class LineParser {
 public:
@@ -106,7 +115,8 @@ public:
             g_regex_new("(#+)\\s+(.*)", GRegexCompileFlags(0), G_REGEX_MATCH_ANCHORED, nullptr);
         line = g_regex_new(".+", GRegexCompileFlags(0), G_REGEX_MATCH_ANCHORED, nullptr);
         newline = g_regex_new("\\n+", G_REGEX_MULTILINE, G_REGEX_MATCH_ANCHORED, nullptr);
-        scene = g_regex_new("#s", GRegexCompileFlags(0), G_REGEX_MATCH_ANCHORED, nullptr);
+        directive = g_regex_new(
+            "#(\\w+)( +[^ ].*)?", GRegexCompileFlags(0), G_REGEX_MATCH_ANCHORED, nullptr);
         specialblock_start =
             g_regex_new("```(\\w+)", GRegexCompileFlags(0), G_REGEX_MATCH_ANCHORED, nullptr);
         specialblock_end =
@@ -145,7 +155,7 @@ private:
     GRegex *section;
     GRegex *line;
     GRegex *newline;
-    GRegex *scene;
+    GRegex *directive;
     GRegex *specialblock_start;
     GRegex *specialblock_end;
 };

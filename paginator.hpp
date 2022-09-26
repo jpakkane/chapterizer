@@ -49,13 +49,19 @@ struct PageLayout {
 };
 
 struct Heights {
+    Millimeter figure_height;
     Millimeter text_height;
     Millimeter footnote_height;
     Millimeter whitespace_height;
 
-    Millimeter total_height() const { return text_height + footnote_height + whitespace_height; }
+    Millimeter total_height() const {
+        return figure_height + text_height + footnote_height + whitespace_height;
+    }
 
-    void clear() { text_height = footnote_height = whitespace_height = Millimeter::from_value(0); }
+    void clear() {
+        figure_height = text_height = footnote_height = whitespace_height =
+            Millimeter::from_value(0);
+    }
 };
 
 class Paginator {
@@ -76,6 +82,8 @@ private:
     void new_page(bool draw_page_num);
 
     void flush_draw_commands();
+
+    Millimeter textblock_width() const { return page.w - m.inner - m.outer; }
 
     const Document &doc;
     PageSize page;
