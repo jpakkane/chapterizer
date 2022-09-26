@@ -138,12 +138,12 @@ void Paginator::generate_pdf(const char *outfile) {
         } else if(std::holds_alternative<Paragraph>(e)) {
             const Paragraph &p = std::get<Paragraph>(e);
             StyleStack current_style;
-            text_par.indent = first_paragraph ? Millimeter::from_value(0) : text_par.indent;
+            auto cur_par = text_par;
+            cur_par.indent = first_paragraph ? Millimeter::zero() : text_par.indent;
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
-            ParagraphFormatter b(processed_words, text_par, extras);
+            ParagraphFormatter b(processed_words, cur_par, extras);
             auto lines = b.split_formatted_lines();
-            render_formatted_lines(
-                lines, x, rel_y, bottom_watermark, text_par, heights.text_height);
+            render_formatted_lines(lines, x, rel_y, bottom_watermark, cur_par, heights.text_height);
             first_paragraph = false;
         } else if(std::holds_alternative<Footnote>(e)) {
             if(!layout.footnote.empty()) {
