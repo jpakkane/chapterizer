@@ -26,6 +26,9 @@ struct ExtraPenaltyAmounts {
     double single_split_word_line = 50;
 };
 
+// Some fonts have "medium" instead of "regular" as their weight.
+// For example Nimbus Roman. This is currently ignored, might need
+// to be fixed.
 enum class FontStyle : int {
     Regular,
     Italic,

@@ -100,49 +100,56 @@ void Paginator::generate_pdf(const char *outfile) {
     footnote_par.indent = Millimeter::from_value(4);
 
     ExtraPenaltyAmounts extras;
-    const Millimeter bottom_watermark = page.h - m.lower - text_par.line_height.tomm();
+    const Millimeter bottom_watermark = page.h - m.lower - m.upper - text_par.line_height.tomm();
     const Millimeter title_above_space = Millimeter::from_value(30);
     const Millimeter title_below_space = Millimeter::from_value(10);
     const Millimeter different_paragraph_space = Millimeter::from_value(2);
     Millimeter x = m.inner;
-    Millimeter y = m.upper;
-    const Millimeter indent = Millimeter::from_value(5);
+    Millimeter rel_y;
+    const Millimeter footnote_separation = Millimeter::from_value(10);
     bool first_paragraph = true;
     bool first_section = true;
+
     for(const auto &e : doc.elements) {
         if(std::holds_alternative<Section>(e)) {
             const Section &s = std::get<Section>(e);
             if(!first_section) {
-                render_page_num(text_par.font);
-                rend->new_page();
-                ++current_page;
+                new_page(true);
                 if(current_page % 2 == 0) {
-                    rend->new_page();
-                    ++current_page;
+                    new_page(false);
                 }
             }
             first_section = false;
-            y = m.upper;
-            x = current_page % 2 ? m.inner : m.outer;
-            y += title_above_space;
+            rel_y = Millimeter::zero();
+            x = current_left_margin();
+            rel_y += title_above_space;
+            heights.whitespace_height += title_above_space;
             assert(s.level == 1);
             std::string full_title = std::to_string(s.number);
             full_title += ". ";
             full_title += s.text;
-            rend->render_markup_as_is(full_title.c_str(), font_styles.heading, x.topt(), y.topt());
-            y += font_styles.heading.size.tomm();
-            y += title_below_space;
+            rend->render_markup_as_is(
+                full_title.c_str(), font_styles.heading, x.topt(), (rel_y + m.upper).topt());
+            rel_y += font_styles.heading.size.tomm();
+            heights.text_height += font_styles.heading.size.tomm();
+            rel_y += title_below_space;
+            heights.text_height += title_below_space;
             first_paragraph = true;
         } else if(std::holds_alternative<Paragraph>(e)) {
             const Paragraph &p = std::get<Paragraph>(e);
             StyleStack current_style;
-            text_par.indent = first_paragraph ? Millimeter::from_value(0) : indent;
+            text_par.indent = first_paragraph ? Millimeter::from_value(0) : text_par.indent;
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
             ParagraphFormatter b(processed_words, text_par, extras);
             auto lines = b.split_formatted_lines();
-            render_formatted_lines(lines, x, y, bottom_watermark, text_par);
+            render_formatted_lines(
+                lines, x, rel_y, bottom_watermark, text_par, heights.text_height);
             first_paragraph = false;
         } else if(std::holds_alternative<Footnote>(e)) {
+            if(!layout.footnote.empty()) {
+                printf("More than one footnote per page is not yet supported.");
+                std::abort();
+            }
             const Footnote &f = std::get<Footnote>(e);
             StyleStack current_style;
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text);
@@ -150,34 +157,37 @@ void Paginator::generate_pdf(const char *outfile) {
             auto lines = b.split_formatted_lines();
             std::string fnum = std::to_string(f.number);
             fnum += '.';
-            rend->render_text_as_is(fnum.c_str(), footnote_par.font, x.topt(), y.topt());
-            render_formatted_lines(lines, x, y, bottom_watermark, footnote_par);
+            rend->render_text_as_is(
+                fnum.c_str(), footnote_par.font, x.topt(), (rel_y + m.upper).topt());
+            render_formatted_lines(
+                lines, x, rel_y, bottom_watermark, footnote_par, heights.footnote_height);
         } else if(std::holds_alternative<SceneChange>(e)) {
-            y += text_par.line_height.tomm();
-            if(y >= bottom_watermark) {
-                render_page_num(text_par.font);
-                rend->new_page();
-                ++current_page;
-                y = m.upper;
-                x = current_page % 2 ? m.inner : m.outer;
+            rel_y += text_par.line_height.tomm();
+            heights.whitespace_height += text_par.line_height.tomm();
+            if(rel_y >= bottom_watermark) {
+                new_page(true);
+                rel_y = Millimeter::zero();
+                x = current_left_margin();
             }
             first_paragraph = true;
         } else if(std::holds_alternative<CodeBlock>(e)) {
             const CodeBlock &cb = std::get<CodeBlock>(e);
-            y += different_paragraph_space;
+            rel_y += different_paragraph_space;
+            heights.whitespace_height += different_paragraph_space;
             for(const auto &line : cb.raw_lines) {
-                if(y >= bottom_watermark) {
-                    render_page_num(text_par.font);
-                    rend->new_page();
-                    ++current_page;
-                    y = m.upper;
-                    x = current_page % 2 ? m.inner : m.outer;
+                if(heights.total_height() >= bottom_watermark) {
+                    new_page(true);
+                    rel_y = Millimeter::zero();
+                    x = current_left_margin();
                 }
-                rend->render_text_as_is(line.c_str(), code_par.font, x.topt(), y.topt());
-                y += code_par.line_height.tomm();
+                rend->render_text_as_is(
+                    line.c_str(), code_par.font, x.topt(), (rel_y + m.upper).topt());
+                rel_y += code_par.line_height.tomm();
+                heights.text_height += code_par.line_height.tomm();
             }
             first_paragraph = true;
-            y += different_paragraph_space;
+            rel_y += different_paragraph_space;
+            heights.whitespace_height += different_paragraph_space;
         } else {
             std::abort();
         }
@@ -188,26 +198,25 @@ void Paginator::render_page_num(const FontParameters &par) {
     char buf[128];
     snprintf(buf, 128, "%d", current_page);
     const Millimeter yloc = page.h - 2.0 * m.lower / 3.0;
-    const Millimeter leftmargin = current_page % 2 ? m.inner : m.outer;
-    const Millimeter xloc = leftmargin + (page.w - m.inner - m.outer) / 2;
+    const Millimeter xloc = current_left_margin() + (page.w - m.inner - m.outer) / 2;
     rend->render_line_centered(buf, par, xloc.topt(), yloc.topt());
 }
 
 void Paginator::render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
                                        Millimeter &x,
-                                       Millimeter &y,
+                                       Millimeter &rel_y,
                                        const Millimeter &bottom_watermark,
-                                       const ChapterParameters &text_par) {
+                                       const ChapterParameters &text_par,
+                                       Millimeter &height_counter) {
     const bool debug_draw = true;
     size_t line_num = 0;
     for(const auto &markup_words : lines) {
         Millimeter current_indent = line_num == 0 ? text_par.indent : Millimeter{};
-        if(y >= bottom_watermark) {
-            render_page_num(text_par.font);
-            rend->new_page();
-            ++current_page;
-            y = m.upper;
-            x = current_page % 2 ? m.inner : m.outer;
+        if(rel_y >= bottom_watermark) {
+            flush_draw_commands();
+            new_page(true);
+            rel_y = Millimeter::zero();
+            x = current_left_margin();
             if(debug_draw) {
                 if(current_page % 2) {
                     rend->draw_box(m.inner.topt(),
@@ -227,13 +236,14 @@ void Paginator::render_formatted_lines(const std::vector<std::vector<std::string
                                         text_par.font,
                                         text_par.paragraph_width - current_indent,
                                         (x + current_indent).topt(),
-                                        y.topt());
+                                        (rel_y + m.upper).topt());
         } else {
             rend->render_markup_as_is(
-                markup_words, text_par.font, (x + current_indent).topt(), y.topt());
+                markup_words, text_par.font, (x + current_indent).topt(), (rel_y + m.upper).topt());
         }
         line_num++;
-        y += text_par.line_height.tomm();
+        rel_y += text_par.line_height.tomm();
+        height_counter += text_par.line_height.tomm();
     }
 }
 
@@ -252,4 +262,17 @@ std::vector<EnrichedWord> Paginator::text_to_formatted_words(const std::string &
                                                   start_style});
     }
     return processed_words;
+}
+
+void Paginator::new_page(bool draw_page_num) {
+    if(draw_page_num) {
+        render_page_num(font_styles.basic);
+    }
+    rend->new_page();
+    ++current_page;
+}
+
+void Paginator::flush_draw_commands() {
+    layout.clear();
+    heights.clear();
 }

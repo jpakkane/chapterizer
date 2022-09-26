@@ -52,6 +52,7 @@ public:
     Point(const Point &d) : v(d.v){};
 
     static Point from_value(double d) { return Point{d}; }
+    static Point zero() { return Point{0}; }
 
     Point &operator=(const Point &p) {
         v = p.v;
@@ -92,6 +93,7 @@ public:
     Millimeter(const Millimeter &d) : v(d.v){};
 
     static Millimeter from_value(double mm) { return Millimeter{mm}; }
+    static Millimeter zero() { return Millimeter{0.0}; }
 
     Millimeter &operator=(const Millimeter &p) {
         v = p.v;

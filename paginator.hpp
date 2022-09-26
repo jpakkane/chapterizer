@@ -18,6 +18,44 @@ struct PageSize {
     Millimeter h;
 };
 
+struct MarkupDrawCommand {
+    std::string markup;
+    FontParameters *font;
+    Millimeter x;
+    Millimeter y;
+};
+
+struct JustifiedMarkupDrawCommand {
+    std::string markup;
+    FontParameters *font;
+    Millimeter x;
+    Millimeter y;
+    Millimeter width;
+};
+
+typedef std::variant<MarkupDrawCommand, JustifiedMarkupDrawCommand> TextCommands;
+
+struct PageLayout {
+    // Picture.
+    std::vector<TextCommands> text;
+    std::vector<TextCommands> footnote;
+
+    void clear() {
+        text.clear();
+        footnote.clear();
+    }
+};
+
+struct Heights {
+    Millimeter text_height;
+    Millimeter footnote_height;
+    Millimeter whitespace_height;
+
+    Millimeter total_height() const { return text_height + footnote_height + whitespace_height; }
+
+    void clear() { text_height = footnote_height = whitespace_height = Millimeter::from_value(0); }
+};
+
 class Paginator {
 public:
     Paginator(const Document &d);
@@ -30,8 +68,14 @@ private:
                                 Millimeter &x,
                                 Millimeter &y,
                                 const Millimeter &bottom_watermark,
-                                const ChapterParameters &text_par);
+                                const ChapterParameters &text_par, Millimeter &height_counter);
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text);
+
+    Millimeter current_left_margin() const { return current_page % 2 ? m.inner : m.outer; }
+
+    void new_page(bool draw_page_num);
+
+    void flush_draw_commands();
 
     const Document &doc;
     PageSize page;
@@ -40,4 +84,8 @@ private:
     std::unique_ptr<PdfRenderer> rend;
     WordHyphenator hyphen;
     int current_page = 1;
+
+    // These keep track of the current page stats.
+    PageLayout layout;
+    Heights heights;
 };
