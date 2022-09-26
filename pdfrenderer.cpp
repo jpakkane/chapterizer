@@ -89,6 +89,7 @@ void PdfRenderer::draw_grid() {
 }
 
 void PdfRenderer::draw_box(Point x, Point y, Point w, Point h) {
+    cairo_set_line_width(cr, 0.2);
     cairo_move_to(cr, x.v, y.v);
     cairo_line_to(cr, (x + w).v, y.v);
     cairo_line_to(cr, (x + w).v, (y + h).v);
@@ -246,4 +247,11 @@ void PdfRenderer::render_line_centered(const char *line,
 void PdfRenderer::new_page() {
     cairo_surface_show_page(surf);
     ++pages;
+}
+
+void PdfRenderer::draw_line(Point x0, Point y0, Point x1, Point y1, Point thickness) {
+    cairo_set_line_width(cr, thickness.v);
+    cairo_move_to(cr, x0.v, y0.v);
+    cairo_line_to(cr, x1.v, y1.v);
+    cairo_stroke(cr);
 }

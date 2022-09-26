@@ -20,14 +20,14 @@ struct PageSize {
 
 struct MarkupDrawCommand {
     std::string markup;
-    FontParameters *font;
+    const FontParameters *font;
     Millimeter x;
     Millimeter y;
 };
 
 struct JustifiedMarkupDrawCommand {
-    std::string markup;
-    FontParameters *font;
+    std::vector<std::string> markup_words;
+    const FontParameters *font;
     Millimeter x;
     Millimeter y;
     Millimeter width;
@@ -68,7 +68,13 @@ private:
                                 Millimeter &x,
                                 Millimeter &y,
                                 const Millimeter &bottom_watermark,
-                                const ChapterParameters &text_par, Millimeter &height_counter);
+                                const ChapterParameters &text_par,
+                                Millimeter &height_counter);
+    void build_formatted_lines(const std::vector<std::vector<std::string>> &lines,
+                               Millimeter &x,
+                               Millimeter &rel_y,
+                               const ChapterParameters &text_par,
+                               Millimeter &height_counter);
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text);
 
     Millimeter current_left_margin() const { return current_page % 2 ? m.inner : m.outer; }

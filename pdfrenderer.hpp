@@ -56,6 +56,8 @@ public:
 
     void draw_box(Point x, Point y, Point w, Point h);
 
+    void draw_line(Point x0, Point y0, Point x1, Point y1, Point thickness);
+
 private:
     void draw_grid();
     void setup_pango(const FontParameters &par);
