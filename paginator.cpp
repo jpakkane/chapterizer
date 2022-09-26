@@ -82,8 +82,8 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
 } // namespace
 
 Paginator::Paginator(const Document &d) : doc(d) {
-    page.w = Millimeter::from_value(110);
-    page.h = Millimeter::from_value(175);
+    page.w = Millimeter::from_value(130);
+    page.h = Millimeter::from_value(210);
     font_styles.basic.name = "Gentium";
     font_styles.basic.size = Point::from_value(10);
     font_styles.code.name = "Liberation Mono";
@@ -113,13 +113,13 @@ void Paginator::generate_pdf(const char *outfile) {
     footnote_par.indent = Millimeter::from_value(4);
 
     ExtraPenaltyAmounts extras;
-    const Millimeter bottom_watermark = page.h - m.lower - m.upper - text_par.line_height.tomm();
+    const Millimeter bottom_watermark = page.h - m.lower - m.upper;
     const Millimeter title_above_space = Millimeter::from_value(30);
     const Millimeter title_below_space = Millimeter::from_value(10);
     const Millimeter different_paragraph_space = Millimeter::from_value(2);
     Millimeter x = m.inner;
     Millimeter rel_y;
-    const Millimeter footnote_separation = Millimeter::from_value(4);
+    const Millimeter footnote_separation = Millimeter::from_value(2);
     bool first_paragraph = true;
     bool first_section = true;
 
@@ -156,7 +156,25 @@ void Paginator::generate_pdf(const char *outfile) {
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
             ParagraphFormatter b(processed_words, cur_par, extras);
             auto lines = b.split_formatted_lines();
-            render_formatted_lines(lines, x, rel_y, bottom_watermark, cur_par, heights.text_height);
+            auto built_lines = build_formatted_lines(lines, cur_par);
+
+            //            render_formatted_lines(lines, x, rel_y, bottom_watermark, cur_par,
+            //            heights.text_height);
+            Millimeter current_y_origin = rel_y;
+            int lines_in_paragraph = 0;
+            for(auto &line : built_lines) {
+                if(heights.total_height() + cur_par.line_height.tomm() > bottom_watermark) {
+                    new_page(true);
+                    current_y_origin = -lines_in_paragraph * cur_par.line_height.tomm();
+                    rel_y = Millimeter::zero();
+                    x = current_left_margin();
+                }
+                ++lines_in_paragraph;
+                layout.text.emplace_back(std::move(line));
+                adjust_y(layout.text.back(), current_y_origin);
+                rel_y += cur_par.line_height.tomm();
+                heights.text_height += cur_par.line_height.tomm();
+            }
             first_paragraph = false;
         } else if(std::holds_alternative<Footnote>(e)) {
             if(!layout.footnote.empty()) {
@@ -173,8 +191,8 @@ void Paginator::generate_pdf(const char *outfile) {
             fnum += '.';
             auto tmpy = heights.footnote_height;
             layout.footnote.emplace_back(
-                MarkupDrawCommand{std::move(fnum), &footnote_par.font, x, tmpy});
-            auto built_lines = build_formatted_lines(lines, x, footnote_par);
+                MarkupDrawCommand{std::move(fnum), &footnote_par.font, Millimeter::zero(), tmpy});
+            auto built_lines = build_formatted_lines(lines, footnote_par);
             // FIXME, assumes there is always enough space for a footnote.
             heights.footnote_height += built_lines.size() * footnote_par.line_height.tomm();
             layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
@@ -209,6 +227,10 @@ void Paginator::generate_pdf(const char *outfile) {
             std::abort();
         }
     }
+    if(!layout.empty()) {
+        flush_draw_commands();
+    }
+    rend.reset(nullptr);
 }
 
 void Paginator::render_page_num(const FontParameters &par) {
@@ -218,42 +240,11 @@ void Paginator::render_page_num(const FontParameters &par) {
     const Millimeter xloc = current_left_margin() + (page.w - m.inner - m.outer) / 2;
     rend->render_line_centered(buf, par, xloc.topt(), yloc.topt());
 }
-
-void Paginator::render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
-                                       Millimeter &x,
-                                       Millimeter &rel_y,
-                                       const Millimeter &bottom_watermark,
-                                       const ChapterParameters &text_par,
-                                       Millimeter &height_counter) {
-    size_t line_num = 0;
-    for(const auto &markup_words : lines) {
-        Millimeter current_indent = line_num == 0 ? text_par.indent : Millimeter{};
-        if(rel_y >= bottom_watermark) {
-            new_page(true);
-            rel_y = Millimeter::zero();
-            x = current_left_margin();
-        }
-        if(line_num < lines.size() - 1) {
-            rend->render_line_justified(markup_words,
-                                        text_par.font,
-                                        text_par.paragraph_width - current_indent,
-                                        (x + current_indent).topt(),
-                                        (rel_y + m.upper).topt());
-        } else {
-            rend->render_markup_as_is(
-                markup_words, text_par.font, (x + current_indent).topt(), (rel_y + m.upper).topt());
-        }
-        line_num++;
-        rel_y += text_par.line_height.tomm();
-        height_counter += text_par.line_height.tomm();
-    }
-}
-
 std::vector<TextCommands>
 Paginator::build_formatted_lines(const std::vector<std::vector<std::string>> &lines,
-                                 Millimeter &x,
                                  const ChapterParameters &text_par) {
     Millimeter rel_y = Millimeter::zero();
+    const Millimeter x = Millimeter::zero();
     std::vector<TextCommands> line_commands;
     size_t line_num = 0;
     for(const auto &markup_words : lines) {
@@ -321,17 +312,37 @@ void Paginator::new_page(bool draw_page_num) {
 
 void Paginator::flush_draw_commands() {
     Millimeter footnote_block_start = page.h - m.lower - heights.footnote_height;
-    for(const auto &c : layout.footnote) {
+    for(const auto &c : layout.text) {
         if(std::holds_alternative<MarkupDrawCommand>(c)) {
             const auto &md = std::get<MarkupDrawCommand>(c);
-            rend->render_markup_as_is(
-                md.markup.c_str(), *md.font, md.x.topt(), (md.y + footnote_block_start).topt());
+            rend->render_markup_as_is(md.markup.c_str(),
+                                      *md.font,
+                                      (md.x + current_left_margin()).topt(),
+                                      (md.y + m.upper).topt());
         } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(c)) {
             const auto &md = std::get<JustifiedMarkupDrawCommand>(c);
             rend->render_line_justified(md.markup_words,
                                         *md.font,
                                         md.width,
-                                        md.x.topt(),
+                                        (current_left_margin() + md.x).topt(),
+                                        (md.y + m.upper).topt());
+        } else {
+            printf("Unknown draw command.\n");
+        }
+    }
+    for(const auto &c : layout.footnote) {
+        if(std::holds_alternative<MarkupDrawCommand>(c)) {
+            const auto &md = std::get<MarkupDrawCommand>(c);
+            rend->render_markup_as_is(md.markup.c_str(),
+                                      *md.font,
+                                      (current_left_margin() + md.x).topt(),
+                                      (md.y + footnote_block_start).topt());
+        } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(c)) {
+            const auto &md = std::get<JustifiedMarkupDrawCommand>(c);
+            rend->render_line_justified(md.markup_words,
+                                        *md.font,
+                                        md.width,
+                                        (current_left_margin() + md.x).topt(),
                                         (md.y + footnote_block_start).topt());
         } else {
             printf("Unknown draw command.\n");

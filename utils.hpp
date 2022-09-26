@@ -95,6 +95,8 @@ public:
     static Millimeter from_value(double mm) { return Millimeter{mm}; }
     static Millimeter zero() { return Millimeter{0.0}; }
 
+    Millimeter operator-() const { return Millimeter{-v}; }
+
     Millimeter &operator=(const Millimeter &p) {
         v = p.v;
         return *this;

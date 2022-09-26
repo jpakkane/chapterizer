@@ -7,10 +7,10 @@
 #include <memory>
 
 struct margins {
-    Millimeter inner = Millimeter::from_value(15);
-    Millimeter outer = Millimeter::from_value(10);
-    Millimeter upper = Millimeter::from_value(10);
-    Millimeter lower = Millimeter::from_value(20);
+    Millimeter inner = Millimeter::from_value(20);
+    Millimeter outer = Millimeter::from_value(15);
+    Millimeter upper = Millimeter::from_value(15);
+    Millimeter lower = Millimeter::from_value(15);
 };
 
 struct PageSize {
@@ -40,6 +40,8 @@ struct PageLayout {
     std::vector<TextCommands> text;
     std::vector<TextCommands> footnote;
 
+    bool empty() const { return text.empty() && footnote.empty(); }
+
     void clear() {
         text.clear();
         footnote.clear();
@@ -64,15 +66,8 @@ public:
 
 private:
     void render_page_num(const FontParameters &par);
-    void render_formatted_lines(const std::vector<std::vector<std::string>> &lines,
-                                Millimeter &x,
-                                Millimeter &y,
-                                const Millimeter &bottom_watermark,
-                                const ChapterParameters &text_par,
-                                Millimeter &height_counter);
     std::vector<TextCommands>
     build_formatted_lines(const std::vector<std::vector<std::string>> &lines,
-                          Millimeter &x,
                           const ChapterParameters &text_par);
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text);
 
