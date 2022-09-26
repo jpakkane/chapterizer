@@ -159,10 +159,14 @@ void Paginator::generate_pdf(const char *outfile) {
             auto lines = b.split_formatted_lines();
             std::string fnum = std::to_string(f.number);
             fnum += '.';
-            auto tmpy = Millimeter::zero();
+            auto tmpy = heights.footnote_height;
             layout.footnote.emplace_back(
                 MarkupDrawCommand{std::move(fnum), &footnote_par.font, x, tmpy});
-            build_formatted_lines(lines, x, tmpy, footnote_par, heights.footnote_height);
+            auto built_lines =
+                build_formatted_lines(lines, x, footnote_par, heights.footnote_height);
+            // FIXME, assumes there is always enough space for a footnote.
+            heights.footnote_height += built_lines.size() * footnote_par.line_height.tomm();
+            layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
         } else if(std::holds_alternative<SceneChange>(e)) {
             rel_y += text_par.line_height.tomm();
             heights.whitespace_height += text_par.line_height.tomm();
@@ -234,16 +238,18 @@ void Paginator::render_formatted_lines(const std::vector<std::vector<std::string
     }
 }
 
-void Paginator::build_formatted_lines(const std::vector<std::vector<std::string>> &lines,
-                                      Millimeter &x,
-                                      Millimeter &rel_y,
-                                      const ChapterParameters &text_par,
-                                      Millimeter &height_counter) {
+std::vector<TextCommands>
+Paginator::build_formatted_lines(const std::vector<std::vector<std::string>> &lines,
+                                 Millimeter &x,
+                                 const ChapterParameters &text_par,
+                                 Millimeter &height_counter) {
+    Millimeter rel_y = Millimeter::zero();
+    std::vector<TextCommands> line_commands;
     size_t line_num = 0;
     for(const auto &markup_words : lines) {
         Millimeter current_indent = line_num == 0 ? text_par.indent : Millimeter{};
         if(line_num < lines.size() - 1) {
-            layout.footnote.emplace_back(
+            line_commands.emplace_back(
                 JustifiedMarkupDrawCommand{markup_words,
                                            &text_par.font,
                                            (x + current_indent),
@@ -254,13 +260,13 @@ void Paginator::build_formatted_lines(const std::vector<std::vector<std::string>
             for(const auto &w : markup_words) {
                 full_line += w;
             }
-            layout.footnote.emplace_back(
+            line_commands.emplace_back(
                 MarkupDrawCommand{std::move(full_line), &text_par.font, x, rel_y});
         }
         line_num++;
         rel_y += text_par.line_height.tomm();
-        height_counter += text_par.line_height.tomm();
     }
+    return line_commands;
 }
 
 std::vector<EnrichedWord> Paginator::text_to_formatted_words(const std::string &text) {

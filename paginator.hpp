@@ -70,11 +70,11 @@ private:
                                 const Millimeter &bottom_watermark,
                                 const ChapterParameters &text_par,
                                 Millimeter &height_counter);
-    void build_formatted_lines(const std::vector<std::vector<std::string>> &lines,
-                               Millimeter &x,
-                               Millimeter &rel_y,
-                               const ChapterParameters &text_par,
-                               Millimeter &height_counter);
+    std::vector<TextCommands>
+    build_formatted_lines(const std::vector<std::vector<std::string>> &lines,
+                          Millimeter &x,
+                          const ChapterParameters &text_par,
+                          Millimeter &height_counter);
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text);
 
     Millimeter current_left_margin() const { return current_page % 2 ? m.inner : m.outer; }
