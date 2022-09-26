@@ -17,6 +17,18 @@ template<typename T> void style_change(T &stack, typename T::value_type val) {
     }
 }
 
+void adjust_y(TextCommands &c, Millimeter diff) {
+    if(std::holds_alternative<MarkupDrawCommand>(c)) {
+        auto &mc = std::get<MarkupDrawCommand>(c);
+        mc.y += diff;
+    } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(c)) {
+        auto &mc = std::get<JustifiedMarkupDrawCommand>(c);
+        mc.y += diff;
+    } else {
+        std::abort();
+    }
+}
+
 // NOTE: mutates the input words.
 std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::string &word) {
     std::vector<FormattingChange> changes;
@@ -162,8 +174,7 @@ void Paginator::generate_pdf(const char *outfile) {
             auto tmpy = heights.footnote_height;
             layout.footnote.emplace_back(
                 MarkupDrawCommand{std::move(fnum), &footnote_par.font, x, tmpy});
-            auto built_lines =
-                build_formatted_lines(lines, x, footnote_par, heights.footnote_height);
+            auto built_lines = build_formatted_lines(lines, x, footnote_par);
             // FIXME, assumes there is always enough space for a footnote.
             heights.footnote_height += built_lines.size() * footnote_par.line_height.tomm();
             layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
@@ -241,8 +252,7 @@ void Paginator::render_formatted_lines(const std::vector<std::vector<std::string
 std::vector<TextCommands>
 Paginator::build_formatted_lines(const std::vector<std::vector<std::string>> &lines,
                                  Millimeter &x,
-                                 const ChapterParameters &text_par,
-                                 Millimeter &height_counter) {
+                                 const ChapterParameters &text_par) {
     Millimeter rel_y = Millimeter::zero();
     std::vector<TextCommands> line_commands;
     size_t line_num = 0;

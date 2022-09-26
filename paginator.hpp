@@ -73,8 +73,7 @@ private:
     std::vector<TextCommands>
     build_formatted_lines(const std::vector<std::vector<std::string>> &lines,
                           Millimeter &x,
-                          const ChapterParameters &text_par,
-                          Millimeter &height_counter);
+                          const ChapterParameters &text_par);
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text);
 
     Millimeter current_left_margin() const { return current_page % 2 ? m.inner : m.outer; }
