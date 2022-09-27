@@ -9,6 +9,8 @@
 
 namespace {
 
+const Millimeter image_separator = Millimeter::from_value(4);
+
 template<typename T> void style_change(T &stack, typename T::value_type val) {
     if(stack.contains(val)) {
         stack.pop(val);
@@ -84,7 +86,7 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
 Paginator::Paginator(const Document &d) : doc(d) {
     page.w = Millimeter::from_value(130);
     page.h = Millimeter::from_value(210);
-    font_styles.basic.name = "Gentium";
+    font_styles.basic.name = "Gentium Plus";
     font_styles.basic.size = Point::from_value(10);
     font_styles.code.name = "Liberation Mono";
     font_styles.code.size = Point::from_value(8);
@@ -122,6 +124,7 @@ void Paginator::generate_pdf(const char *outfile) {
     const Millimeter footnote_separation = Millimeter::from_value(2);
     bool first_paragraph = true;
     bool first_section = true;
+    int chapter_start_page = rend->page_num();
 
     for(const auto &e : doc.elements) {
         if(std::holds_alternative<Section>(e)) {
@@ -132,6 +135,7 @@ void Paginator::generate_pdf(const char *outfile) {
                     new_page(false);
                 }
             }
+            chapter_start_page = rend->page_num();
             first_section = false;
             rel_y = Millimeter::zero();
             x = current_left_margin();
@@ -228,9 +232,20 @@ void Paginator::generate_pdf(const char *outfile) {
             auto image = rend->get_image(cb.file);
             const Millimeter display_width = textblock_width();
             const Millimeter display_height = display_width * image.h / image.w;
-            rend->draw_image(image, current_left_margin(), m.upper, display_width, display_height);
-            // printf("Image is %d PPI\n", int(image.w / display_width.v * 25.4));
-            //  heights.figure_height += display_height;
+            if(chapter_start_page == rend->page_num()) {
+                add_pending_figure(image);
+            } else if(heights.figure_height > Millimeter::zero()) {
+                add_pending_figure(image);
+            } else if(heights.total_height() + display_height + image_separator >
+                      bottom_watermark) {
+                add_pending_figure(image);
+            } else {
+                add_top_image(image);
+                // rend->draw_image(image, current_left_margin(), m.upper, display_width,
+                // display_height);
+                //  printf("Image is %d PPI\n", int(image.w / display_width.v * 25.4));
+                //   heights.figure_height += display_height;
+            }
         } else {
             std::abort();
         }
@@ -241,6 +256,18 @@ void Paginator::generate_pdf(const char *outfile) {
     rend.reset(nullptr);
 }
 
+void Paginator::add_top_image(const ImageInfo &image) {
+    ImageCommand cmd;
+    cmd.i = image;
+    cmd.display_width = textblock_width();
+    cmd.display_height = cmd.display_width * image.h / image.w;
+    layout.images.emplace_back(std::move(cmd));
+    assert(heights.figure_height < Millimeter::from_value(0.0001));
+    heights.figure_height += cmd.display_height;
+    heights.figure_height += image_separator;
+    layout.images.emplace_back(std::move(cmd));
+}
+
 void Paginator::render_page_num(const FontParameters &par) {
     char buf[128];
     snprintf(buf, 128, "%d", current_page);
@@ -248,6 +275,7 @@ void Paginator::render_page_num(const FontParameters &par) {
     const Millimeter xloc = current_left_margin() + (page.w - m.inner - m.outer) / 2;
     rend->render_line_centered(buf, par, xloc.topt(), yloc.topt());
 }
+
 std::vector<TextCommands>
 Paginator::build_formatted_lines(const std::vector<std::vector<std::string>> &lines,
                                  const ChapterParameters &text_par) {
@@ -302,6 +330,10 @@ void Paginator::new_page(bool draw_page_num) {
         render_page_num(font_styles.basic);
     }
     rend->new_page();
+    if(pending_figure) {
+        add_top_image(*pending_figure);
+        pending_figure.reset();
+    }
     ++current_page;
     if(debug_draw) {
         if(current_page % 2) {
@@ -320,24 +352,28 @@ void Paginator::new_page(bool draw_page_num) {
 
 void Paginator::flush_draw_commands() {
     Millimeter footnote_block_start = page.h - m.lower - heights.footnote_height;
+    for(const auto &c : layout.images) {
+        rend->draw_image(c.i, current_left_margin(), m.upper, c.display_width, c.display_height);
+    }
     for(const auto &c : layout.text) {
         if(std::holds_alternative<MarkupDrawCommand>(c)) {
             const auto &md = std::get<MarkupDrawCommand>(c);
             rend->render_markup_as_is(md.markup.c_str(),
                                       *md.font,
                                       (md.x + current_left_margin()).topt(),
-                                      (md.y + m.upper).topt());
+                                      (md.y + m.upper + heights.figure_height).topt());
         } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(c)) {
             const auto &md = std::get<JustifiedMarkupDrawCommand>(c);
             rend->render_line_justified(md.markup_words,
                                         *md.font,
                                         md.width,
                                         (current_left_margin() + md.x).topt(),
-                                        (md.y + m.upper).topt());
+                                        (md.y + m.upper + heights.figure_height).topt());
         } else {
             printf("Unknown draw command.\n");
         }
     }
+
     for(const auto &c : layout.footnote) {
         if(std::holds_alternative<MarkupDrawCommand>(c)) {
             const auto &md = std::get<MarkupDrawCommand>(c);
@@ -367,4 +403,12 @@ void Paginator::flush_draw_commands() {
     }
     layout.clear();
     heights.clear();
+}
+
+void Paginator::add_pending_figure(const ImageInfo &f) {
+    if(pending_figure) {
+        printf("Multiple pending figures not yet supported.\n");
+        std::abort();
+    }
+    pending_figure = f;
 }

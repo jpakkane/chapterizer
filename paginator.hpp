@@ -33,16 +33,23 @@ struct JustifiedMarkupDrawCommand {
     Millimeter width;
 };
 
+struct ImageCommand {
+    ImageInfo i;
+    Millimeter display_height;
+    Millimeter display_width;
+};
+
 typedef std::variant<MarkupDrawCommand, JustifiedMarkupDrawCommand> TextCommands;
 
 struct PageLayout {
-    // Picture.
+    std::vector<ImageCommand> images;
     std::vector<TextCommands> text;
     std::vector<TextCommands> footnote;
 
     bool empty() const { return text.empty() && footnote.empty(); }
 
     void clear() {
+        images.clear();
         text.clear();
         footnote.clear();
     }
@@ -85,6 +92,9 @@ private:
 
     Millimeter textblock_width() const { return page.w - m.inner - m.outer; }
 
+    void add_pending_figure(const ImageInfo &f);
+    void add_top_image(const ImageInfo &image);
+
     const Document &doc;
     PageSize page;
     FontStyles font_styles;
@@ -96,4 +106,5 @@ private:
     // These keep track of the current page stats.
     PageLayout layout;
     Heights heights;
+    std::optional<ImageInfo> pending_figure;
 };
