@@ -160,6 +160,39 @@ private:
     GRegex *specialblock_end;
 };
 
+struct FontStyles_temp {
+    std::string name;
+    std::string style; // FIXME to use enum.
+    double size;
+    double line_height;
+};
+
+struct PdfMetadata {
+    std::string ofname;
+    // FIXME, replace with units.
+    int pagew, pageh;
+    int inner, outer, upper, lower;
+    FontStyles_temp normal_style;
+    FontStyles_temp code_style;
+    FontStyles_temp section_style;
+    FontStyles_temp footnote_style;
+};
+
+struct EpubMetadata {
+    std::string ofname;
+    std::string ISBN;
+    std::string cover;
+};
+
+struct Metadata {
+    std::string title;
+    std::string author;
+    std::string language;
+    std::vector<std::string> sources;
+    PdfMetadata pdf;
+    EpubMetadata epub;
+};
+
 struct Document {
     // Add metadata entries for things like name, ISBN, authors etc.
     std::vector<DocElement> elements;

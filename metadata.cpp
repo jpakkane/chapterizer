@@ -1,0 +1,117 @@
+#include <metadata.hpp>
+#include <fstream>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+
+std::string get_string(const json &data, const char *key) {
+    if(!data.contains(key)) {
+        printf("Missing required key %s.\n", key);
+        std::abort();
+    }
+    auto value = data[key];
+    if(!value.is_string()) {
+        printf("Element %s is not a string.\n", key);
+        std::abort();
+    }
+    return value.get<std::string>();
+}
+
+double get_double(const json &data, const char *key) {
+    if(!data.contains(key)) {
+        printf("Missing required key %s.\n", key);
+        std::abort();
+    }
+    auto value = data[key];
+    if(!value.is_number()) {
+        printf("Element %s is not a string.\n", key);
+        std::abort();
+    }
+    return value.get<double>();
+}
+
+int get_int(const json &data, const char *key) {
+    if(!data.contains(key)) {
+        printf("Missing required key %s.\n", key);
+        std::abort();
+    }
+    auto value = data[key];
+    if(!value.is_number_integer()) {
+        printf("Element %s is not a string.\n", key);
+        std::abort();
+    }
+    return value.get<int>();
+}
+
+FontStyles_temp parse_fontstyle(const json &data) {
+    FontStyles_temp style;
+    style.name = get_string(data, "font");
+    style.style = get_string(data, "style");
+    style.size = get_double(data, "pointsize");
+    style.line_height = get_double(data, "line_height");
+    return style;
+}
+
+Metadata load_book(const char *path) {
+    Metadata m;
+    std::ifstream ifile(path);
+
+    json data = json::parse(ifile);
+    assert(data.is_object());
+    m.author = get_string(data, "author");
+    m.title = get_string(data, "title");
+    m.language = get_string(data, "language");
+
+    auto sources = data["sources"];
+    if(!sources.is_array()) {
+        printf("Sources must be an array of strings.\n");
+        std::abort();
+    }
+    for(const auto &e : sources) {
+        if(!e.is_string()) {
+            printf("Source array entry is not a string.\n");
+            std::abort();
+        }
+        m.sources.push_back(e.get<std::string>());
+    }
+
+    auto pdf = data["pdf"];
+    m.pdf.ofname = get_string(pdf, "filename");
+    auto page = pdf["page"];
+    auto margins = pdf["margins"];
+    m.pdf.pageh = get_int(page, "width");
+    m.pdf.pagew = get_int(page, "width");
+    m.pdf.inner = get_int(margins, "inner");
+    m.pdf.outer = get_int(margins, "outer");
+    m.pdf.upper = get_int(margins, "upper");
+    m.pdf.lower = get_int(margins, "lower");
+    auto styles = pdf["text_styles"];
+    m.pdf.normal_style = parse_fontstyle(styles["plain"]);
+    m.pdf.section_style = parse_fontstyle(styles["section"]);
+    m.pdf.code_style = parse_fontstyle(styles["code"]);
+    m.pdf.footnote_style = parse_fontstyle(styles["footnote"]);
+
+    auto epub = data["epub"];
+    m.epub.ofname = get_string(epub, "filename");
+    m.epub.cover = get_string(epub, "cover");
+    m.epub.ISBN = get_string(epub, "ISBN");
+    return m;
+}
+
+int main(int argc, char **argv) {
+    if(argc != 2) {
+        printf("Fail.\n");
+        return 1;
+    }
+    Metadata m;
+    try {
+        m = load_book(argv[1]);
+    } catch(const json::exception &e) {
+        printf("%s\n", e.what());
+        return 1;
+    }
+
+    printf("Author is: %s\n", m.author.c_str());
+    printf("%d source files\n", (int)m.sources.size());
+    return 0;
+}

@@ -9,6 +9,7 @@ gtk4_dep = dependency('gtk4', required: false, method: 'pkg-config')
 fc_dep = dependency('fontconfig')
 glib_dep = dependency('glib-2.0')
 tixml_dep = dependency('tinyxml2')
+nljson_dep = dependency('nlohmann_json')
 
 add_project_arguments('-Wshadow', language: 'cpp')
 
@@ -43,3 +44,5 @@ executable('xmltest', 'xmltest.cpp', dependencies: tixml_dep)
 executable('tests', 'tests.cpp',
     link_with: [l],
     dependencies: glib_dep)
+
+executable('maindoc', 'metadata.cpp', dependencies: [glib_dep, nljson_dep])

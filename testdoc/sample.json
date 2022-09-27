@@ -1,0 +1,56 @@
+{
+    "title": "The Super Book of Stuff",
+    "author": "Bob McBob",
+    "language": "fi",
+    "sources": [
+        "chapter1.bd",
+        "chapter2.bd"
+    ],
+    "pdf": {
+        "filename": "bookout.pdf",
+        "page": {
+            "width": 130,
+            "height": 210
+        },
+        "margins": {
+            "inner": 20,
+            "outer": 15,
+            "upper": 15,
+            "lower": 20
+        },
+        "text_styles": {
+            "plain": {
+                "font": "Gentium Plus",
+                "style": "regular",
+                "pointsize": 10,
+                "line_height": 12
+            },
+            "section": {
+                "font": "Noto Sans",
+                "style": "bold",
+                "pointsize": 14,
+                "line_height": 16
+            },
+            "code": {
+                "font": "Liberation Mono",
+                "style": "regular",
+                "pointsize": 9,
+                "line_height": 12
+            },
+            "footnote": {
+                "font": "Gentium Plus",
+                "style": "regular",
+                "pointsize": 9,
+                "line_height": 11
+            }
+        },
+        "spaces": {
+            "chapter_start": 30
+        }
+    },
+    "epub": {
+        "cover": "epub_cover.png",
+        "filename": "bookout.epub",
+        "ISBN": "1234567890ABC"
+    }
+}
