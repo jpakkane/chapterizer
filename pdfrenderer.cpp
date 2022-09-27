@@ -29,6 +29,8 @@ static TextStats hack{};
 
 namespace {
 
+const char *workname = "turbotempfile.pdf";
+
 std::vector<std::string> hack_split(const std::string &in_text) {
     std::string text;
     text.reserve(in_text.size());
@@ -51,7 +53,7 @@ std::vector<std::string> hack_split(const std::string &in_text) {
 } // namespace
 
 PdfRenderer::PdfRenderer(const char *ofname, Point pagew, Point pageh) {
-    surf = cairo_pdf_surface_create(ofname, pagew.v, pageh.v);
+    surf = cairo_pdf_surface_create(workname, pagew.v, pageh.v);
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_TITLE, "Name of the book");
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_AUTHOR, "Author Name");
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_CREATOR, "Superpdf from Outer Space!");
@@ -66,6 +68,7 @@ PdfRenderer::PdfRenderer(const char *ofname, Point pagew, Point pageh) {
     //    cairo_select_font_face(cr, "Gentium", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     //    cairo_set_font_size(cr, 10.0);
     cairo_set_line_width(cr, 0.1);
+    outname = ofname;
 }
 
 PdfRenderer::~PdfRenderer() {
@@ -75,6 +78,21 @@ PdfRenderer::~PdfRenderer() {
     g_object_unref(G_OBJECT(layout));
     cairo_destroy(cr);
     cairo_surface_destroy(surf);
+
+    // Cairo only supports RGB output, so convert to Gray.
+    assert(outname.find('"') == std::string::npos);
+    std::string graycmd{"gs \"-sOutputFile="};
+    graycmd += outname;
+    graycmd += "\" -sDEVICE=pdfwrite -sColorConversionStrategy=Gray "
+               "-dProcessColorModel=/DeviceGray -dCompatibilityLevel=1.6 -dNOPAUSE -dBATCH \"";
+    graycmd += workname;
+    graycmd += "\"";
+    printf("%s\n", graycmd.c_str());
+    auto rc = system(graycmd.c_str());
+    if(rc != 0) {
+        std::abort();
+    }
+    unlink(workname);
 }
 
 void PdfRenderer::draw_grid() {

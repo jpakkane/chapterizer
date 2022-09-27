@@ -76,4 +76,5 @@ private:
     cairo_surface_t *surf;
     PangoLayout *layout;
     std::unordered_map<std::string, cairo_surface_t *> loaded_images;
+    std::string outname;
 };
