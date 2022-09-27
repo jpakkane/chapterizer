@@ -182,7 +182,7 @@ void Epub::generate(const char *ofilename) {
     fs::path outdir{"epubtmp"};
     fs::remove_all(outdir);
     auto metadir = outdir / "META-INF";
-    auto oebpsdir = outdir / "OEBPS";
+    oebpsdir = outdir / "OEBPS";
     auto mimefile = outdir / "mimetype";
     auto containerfile = metadir / "container.xml";
     auto contentfile = oebpsdir / "content.opf";
@@ -213,10 +213,10 @@ void Epub::generate(const char *ofilename) {
     fwrite(csstext, 1, strlen(csstext), f);
     fclose(f);
 
-    write_opf(contentfile, has_cover ? cover_in.c_str() : nullptr);
-    write_ncx(ncxfile.c_str());
     write_chapters(oebpsdir);
     write_footnotes(oebpsdir);
+    write_opf(contentfile, has_cover ? cover_in.c_str() : nullptr);
+    write_ncx(ncxfile.c_str());
 
     unlink(ofilename);
     package(ofilename, outdir.c_str());
@@ -377,6 +377,14 @@ void Epub::write_chapters(const fs::path &outdir) {
             // We just ignore them.
 
             // FIXME: add links to the footnote file.
+        } else if(std::holds_alternative<Figure>(e)) {
+            const auto &figure = std::get<Figure>(e);
+            const auto imagepath = get_epub_image_path(figure.file);
+            auto p = epubdoc.NewElement("p");
+            body->InsertEndChild(p);
+            auto img = epubdoc.NewElement("img");
+            img->SetAttribute("src", imagepath.c_str());
+            p->InsertEndChild(img);
         } else {
             std::abort();
         }
@@ -500,6 +508,17 @@ void Epub::generate_epub_manifest(tinyxml2::XMLNode *manifest, const char *cover
     css->SetAttribute("href", "book.css");
     css->SetAttribute("media-type", "text/css");
 
+    int imagenum = 0;
+    for(const auto &image : embedded_images) {
+        auto item = opf->NewElement("item");
+        snprintf(buf, bufsize, "image%d", imagenum);
+        item->SetAttribute("id", buf);
+        item->SetAttribute("href", image.c_str());
+        item->SetAttribute("media-type", "image/png");
+        manifest->InsertEndChild(item);
+        ++imagenum;
+    }
+
     if(coverfile) {
         auto item = opf->NewElement("item");
         manifest->InsertEndChild(item);
@@ -507,6 +526,7 @@ void Epub::generate_epub_manifest(tinyxml2::XMLNode *manifest, const char *cover
         item->SetAttribute("id", "coverpic");
         item->SetAttribute("media-type", "image/png");
     }
+
     auto ncx = opf->NewElement("item");
     manifest->InsertEndChild(ncx);
     ncx->SetAttribute("id", "ncx");
@@ -536,4 +556,21 @@ void Epub::generate_spine(tinyxml2::XMLNode *spine) {
         spine->InsertEndChild(node);
         node->SetAttribute("idref", "footnotes");
     }
+}
+
+std::string Epub::get_epub_image_path(const std::string &fs_name) {
+    auto it = imagenames.find(fs_name);
+    if(it != imagenames.end()) {
+        return it->second;
+    }
+    char buf[1024];
+    snprintf(buf, 1024, "image-%d.png", (int)imagenames.size());
+    std::string epub_name{buf};
+    auto epub_path = oebpsdir / epub_name;
+    std::filesystem::copy_file(fs_name, epub_path);
+
+    embedded_images.push_back(epub_name);
+    imagenames[fs_name] = epub_name;
+
+    return epub_name;
 }

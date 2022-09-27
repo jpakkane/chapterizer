@@ -38,8 +38,8 @@ int main(int argc, char **argv) {
         return 1;
     }
     auto doc = load_document(argv[1]);
-    Paginator p(doc);
-    p.generate_pdf("bookout.pdf");
+    // Paginator p(doc);
+    // p.generate_pdf("bookout.pdf");
     Epub epub(doc);
     epub.generate("epub_test.epub");
     return 0;
