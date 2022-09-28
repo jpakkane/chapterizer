@@ -51,6 +51,7 @@
     "epub": {
         "cover": "epub_cover.png",
         "filename": "bookout.epub",
-        "ISBN": "1234567890ABC"
+        "ISBN": "123456789X",
+        "file_as": "McBob, Bob"
     }
 }

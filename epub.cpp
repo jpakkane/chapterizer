@@ -189,15 +189,12 @@ void Epub::generate(const char *ofilename) {
     auto ncxfile = oebpsdir / "toc.ncx";
     auto cssfile = oebpsdir / "book.css";
 
-    fs::path cover_in{"cover.png"};
-    fs::path cover_out = oebpsdir / cover_in;
-    bool has_cover = false;
-
     fs::create_directories(metadir);
     fs::create_directory(oebpsdir);
 
-    if(fs::exists(cover_in)) {
-        has_cover = true;
+    if(!doc.data.epub.cover.empty()) {
+        fs::path cover_in = doc.data.top_dir / doc.data.epub.cover;
+        fs::path cover_out = oebpsdir / "cover.png";
         fs::copy(cover_in, cover_out);
     }
 
@@ -215,14 +212,14 @@ void Epub::generate(const char *ofilename) {
 
     write_chapters(oebpsdir);
     write_footnotes(oebpsdir);
-    write_opf(contentfile, has_cover ? cover_in.c_str() : nullptr);
+    write_opf(contentfile);
     write_ncx(ncxfile.c_str());
 
     unlink(ofilename);
     package(ofilename, outdir.c_str());
 }
 
-void Epub::write_opf(const fs::path &ofile, const char *coverfile) {
+void Epub::write_opf(const fs::path &ofile) {
     tinyxml2::XMLDocument opf;
 
     auto decl = opf.NewDeclaration(nullptr);
@@ -243,19 +240,19 @@ void Epub::write_opf(const fs::path &ofile, const char *coverfile) {
     metadata->InsertEndChild(name);
     name->SetText("Book title");
     auto language = opf.NewElement("dc:language");
-    language->SetText("en");
+    language->SetText(doc.data.language.c_str());
     metadata->InsertEndChild(language);
     auto identifier = opf.NewElement("dc:identifier");
     metadata->InsertEndChild(identifier);
     identifier->SetAttribute("id", "BookId");
     identifier->SetAttribute("opf:scheme", "ISBN");
-    identifier->SetText("123456789X");
+    identifier->SetText(doc.data.epub.ISBN.c_str());
     auto creator = opf.NewElement("dc:creator");
     metadata->InsertEndChild(creator);
-    creator->SetAttribute("opf:file-as", "Name, Author");
+    creator->SetAttribute("opf:file-as", doc.data.epub.file_as.c_str());
     creator->SetAttribute("opf:role", "aut");
-    creator->SetText("Author Name");
-    if(coverfile) {
+    creator->SetText(doc.data.author.c_str());
+    if(!doc.data.epub.cover.empty()) {
         auto meta = opf.NewElement("meta");
         metadata->InsertEndChild(meta);
         meta->SetAttribute("name", "cover");
@@ -264,7 +261,7 @@ void Epub::write_opf(const fs::path &ofile, const char *coverfile) {
 
     auto manifest = opf.NewElement("manifest");
     package->InsertEndChild(manifest);
-    generate_epub_manifest(manifest, coverfile);
+    generate_epub_manifest(manifest);
 
     auto spine = opf.NewElement("spine");
     package->InsertEndChild(spine);
@@ -319,13 +316,13 @@ void Epub::write_ncx(const char *ofile) {
     root->InsertEndChild(doctitle);
     auto text = ncx.NewElement("text");
     doctitle->InsertEndChild(text);
-    text->SetText("Name of the Book");
+    text->SetText(doc.data.title.c_str());
 
     auto docauthor = ncx.NewElement("docAuthor");
     root->InsertEndChild(docauthor);
     text = ncx.NewElement("text");
     docauthor->InsertEndChild(text);
-    text->SetText("Author, Name");
+    text->SetText(doc.data.author.c_str());
 
     write_navmap(root);
     ncx.SaveFile(ofile);
@@ -475,7 +472,7 @@ void Epub::write_navmap(tinyxml2::XMLElement *root) {
     }
 }
 
-void Epub::generate_epub_manifest(tinyxml2::XMLNode *manifest, const char *coverfile) {
+void Epub::generate_epub_manifest(tinyxml2::XMLNode *manifest) {
     auto opf = manifest->GetDocument();
 
     const int bufsize = 128;
@@ -519,10 +516,10 @@ void Epub::generate_epub_manifest(tinyxml2::XMLNode *manifest, const char *cover
         ++imagenum;
     }
 
-    if(coverfile) {
+    if(!doc.data.epub.cover.empty()) {
         auto item = opf->NewElement("item");
         manifest->InsertEndChild(item);
-        item->SetAttribute("href", coverfile);
+        item->SetAttribute("href", "cover.png");
         item->SetAttribute("id", "coverpic");
         item->SetAttribute("media-type", "image/png");
     }

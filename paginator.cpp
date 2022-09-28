@@ -83,9 +83,7 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
 
 } // namespace
 
-Paginator::Paginator(const Document &d) : doc(d) {
-    page.w = Millimeter::from_value(130);
-    page.h = Millimeter::from_value(210);
+Paginator::Paginator(const Document &d) : doc(d), page(doc.data.pdf.page), m(doc.data.pdf.margins) {
     font_styles.basic.name = "Gentium Plus";
     font_styles.basic.size = Point::from_value(10);
     font_styles.code.name = "Liberation Mono";
@@ -98,7 +96,8 @@ Paginator::Paginator(const Document &d) : doc(d) {
 }
 
 void Paginator::generate_pdf(const char *outfile) {
-    rend.reset(new PdfRenderer(outfile, page.w.topt(), page.h.topt()));
+    rend.reset(new PdfRenderer(
+        outfile, page.w.topt(), page.h.topt(), doc.data.title.c_str(), doc.data.author.c_str()));
 
     ChapterParameters text_par;
     text_par.indent = Millimeter::from_value(5);

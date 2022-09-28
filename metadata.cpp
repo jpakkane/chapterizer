@@ -83,8 +83,8 @@ Metadata load_book_json(const char *path) {
     m.pdf.ofname = get_string(pdf, "filename");
     auto page = pdf["page"];
     auto margins = pdf["margins"];
-    m.pdf.page.h = Millimeter::from_value(get_int(page, "width"));
     m.pdf.page.w = Millimeter::from_value(get_int(page, "width"));
+    m.pdf.page.h = Millimeter::from_value(get_int(page, "height"));
     m.pdf.margins.inner = Millimeter::from_value(get_int(margins, "inner"));
     m.pdf.margins.outer = Millimeter::from_value(get_int(margins, "outer"));
     m.pdf.margins.upper = Millimeter::from_value(get_int(margins, "upper"));
@@ -99,6 +99,7 @@ Metadata load_book_json(const char *path) {
     m.epub.ofname = get_string(epub, "filename");
     m.epub.cover = get_string(epub, "cover");
     m.epub.ISBN = get_string(epub, "ISBN");
+    m.epub.file_as = get_string(epub, "file_as");
     return m;
 }
 

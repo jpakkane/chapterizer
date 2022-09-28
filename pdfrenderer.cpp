@@ -52,10 +52,11 @@ std::vector<std::string> hack_split(const std::string &in_text) {
 }
 } // namespace
 
-PdfRenderer::PdfRenderer(const char *ofname, Point pagew, Point pageh) {
+PdfRenderer::PdfRenderer(
+    const char *ofname, Point pagew, Point pageh, const char *title, const char *author) {
     surf = cairo_pdf_surface_create(workname, pagew.v, pageh.v);
-    cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_TITLE, "Name of the book");
-    cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_AUTHOR, "Author Name");
+    cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_TITLE, title);
+    cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_AUTHOR, author);
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_CREATOR, "Superpdf from Outer Space!");
     cr = cairo_create(surf);
     layout = pango_cairo_create_layout(cr);

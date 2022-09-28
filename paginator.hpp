@@ -86,9 +86,10 @@ private:
     void add_top_image(const ImageInfo &image);
 
     const Document &doc;
-    PageSize page;
+    // These are just helpers to cut down on typing.
+    const PageSize &page;
+    const Margins &m;
     FontStyles font_styles;
-    Margins m;
     std::unique_ptr<PdfRenderer> rend;
     WordHyphenator hyphen;
     int current_page = 1;

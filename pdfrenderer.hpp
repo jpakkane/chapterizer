@@ -32,7 +32,7 @@ struct ImageInfo {
 
 class PdfRenderer {
 public:
-    explicit PdfRenderer(const char *ofname, Point pagew, Point pageh);
+    explicit PdfRenderer(const char *ofname, Point pagew, Point pageh, const char *title, const char *author);
     ~PdfRenderer();
 
     void render_line_justified(const std::string &text,
