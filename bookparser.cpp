@@ -210,11 +210,10 @@ void StructureParser::push(const line_token &l) {
     }
 }
 
-Document StructureParser::get_document() {
+void StructureParser::finish() {
     if(has_finished) {
         std::abort();
     }
     // Get data from pending declarations (i.e. the last paragraph)
     has_finished = true;
-    return std::move(doc);
 }

@@ -284,7 +284,10 @@ ImageInfo PdfRenderer::get_image(const std::string &path) {
         result.surf = it->second;
     } else {
         result.surf = cairo_image_surface_create_from_png(path.c_str());
-        assert(cairo_surface_status(result.surf) == CAIRO_STATUS_SUCCESS);
+        if(cairo_surface_status(result.surf) != CAIRO_STATUS_SUCCESS) {
+            printf("Failed to load image %s.\n", path.c_str());
+            std::abort();
+        }
         loaded_images[path] = result.surf;
     }
     result.w = cairo_image_surface_get_width(result.surf);

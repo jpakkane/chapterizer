@@ -54,8 +54,10 @@ FontStyles_temp parse_fontstyle(const json &data) {
     return style;
 }
 
-Metadata load_book(const char *path) {
+Metadata load_book_json(const char *path) {
     Metadata m;
+    std::filesystem::path json_file(path);
+    m.top_dir = json_file.parent_path();
     std::ifstream ifile(path);
 
     json data = json::parse(ifile);

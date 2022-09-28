@@ -8,7 +8,7 @@ int main(int argc, char **argv) {
     }
     Metadata m;
     try {
-        m = load_book(argv[1]);
+        m = load_book_json(argv[1]);
     } catch(const std::exception &e) {
         printf("%s\n", e.what());
         return 1;

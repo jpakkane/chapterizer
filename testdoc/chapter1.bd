@@ -1,0 +1,57 @@
+# The Fake Chapter
+
+This /is some/ text to fill up a dummy paragraph of text. A code
+sample with brackets: `#include<foobar>`.
+
+```code
+We are the Borg.
+Resistance is futile.
+You will be assimilated.
+```
+
+|The fifth cylinder| must t*hi*s *bol*d *Woking*.
+
+After this paragraph there will be a scene change. The visual
+appearance should be such that there is an empty line and the next
+paragraph is not indented.
+
+#s
+
+This is the paragraph that should not be indented. Some more text here
+to make sure it takes more than one line in the final output.
+
+This paragraph should again be indented. Some math: /a/^2^ + /b/^2^ = /c/⁴
+
+
+```footnote
+This is a footnote with some text in it. You can't yet name them or refer
+to them, but then again why would you.
+```
+
+“Henderson,” he called, “you saw that shooting star last night?”
+
+I think everyone expected to see a man emerge—possibly something a
+little unlike us terrestrial men, but in all essentials a man. I know I
+did. But, looking, I presently saw something stirring within the
+shadow: greyish billowy movements, one above another, and then two
+luminous disks—like eyes. Then something resembling a little grey
+snake, about the thickness of a walking stick, coiled up out of the
+writhing middle, and wriggled in the air towards me—and then another.
+
+#figure testimage.png
+
+I think everyone expected to see a man emerge—possibly something a
+little unlike us terrestrial men, but in all essentials a man. I know I
+did. But, looking, I presently saw something stirring within the
+shadow: greyish billowy movements, one above another, and then two
+luminous disks—like eyes. Then something resembling a little grey
+snake, about the thickness of a walking stick, coiled up out of the
+writhing middle, and wriggled in the air towards me—and then another.
+
+I think everyone expected to see a man emerge—possibly something a
+little unlike us terrestrial men, but in all essentials a man. I know I
+did. But, looking, I presently saw something stirring within the
+shadow: greyish billowy movements, one above another, and then two
+luminous disks—like eyes. Then something resembling a little grey
+snake, about the thickness of a walking stick, coiled up out of the
+writhing middle, and wriggled in the air towards me—and then another.

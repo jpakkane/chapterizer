@@ -8,33 +8,36 @@
 
 Document load_document(const char *fname) {
     Document doc;
-    MMapper map(fname);
-    if(!g_utf8_validate(map.data(), map.size(), nullptr)) {
-        printf("Invalid utf-8.\n");
-        std::abort();
-    }
-    GError *err = nullptr;
-    if(err) {
-        std::abort();
-    }
+    doc.data = load_book_json(fname);
 
-    LineParser linep(map.data(), map.size());
-    StructureParser strucp;
+    StructureParser strucp(doc);
+    for(const auto &s : doc.data.sources) {
+        const auto fpath = doc.data.top_dir / s;
+        MMapper map(fpath.c_str());
+        if(!g_utf8_validate(map.data(), map.size(), nullptr)) {
+            printf("Invalid utf-8.\n");
+            std::abort();
+        }
 
-    line_token token = linep.next();
-    while(!std::holds_alternative<EndOfFile>(token)) {
+        GError *err = nullptr;
+        if(err) {
+            std::abort();
+        }
+
+        LineParser linep(map.data(), map.size());
+        line_token token = linep.next();
+        while(!std::holds_alternative<EndOfFile>(token)) {
+            strucp.push(token);
+            token = linep.next();
+        }
         strucp.push(token);
-        token = linep.next();
     }
-    strucp.push(token);
-
-    // FIXME, add stored data if any.
-    return strucp.get_document();
+    return doc;
 }
 
 int main(int argc, char **argv) {
     if(argc != 2) {
-        printf("%s <input text file>\n", argv[0]);
+        printf("%s <bookdef.json>\n", argv[0]);
         return 1;
     }
     auto doc = load_document(argv[1]);

@@ -135,9 +135,11 @@ private:
 
 class StructureParser {
 public:
+    explicit StructureParser(Document &in_doc) : doc(in_doc) {}
+
     ~StructureParser();
     void push(const line_token &l);
-    Document get_document();
+    void finish();
 
 private:
     enum class ParsingState : int {
@@ -153,7 +155,7 @@ private:
 
     std::string pop_lines_to_string();
 
-    Document doc;
+    Document &doc;
     bool has_finished = false;
     int section_level = 1; // FIXME
     int section_number = 0;

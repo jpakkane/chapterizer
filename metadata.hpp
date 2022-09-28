@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <variant>
+#include <filesystem>
 
 struct Millimeter;
 
@@ -131,6 +132,8 @@ struct EpubMetadata {
 };
 
 struct Metadata {
+    // All paths in metadata are relative to this (i.e. where the JSON file was)
+    std::filesystem::path top_dir;
     std::string title;
     std::string author;
     std::string language;
@@ -168,11 +171,11 @@ struct SceneChange {};
 typedef std::variant<Paragraph, Section, SceneChange, CodeBlock, Footnote, Figure> DocElement;
 
 struct Document {
-    // Add metadata entries for things like name, ISBN, authors etc.
+    Metadata data;
     std::vector<DocElement> elements;
 
     int num_chapters() const;
     int num_footnotes() const;
 };
 
-Metadata load_book(const char *path);
+Metadata load_book_json(const char *path);

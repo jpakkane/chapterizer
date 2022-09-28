@@ -229,7 +229,8 @@ void Paginator::generate_pdf(const char *outfile) {
             heights.whitespace_height += different_paragraph_space;
         } else if(std::holds_alternative<Figure>(e)) {
             const Figure &cb = std::get<Figure>(e);
-            auto image = rend->get_image(cb.file);
+            const auto fullpath = doc.data.top_dir / cb.file;
+            auto image = rend->get_image(fullpath.c_str());
             const Millimeter display_width = textblock_width();
             const Millimeter display_height = display_width * image.h / image.w;
             if(chapter_start_page == rend->page_num()) {

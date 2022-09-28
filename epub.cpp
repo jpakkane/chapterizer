@@ -567,7 +567,8 @@ std::string Epub::get_epub_image_path(const std::string &fs_name) {
     snprintf(buf, 1024, "image-%d.png", (int)imagenames.size());
     std::string epub_name{buf};
     auto epub_path = oebpsdir / epub_name;
-    std::filesystem::copy_file(fs_name, epub_path);
+    auto fullpath = doc.data.top_dir / fs_name;
+    std::filesystem::copy_file(fullpath, epub_path);
 
     embedded_images.push_back(epub_name);
     imagenames[fs_name] = epub_name;
