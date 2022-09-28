@@ -344,7 +344,7 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
     if(to_split_ind == from_split_ind) {
         return line;
     }
-    const auto &from_split = split_points[from_split_ind];
+    // const auto &from_split = split_points[from_split_ind];
     const auto &to_split = split_points[to_split_ind];
     const auto &from_loc = split_locations[from_split_ind];
     const auto &to_loc = split_locations[to_split_ind];

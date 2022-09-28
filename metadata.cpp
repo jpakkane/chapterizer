@@ -4,6 +4,8 @@
 
 using json = nlohmann::json;
 
+Millimeter Point::tomm() const { return Millimeter::from_value(pt2mm(v)); }
+
 std::string get_string(const json &data, const char *key) {
     if(!data.contains(key)) {
         printf("Missing required key %s.\n", key);
