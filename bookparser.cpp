@@ -4,18 +4,6 @@
 
 #include <algorithm>
 
-int Document::num_chapters() const {
-    return std::count_if(elements.begin(), elements.end(), [](const DocElement &e) {
-        return std::holds_alternative<Section>(e);
-    });
-}
-
-int Document::num_footnotes() const {
-    return std::count_if(elements.begin(), elements.end(), [](const DocElement &e) {
-        return std::holds_alternative<Footnote>(e);
-    });
-}
-
 std::string get_normalized_string(std::string_view v) {
     gchar *norm = g_utf8_normalize(v.data(), v.length(), G_NORMALIZE_NFC);
     std::string result{norm};

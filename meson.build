@@ -24,6 +24,7 @@ l = static_library('chap',
     'bookparser.cpp',
     'epub.cpp',
     'paginator.cpp',
+    'metadata.cpp',
     dependencies: [hyphen_dep, pangocairo_dep, cairo_dep, fc_dep]
 )
 
@@ -45,4 +46,5 @@ executable('tests', 'tests.cpp',
     link_with: [l],
     dependencies: glib_dep)
 
-executable('maindoc', 'metadata.cpp', dependencies: [glib_dep, nljson_dep])
+executable('mdtool', 'mdtool.cpp',
+    link_with: l)

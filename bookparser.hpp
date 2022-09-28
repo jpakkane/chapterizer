@@ -80,34 +80,6 @@ typedef std::variant<SectionDecl,
                      EndOfFile>
     line_token;
 
-struct Paragraph {
-    std::string text;
-};
-
-struct Section {
-    int level;
-    int number;
-    std::string text;
-};
-
-struct CodeBlock {
-    std::vector<std::string> raw_lines;
-};
-
-struct Footnote {
-    int number;
-    std::string text;
-};
-
-struct Figure {
-    std::string file;
-};
-
-struct SceneChange {};
-
-// Also needs images, footnotes, unformatted text etc.
-typedef std::variant<Paragraph, Section, SceneChange, CodeBlock, Footnote, Figure> DocElement;
-
 class LineParser {
 public:
     LineParser(const char *data_, const int64_t data_size_) : data(data_), data_size(data_size_) {
@@ -159,14 +131,6 @@ private:
     GRegex *directive;
     GRegex *specialblock_start;
     GRegex *specialblock_end;
-};
-
-struct Document {
-    // Add metadata entries for things like name, ISBN, authors etc.
-    std::vector<DocElement> elements;
-
-    int num_chapters() const;
-    int num_footnotes() const;
 };
 
 class StructureParser {
