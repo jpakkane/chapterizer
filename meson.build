@@ -10,6 +10,7 @@ fc_dep = dependency('fontconfig')
 glib_dep = dependency('glib-2.0')
 tixml_dep = dependency('tinyxml2')
 nljson_dep = dependency('nlohmann_json')
+voikko_dep = dependency('libvoikko', required: false)
 
 add_project_arguments('-Wshadow', language: 'cpp')
 
@@ -48,3 +49,8 @@ executable('tests', 'tests.cpp',
 
 executable('mdtool', 'mdtool.cpp',
     link_with: l)
+
+if voikko_dep.found()
+  executable('voikkotest', 'voikkotest.cpp',
+      dependencies: voikko_dep)
+endif
