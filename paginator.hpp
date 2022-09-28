@@ -1,22 +1,12 @@
 #pragma once
 
+#include <metadata.hpp>
+
 #include <bookparser.hpp>
 #include <pdfrenderer.hpp>
 #include <formatting.hpp>
 
 #include <memory>
-
-struct margins {
-    Millimeter inner = Millimeter::from_value(20);
-    Millimeter outer = Millimeter::from_value(15);
-    Millimeter upper = Millimeter::from_value(15);
-    Millimeter lower = Millimeter::from_value(15);
-};
-
-struct PageSize {
-    Millimeter w;
-    Millimeter h;
-};
 
 struct MarkupDrawCommand {
     std::string markup;
@@ -98,7 +88,7 @@ private:
     const Document &doc;
     PageSize page;
     FontStyles font_styles;
-    margins m;
+    Margins m;
     std::unique_ptr<PdfRenderer> rend;
     WordHyphenator hyphen;
     int current_page = 1;

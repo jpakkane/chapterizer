@@ -47,8 +47,8 @@ FontStyles_temp parse_fontstyle(const json &data) {
     FontStyles_temp style;
     style.name = get_string(data, "font");
     style.style = get_string(data, "style");
-    style.size = get_double(data, "pointsize");
-    style.line_height = get_double(data, "line_height");
+    style.size = Point::from_value(get_double(data, "pointsize"));
+    style.line_height = Point::from_value(get_double(data, "line_height"));
     return style;
 }
 
@@ -79,12 +79,12 @@ Metadata load_book(const char *path) {
     m.pdf.ofname = get_string(pdf, "filename");
     auto page = pdf["page"];
     auto margins = pdf["margins"];
-    m.pdf.pageh = get_int(page, "width");
-    m.pdf.pagew = get_int(page, "width");
-    m.pdf.inner = get_int(margins, "inner");
-    m.pdf.outer = get_int(margins, "outer");
-    m.pdf.upper = get_int(margins, "upper");
-    m.pdf.lower = get_int(margins, "lower");
+    m.pdf.page.h = Millimeter::from_value(get_int(page, "width"));
+    m.pdf.page.w = Millimeter::from_value(get_int(page, "width"));
+    m.pdf.margins.inner = Millimeter::from_value(get_int(margins, "inner"));
+    m.pdf.margins.outer = Millimeter::from_value(get_int(margins, "outer"));
+    m.pdf.margins.upper = Millimeter::from_value(get_int(margins, "upper"));
+    m.pdf.margins.lower = Millimeter::from_value(get_int(margins, "lower"));
     auto styles = pdf["text_styles"];
     m.pdf.normal_style = parse_fontstyle(styles["plain"]);
     m.pdf.section_style = parse_fontstyle(styles["section"]);
