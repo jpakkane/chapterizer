@@ -41,8 +41,6 @@ if gtk4_dep.found()
       dependencies: [gtk4_dep])
 endif
 
-executable('xmltest', 'xmltest.cpp', dependencies: tixml_dep)
-
 executable('tests', 'tests.cpp',
     link_with: [l],
     dependencies: glib_dep)
