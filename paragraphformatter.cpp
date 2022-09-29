@@ -389,6 +389,7 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
         }
         std::string_view view =
             std::string_view(current_word.text).substr(word_start, word_end - word_start);
+        // std::string debug_aid{view};
         assert(g_utf8_validate(view.data(), view.length(), nullptr));
         for(size_t i = 0; i < view.size(); ++i) {
             while(style_point < current_word.f.size() &&

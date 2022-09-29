@@ -59,6 +59,10 @@ Metadata load_book_json(const char *path) {
     std::filesystem::path json_file(path);
     m.top_dir = json_file.parent_path();
     std::ifstream ifile(path);
+    if(ifile.fail()) {
+        printf("Could not open file %s.\n", path);
+        std::abort();
+    }
 
     json data = json::parse(ifile);
     assert(data.is_object());

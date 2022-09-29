@@ -7,6 +7,12 @@
 #include <variant>
 #include <filesystem>
 
+enum class Language : int {
+    Unset,
+    English,
+    Finnish,
+};
+
 struct Millimeter;
 
 struct Point {

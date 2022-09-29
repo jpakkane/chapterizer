@@ -10,7 +10,7 @@ fc_dep = dependency('fontconfig')
 glib_dep = dependency('glib-2.0')
 tixml_dep = dependency('tinyxml2')
 nljson_dep = dependency('nlohmann_json')
-voikko_dep = dependency('libvoikko', required: false)
+voikko_dep = dependency('libvoikko')
 
 add_project_arguments('-Wshadow', language: 'cpp')
 
@@ -26,7 +26,7 @@ l = static_library('chap',
     'epub.cpp',
     'paginator.cpp',
     'metadata.cpp',
-    dependencies: [hyphen_dep, pangocairo_dep, cairo_dep, fc_dep]
+    dependencies: [hyphen_dep, pangocairo_dep, cairo_dep, fc_dep, voikko_dep]
 )
 
 executable('pangotest', 'pangotest.cpp', dependencies: pangocairo_dep)
@@ -48,7 +48,5 @@ executable('tests', 'tests.cpp',
 executable('mdtool', 'mdtool.cpp',
     link_with: l)
 
-if voikko_dep.found()
-  executable('voikkotest', 'voikkotest.cpp',
-      dependencies: voikko_dep)
-endif
+executable('voikkotest', 'voikkotest.cpp',
+    dependencies: voikko_dep)

@@ -83,6 +83,23 @@ void test_dualhyphen() {
     CHECK(w.front() == expected);
 }
 
+void test_utf8_impl(const char *t, Language lang) {
+    WordHyphenator h;
+    const std::string text(t);
+    const auto w = h.hyphenate(text, lang);
+    for(const auto &hp : w) {
+        std::string pre = text.substr(0, hp.loc + 1);
+        CHECK(g_utf8_validate(pre.c_str(), pre.length(), nullptr));
+        std::string post = text.substr(hp.loc + 1, std::string::npos);
+        CHECK(g_utf8_validate(post.c_str(), post.length(), nullptr));
+    }
+}
+
+void test_utf8() {
+    test_utf8_impl("kansikuvapönöttäjästä", Language::Finnish);
+    test_utf8_impl("päämajaksi", Language::Finnish);
+}
+
 void test_hyphenation() {
     test_hyphenation_simple();
     test_hyphenation_dash();
@@ -92,6 +109,7 @@ void test_hyphenation() {
     test_utf8_splitting();
     test_strange_combo();
     test_dualhyphen();
+    test_utf8();
 }
 
 int main(int, char **) {

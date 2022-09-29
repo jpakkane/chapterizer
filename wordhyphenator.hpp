@@ -16,7 +16,9 @@
 
 #pragma once
 
+#include <metadata.hpp>
 #include <hyphen.h>
+#include <libvoikko/voikko.h>
 
 #include <string>
 #include <vector>
@@ -50,9 +52,11 @@ public:
     WordHyphenator();
     ~WordHyphenator();
 
-    std::vector<HyphenPoint> hyphenate(const std::string &word) const;
+    std::vector<HyphenPoint> hyphenate(const std::string &word,
+                                       const Language lang = Language::English) const;
     std::vector<std::vector<HyphenPoint>> hyphenate(const std::vector<std::string> &words) const;
 
 private:
     HyphenDict *dict;
+    VoikkoHandle *voikko;
 };
