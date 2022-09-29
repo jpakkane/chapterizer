@@ -9,7 +9,7 @@
 
 void test_hyphenation_simple() {
     WordHyphenator h;
-    auto w = h.hyphenate("morning");
+    auto w = h.hyphenate("morning", Language::English);
     HyphenPoint expected{3, SplitType::Regular};
     CHECK(w.size() == 1);
     CHECK(w.front() == expected);
@@ -17,7 +17,7 @@ void test_hyphenation_simple() {
 
 void test_hyphenation_dash() {
     WordHyphenator h;
-    auto w = h.hyphenate("hi-ho");
+    auto w = h.hyphenate("hi-ho", Language::English);
     HyphenPoint expected{2, SplitType::NoHyphen};
     CHECK(w.size() == 1);
     CHECK(w.front() == expected);
@@ -25,7 +25,7 @@ void test_hyphenation_dash() {
 
 void test_hyphenation_emdash() {
     WordHyphenator h;
-    auto w = h.hyphenate("us—more"); // Unicode
+    auto w = h.hyphenate("us—more", Language::English); // Unicode
     HyphenPoint expected{4, SplitType::NoHyphen};
     CHECK(w.size() == 1);
     CHECK(w.front() == expected);
@@ -33,7 +33,7 @@ void test_hyphenation_emdash() {
 
 void test_hyphenation_prefix() {
     WordHyphenator h;
-    auto w = h.hyphenate("“morning");
+    auto w = h.hyphenate("“morning", Language::English);
     HyphenPoint expected{6,
                          SplitType::Regular}; // First character is Unicode and takes three bytes.
     CHECK(w.size() == 1);
@@ -42,7 +42,7 @@ void test_hyphenation_prefix() {
 
 void test_hyphenation_underscore() {
     WordHyphenator h;
-    auto w = h.hyphenate("_Nature_");
+    auto w = h.hyphenate("_Nature_", Language::English);
     HyphenPoint expected{2, SplitType::Regular};
     CHECK(w.size() == 1);
     CHECK(w.front() == expected);
@@ -51,7 +51,7 @@ void test_hyphenation_underscore() {
 void test_utf8_splitting() {
     WordHyphenator h;
     const std::string text{"emerge—possibly"};
-    auto w = h.hyphenate(text); // Note: has an em-dash.
+    auto w = h.hyphenate(text, Language::English); // Note: has an em-dash.
     for(size_t i = 0; i < w.size(); ++i) {
         auto sub = text.substr(0, w[i].loc + 1);
         CHECK(g_utf8_validate(sub.c_str(), -1, nullptr));
@@ -65,7 +65,7 @@ void test_utf8_splitting() {
 void test_strange_combo() {
     WordHyphenator h;
     const std::string text{"impact—“splashed”"}; // impact—“splashed”"};
-    auto w = h.hyphenate(text);
+    auto w = h.hyphenate(text, Language::English);
     HyphenPoint expected{1, SplitType::Regular};
     HyphenPoint expected2{8, SplitType::NoHyphen};
     CHECK(w.size() == 2);
@@ -77,7 +77,7 @@ void test_dualhyphen() {
     // Not sure if correct, this could also be hyphenless.
     WordHyphenator h;
     const std::string text{"maybe——"};
-    auto w = h.hyphenate(text);
+    auto w = h.hyphenate(text, Language::English);
     HyphenPoint expected{7, SplitType::NoHyphen};
     CHECK(w.size() == 1);
     CHECK(w.front() == expected);
@@ -98,6 +98,7 @@ void test_utf8_impl(const char *t, Language lang) {
 void test_utf8() {
     test_utf8_impl("kansikuvapönöttäjästä", Language::Finnish);
     test_utf8_impl("päämajaksi", Language::Finnish);
+    test_utf8_impl("silkkiäis", Language::Finnish);
 }
 
 void test_hyphenation() {

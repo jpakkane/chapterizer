@@ -9,6 +9,8 @@ namespace fs = std::filesystem;
 
 namespace {
 
+std::array<const char *, 3> langnames{"unknown", "en", "fi"};
+
 // The contents of these files is always the same.
 
 const char mimetext[] = "application/epub+zip";
@@ -240,7 +242,7 @@ void Epub::write_opf(const fs::path &ofile) {
     metadata->InsertEndChild(name);
     name->SetText("Book title");
     auto language = opf.NewElement("dc:language");
-    language->SetText(doc.data.language.c_str());
+    language->SetText(langnames[size_t(doc.data.language)]);
     metadata->InsertEndChild(language);
     auto identifier = opf.NewElement("dc:identifier");
     metadata->InsertEndChild(identifier);

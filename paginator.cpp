@@ -101,7 +101,7 @@ void Paginator::generate_pdf(const char *outfile) {
 
     ChapterParameters text_par;
     text_par.indent = Millimeter::from_value(5);
-    text_par.line_height = Point::from_value(12);
+    text_par.line_height = Point::from_value(14);
     text_par.paragraph_width = page.w - m.inner - m.outer;
     text_par.font = font_styles.basic;
 
@@ -298,7 +298,7 @@ Paginator::build_formatted_lines(const std::vector<std::vector<std::string>> &li
                 full_line += w;
             }
             line_commands.emplace_back(
-                MarkupDrawCommand{std::move(full_line), &text_par.font, x, rel_y});
+                MarkupDrawCommand{std::move(full_line), &text_par.font, x + current_indent, rel_y});
         }
         line_num++;
         rel_y += text_par.line_height.tomm();
@@ -314,7 +314,7 @@ std::vector<EnrichedWord> Paginator::text_to_formatted_words(const std::string &
         auto working_word = word;
         auto start_style = current_style;
         auto formatting_data = extract_styling(current_style, working_word);
-        auto hyphenation_data = hyphen.hyphenate(working_word);
+        auto hyphenation_data = hyphen.hyphenate(working_word, doc.data.language);
         processed_words.emplace_back(EnrichedWord{std::move(working_word),
                                                   std::move(hyphenation_data),
                                                   std::move(formatting_data),

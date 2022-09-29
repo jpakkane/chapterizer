@@ -227,11 +227,12 @@ std::vector<HyphenPoint> WordHyphenator::hyphenate(const std::string &word,
             auto byte_offset = size_t(character_location - word.c_str());
             switch(hyphenation[i]) {
             case '-':
-
-                hyphen_points.emplace_back(HyphenPoint{byte_offset, SplitType::Regular});
+                // The weird offset comes from the fact that we need to mimic how the
+                // english language hyphenator has chosen to set up its offsets.
+                hyphen_points.emplace_back(HyphenPoint{byte_offset - 1, SplitType::Regular});
                 break;
             case '=':
-                hyphen_points.emplace_back(HyphenPoint{byte_offset, SplitType::NoHyphen});
+                hyphen_points.emplace_back(HyphenPoint{byte_offset - 1, SplitType::NoHyphen});
                 break;
             case ' ':
                 break;
@@ -243,6 +244,9 @@ std::vector<HyphenPoint> WordHyphenator::hyphenate(const std::string &word,
         }
         assert(character_location == word.c_str() + word.length());
         voikkoFreeCstr(hyphenation);
+    } else {
+        printf("Unkown hyphenation language.\n");
+        std::abort();
     }
     HyphenatedWord tmp;
     tmp.word = word;
@@ -252,11 +256,11 @@ std::vector<HyphenPoint> WordHyphenator::hyphenate(const std::string &word,
 }
 
 std::vector<std::vector<HyphenPoint>>
-WordHyphenator::hyphenate(const std::vector<std::string> &words) const {
+WordHyphenator::hyphenate(const std::vector<std::string> &words, const Language lang) const {
     std::vector<std::vector<HyphenPoint>> hyphs;
     hyphs.reserve(words.size());
     for(const auto &w : words) {
-        hyphs.emplace_back(hyphenate(w));
+        hyphs.emplace_back(hyphenate(w, lang));
     }
     return hyphs;
 }

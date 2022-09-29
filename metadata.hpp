@@ -143,7 +143,7 @@ struct Metadata {
     std::filesystem::path top_dir;
     std::string title;
     std::string author;
-    std::string language;
+    Language language;
     std::vector<std::string> sources;
     PdfMetadata pdf;
     EpubMetadata epub;

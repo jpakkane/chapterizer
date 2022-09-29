@@ -52,9 +52,9 @@ public:
     WordHyphenator();
     ~WordHyphenator();
 
-    std::vector<HyphenPoint> hyphenate(const std::string &word,
-                                       const Language lang = Language::English) const;
-    std::vector<std::vector<HyphenPoint>> hyphenate(const std::vector<std::string> &words) const;
+    std::vector<HyphenPoint> hyphenate(const std::string &word, const Language lang) const;
+    std::vector<std::vector<HyphenPoint>> hyphenate(const std::vector<std::string> &words,
+                                                    const Language lang) const;
 
 private:
     HyphenDict *dict;

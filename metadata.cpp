@@ -1,6 +1,16 @@
 #include <metadata.hpp>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#include <unordered_map>
+
+namespace {
+
+const std::unordered_map<std::string, Language> langmap{
+    {"unk", Language::Unset}, {"en", Language::English}, {"fi", Language::Finnish}
+
+};
+
+} // namespace
 
 using json = nlohmann::json;
 
@@ -68,7 +78,13 @@ Metadata load_book_json(const char *path) {
     assert(data.is_object());
     m.author = get_string(data, "author");
     m.title = get_string(data, "title");
-    m.language = get_string(data, "language");
+    const auto langstr = get_string(data, "language");
+    auto it = langmap.find(langstr);
+    if(it == langmap.end()) {
+        printf("Unsupported language %s\n", langstr.c_str());
+        std::abort();
+    }
+    m.language = it->second;
 
     auto sources = data["sources"];
     if(!sources.is_array()) {
