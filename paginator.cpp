@@ -141,8 +141,11 @@ void Paginator::generate_pdf(const char *outfile) {
             std::string full_title = std::to_string(s.number);
             full_title += ". ";
             full_title += s.text;
-            layout.text.emplace_back(
-                MarkupDrawCommand{full_title, &font_styles.heading, Millimeter::zero(), rel_y});
+            layout.text.emplace_back(MarkupDrawCommand{full_title,
+                                                       &font_styles.heading,
+                                                       textblock_width() / 2,
+                                                       rel_y,
+                                                       TextAlignment::Centered});
             rel_y += font_styles.heading.size.tomm();
             heights.text_height += font_styles.heading.size.tomm();
             rel_y += title_below_space;
@@ -187,8 +190,11 @@ void Paginator::generate_pdf(const char *outfile) {
             std::string fnum = std::to_string(f.number);
             fnum += '.';
             auto tmpy = heights.footnote_height;
-            layout.footnote.emplace_back(
-                MarkupDrawCommand{std::move(fnum), &footnote_par.font, Millimeter::zero(), tmpy});
+            layout.footnote.emplace_back(MarkupDrawCommand{std::move(fnum),
+                                                           &footnote_par.font,
+                                                           Millimeter::zero(),
+                                                           tmpy,
+                                                           TextAlignment::Left});
             auto built_lines = build_formatted_lines(lines, footnote_par);
             // FIXME, assumes there is always enough space for a footnote.
             heights.footnote_height += built_lines.size() * footnote_par.line_height.tomm();
@@ -210,8 +216,11 @@ void Paginator::generate_pdf(const char *outfile) {
                     new_page(true);
                     rel_y = Millimeter::zero();
                 }
-                layout.text.emplace_back(
-                    MarkupDrawCommand{line.c_str(), &font_styles.code, Millimeter::zero(), rel_y});
+                layout.text.emplace_back(MarkupDrawCommand{line.c_str(),
+                                                           &font_styles.code,
+                                                           Millimeter::zero(),
+                                                           rel_y,
+                                                           TextAlignment::Left});
                 rel_y += code_par.line_height.tomm();
                 heights.text_height += code_par.line_height.tomm();
             }
@@ -289,8 +298,11 @@ Paginator::build_formatted_lines(const std::vector<std::vector<std::string>> &li
             for(const auto &w : markup_words) {
                 full_line += w;
             }
-            line_commands.emplace_back(
-                MarkupDrawCommand{std::move(full_line), &text_par.font, x + current_indent, rel_y});
+            line_commands.emplace_back(MarkupDrawCommand{std::move(full_line),
+                                                         &text_par.font,
+                                                         x + current_indent,
+                                                         rel_y,
+                                                         TextAlignment::Left});
         }
         line_num++;
         rel_y += text_par.line_height.tomm();
@@ -395,7 +407,8 @@ void Paginator::flush_draw_commands() {
             rend->render_markup_as_is(md.markup.c_str(),
                                       *md.font,
                                       (md.x + current_left_margin()).topt(),
-                                      (md.y + m.upper + heights.figure_height).topt());
+                                      (md.y + m.upper + heights.figure_height).topt(),
+                                      md.alignment);
         } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(c)) {
             const auto &md = std::get<JustifiedMarkupDrawCommand>(c);
             rend->render_line_justified(md.markup_words,
@@ -414,7 +427,8 @@ void Paginator::flush_draw_commands() {
             rend->render_markup_as_is(md.markup.c_str(),
                                       *md.font,
                                       (current_left_margin() + md.x).topt(),
-                                      (md.y + footnote_block_start).topt());
+                                      (md.y + footnote_block_start).topt(),
+                                      md.alignment);
         } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(c)) {
             const auto &md = std::get<JustifiedMarkupDrawCommand>(c);
             rend->render_line_justified(md.markup_words,

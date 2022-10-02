@@ -25,6 +25,13 @@
 #include <vector>
 #include <string>
 
+enum class TextAlignment : int {
+    Left,
+    Centered,
+    Right,
+    // Justified is stored in a separate struct.
+};
+
 struct ImageInfo {
     cairo_surface_t *surf;
     int w, h;
@@ -55,11 +62,12 @@ public:
 
     void render_text_as_is(const char *line, const FontParameters &par, Point x, Point y);
 
-    void render_markup_as_is(const char *line, const FontParameters &par, Point x, Point y);
+    void render_markup_as_is(const char *line, const FontParameters &par, Point x, Point y, TextAlignment alignment);
     void render_markup_as_is(const std::vector<std::string> markup_words,
                              const FontParameters &par,
                              Point x,
-                             Point y);
+                             Point y,
+                             TextAlignment alignment);
     void render_line_centered(const char *line, const FontParameters &par, Point x, Point y);
 
     void new_page();

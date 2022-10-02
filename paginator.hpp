@@ -13,6 +13,7 @@ struct MarkupDrawCommand {
     const FontParameters *font;
     Millimeter x;
     Millimeter y;
+    TextAlignment alignment;
 };
 
 struct JustifiedMarkupDrawCommand {

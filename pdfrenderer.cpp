@@ -274,14 +274,26 @@ void PdfRenderer::render_text_as_is(const char *line, const FontParameters &par,
     pango_cairo_show_layout(cr, layout);
 }
 
-void PdfRenderer::render_markup_as_is(const char *line,
-                                      const FontParameters &par,
-                                      Point x,
-                                      Point y) {
+void PdfRenderer::render_markup_as_is(
+    const char *line, const FontParameters &par, Point x, Point y, TextAlignment alignment) {
     setup_pango(par);
-    cairo_move_to(cr, x.v, y.v);
     pango_layout_set_attributes(layout, nullptr);
     pango_layout_set_markup(layout, line, -1);
+
+    switch(alignment) {
+    case TextAlignment::Left:
+        cairo_move_to(cr, x.v, y.v);
+        break;
+    case TextAlignment::Centered:
+        PangoRectangle r;
+        pango_layout_get_extents(layout, nullptr, &r);
+        cairo_move_to(cr, (x - Point::from_value(r.width / (2 * PANGO_SCALE))).v, y.v);
+        break;
+    case TextAlignment::Right:
+        printf("Right alignment not supported yet.\n");
+        std::abort();
+    }
+
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
 }
@@ -289,17 +301,13 @@ void PdfRenderer::render_markup_as_is(const char *line,
 void PdfRenderer::render_markup_as_is(const std::vector<std::string> markup_words,
                                       const FontParameters &par,
                                       Point x,
-                                      Point y) {
+                                      Point y,
+                                      TextAlignment alignment) {
     std::string full_line;
     for(const auto &w : markup_words) {
         full_line += w;
     }
-    setup_pango(par);
-    cairo_move_to(cr, x.v, y.v);
-    pango_layout_set_attributes(layout, nullptr);
-    pango_layout_set_markup(layout, full_line.c_str(), -1);
-    pango_cairo_update_layout(cr, layout);
-    pango_cairo_show_layout(cr, layout);
+    render_markup_as_is(full_line.c_str(), par, x, y, alignment);
 }
 
 void PdfRenderer::render_line_centered(const char *line,
@@ -311,7 +319,7 @@ void PdfRenderer::render_line_centered(const char *line,
     pango_layout_set_attributes(layout, nullptr);
     pango_layout_set_text(layout, line, -1);
     pango_layout_get_extents(layout, nullptr, &r);
-    render_markup_as_is(line, par, x - Point::from_value(r.width / (2 * PANGO_SCALE)), y);
+    render_text_as_is(line, par, x - Point::from_value(r.width / (2 * PANGO_SCALE)), y);
 }
 
 void PdfRenderer::new_page() {
