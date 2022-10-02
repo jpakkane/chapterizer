@@ -42,14 +42,18 @@ struct PageSize {
     Millimeter h;
 };
 
+struct ChapterStyles {
+    ChapterParameters normal;
+    ChapterParameters code;
+    ChapterParameters section;
+    ChapterParameters footnote;
+};
+
 struct PdfMetadata {
     std::string ofname;
     PageSize page;
     Margins margins;
-    ChapterParameters normal_style;
-    ChapterParameters code_style;
-    ChapterParameters section_style;
-    ChapterParameters footnote_style;
+    ChapterStyles styles;
 };
 
 struct EpubMetadata {

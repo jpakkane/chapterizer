@@ -111,8 +111,8 @@ private:
     const Document &doc;
     // These are just helpers to cut down on typing.
     const PageSize &page;
+    const ChapterStyles &styles;
     const Margins &m;
-    FontStyles font_styles;
     std::unique_ptr<PdfRenderer> rend;
     WordHyphenator hyphen;
     int current_page = 1;

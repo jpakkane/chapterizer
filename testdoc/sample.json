@@ -19,7 +19,7 @@
             "lower": 20
         },
         "styles": {
-            "plain": {
+            "normal": {
                 "line_height": 14,
                 "indent": 5,
                 "font": {
@@ -32,7 +32,7 @@
                 "line_height": 16,
                 "indent": 0,
                 "font": {
-                    "name": "Noto Sans",
+                    "name": "Liberation Sans",
                     "type": "bold",
                     "pointsize": 14
                 }
