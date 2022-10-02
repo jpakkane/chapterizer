@@ -113,9 +113,15 @@ void Paginator::generate_pdf(const char *outfile) {
     footnote_par.line_height = Point::from_value(11);
     footnote_par.indent = Millimeter::from_value(4);
 
+    ChapterParameters section_par;
+    section_par.font = font_styles.heading;
+    section_par.indent = Millimeter::zero();
+    section_par.line_height = Point::from_value(14);
+    section_par.paragraph_width = 0.8 * text_par.paragraph_width;
+
     ExtraPenaltyAmounts extras;
     const Millimeter bottom_watermark = page.h - m.lower - m.upper;
-    const Millimeter title_above_space = Millimeter::from_value(30);
+    const Millimeter title_above_space = Millimeter::from_value(20);
     const Millimeter title_below_space = Millimeter::from_value(10);
     const Millimeter different_paragraph_space = Millimeter::from_value(2);
     Millimeter rel_y;
@@ -138,28 +144,39 @@ void Paginator::generate_pdf(const char *outfile) {
             rel_y += title_above_space;
             heights.whitespace_height += title_above_space;
             assert(s.level == 1);
-            std::string full_title = std::to_string(s.number);
-            full_title += ". ";
-            full_title += s.text;
-            layout.text.emplace_back(MarkupDrawCommand{full_title,
+            // Fancy stuff above the text.
+            std::string title_number = std::to_string(s.number);
+            title_number += ".";
+            layout.text.emplace_back(MarkupDrawCommand{title_number,
                                                        &font_styles.heading,
                                                        textblock_width() / 2,
                                                        rel_y,
                                                        TextAlignment::Centered});
-            rel_y += font_styles.heading.size.tomm();
-            heights.text_height += font_styles.heading.size.tomm();
+            rel_y += 2 * section_par.line_height.tomm();
+            heights.text_height += 2 * section_par.line_height.tomm();
+
+            // The title. Hyphenation is prohibited.
+            std::vector<EnrichedWord> processed_words = text_to_formatted_words(s.text, false);
+            ParagraphFormatter b(processed_words, section_par, extras);
+            auto lines = b.split_formatted_lines();
+            auto built_lines =
+                build_ragged_paragraph(lines, section_par, TextAlignment::Centered, rel_y);
+            for(auto &line : built_lines) {
+                layout.text.emplace_back(std::move(line));
+                rel_y += section_par.line_height.tomm();
+                heights.text_height += section_par.line_height.tomm();
+            }
             rel_y += title_below_space;
             heights.text_height += title_below_space;
             first_paragraph = true;
         } else if(std::holds_alternative<Paragraph>(e)) {
             const Paragraph &p = std::get<Paragraph>(e);
-            StyleStack current_style;
             auto cur_par = text_par;
             cur_par.indent = first_paragraph ? Millimeter::zero() : text_par.indent;
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
             ParagraphFormatter b(processed_words, cur_par, extras);
             auto lines = b.split_formatted_lines();
-            auto built_lines = build_formatted_lines(lines, cur_par);
+            auto built_lines = build_justified_paragraph(lines, cur_par);
 
             Millimeter current_y_origin = rel_y;
             int lines_in_paragraph = 0;
@@ -183,7 +200,6 @@ void Paginator::generate_pdf(const char *outfile) {
             }
             const Footnote &f = std::get<Footnote>(e);
             heights.whitespace_height += footnote_separation;
-            StyleStack current_style;
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text);
             ParagraphFormatter b(processed_words, footnote_par, extras);
             auto lines = b.split_formatted_lines();
@@ -195,7 +211,7 @@ void Paginator::generate_pdf(const char *outfile) {
                                                            Millimeter::zero(),
                                                            tmpy,
                                                            TextAlignment::Left});
-            auto built_lines = build_formatted_lines(lines, footnote_par);
+            auto built_lines = build_justified_paragraph(lines, footnote_par);
             // FIXME, assumes there is always enough space for a footnote.
             heights.footnote_height += built_lines.size() * footnote_par.line_height.tomm();
             layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
@@ -278,11 +294,12 @@ void Paginator::render_page_num(const FontParameters &par) {
 }
 
 std::vector<TextCommands>
-Paginator::build_formatted_lines(const std::vector<std::vector<std::string>> &lines,
-                                 const ChapterParameters &text_par) {
+Paginator::build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
+                                     const ChapterParameters &text_par) {
     Millimeter rel_y = Millimeter::zero();
     const Millimeter x = Millimeter::zero();
     std::vector<TextCommands> line_commands;
+    line_commands.reserve(lines.size());
     size_t line_num = 0;
     for(const auto &markup_words : lines) {
         Millimeter current_indent = line_num == 0 ? text_par.indent : Millimeter{};
@@ -310,15 +327,41 @@ Paginator::build_formatted_lines(const std::vector<std::vector<std::string>> &li
     return line_commands;
 }
 
-std::vector<EnrichedWord> Paginator::text_to_formatted_words(const std::string &text) {
+std::vector<TextCommands>
+Paginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
+                                  const ChapterParameters &text_par,
+                                  const TextAlignment alignment,
+                                  Millimeter rel_y) {
+    std::vector<TextCommands> line_commands;
+    line_commands.reserve(lines.size());
+    for(const auto &markup_words : lines) {
+        std::string full_line;
+        for(const auto &w : markup_words) {
+            full_line += w;
+        }
+        assert(alignment != TextAlignment::Right);
+        line_commands.emplace_back(MarkupDrawCommand{
+            std::move(full_line),
+            &text_par.font,
+            alignment == TextAlignment::Centered ? textblock_width() / 2 : Millimeter::zero(),
+            rel_y,
+            alignment});
+        rel_y += text_par.line_height.tomm();
+    }
+    return line_commands;
+}
+
+std::vector<EnrichedWord> Paginator::text_to_formatted_words(const std::string &text,
+                                                             bool permit_hyphenation) {
     StyleStack current_style;
     auto plain_words = split_to_words(std::string_view(text));
     std::vector<EnrichedWord> processed_words;
+    const Language lang = permit_hyphenation ? doc.data.language : Language::Unset;
     for(const auto &word : plain_words) {
         auto working_word = word;
         auto start_style = current_style;
         auto formatting_data = extract_styling(current_style, working_word);
-        auto hyphenation_data = hyphen.hyphenate(working_word, doc.data.language);
+        auto hyphenation_data = hyphen.hyphenate(working_word, lang);
         processed_words.emplace_back(EnrichedWord{std::move(working_word),
                                                   std::move(hyphenation_data),
                                                   std::move(formatting_data),

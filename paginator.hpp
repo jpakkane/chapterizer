@@ -71,9 +71,15 @@ public:
 private:
     void render_page_num(const FontParameters &par);
     std::vector<TextCommands>
-    build_formatted_lines(const std::vector<std::vector<std::string>> &lines,
-                          const ChapterParameters &text_par);
-    std::vector<EnrichedWord> text_to_formatted_words(const std::string &text);
+    build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
+                              const ChapterParameters &text_par);
+    std::vector<TextCommands>
+    build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
+                           const ChapterParameters &text_par,
+                           const TextAlignment alignment,
+                           Millimeter rel_y);
+    std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
+                                                      bool permit_hyphenation = true);
 
     Millimeter current_left_margin() const { return current_page % 2 ? m.inner : m.outer; }
 
@@ -95,7 +101,7 @@ private:
     WordHyphenator hyphen;
     int current_page = 1;
     int chapter_start_page = -1;
-    const bool debug_draw = true;
+    const bool debug_draw = false;
 
     // These keep track of the current page stats.
     PageLayout layout;
