@@ -42,21 +42,14 @@ struct PageSize {
     Millimeter h;
 };
 
-struct FontStyles_temp {
-    std::string name;
-    std::string style; // FIXME to use enum.
-    Point size;
-    Point line_height;
-};
-
 struct PdfMetadata {
     std::string ofname;
     PageSize page;
     Margins margins;
-    FontParameters normal_style;
-    FontParameters code_style;
-    FontParameters section_style;
-    FontParameters footnote_style;
+    ChapterParameters normal_style;
+    ChapterParameters code_style;
+    ChapterParameters section_style;
+    ChapterParameters footnote_style;
 };
 
 struct EpubMetadata {

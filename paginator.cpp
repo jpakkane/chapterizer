@@ -100,15 +100,10 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
 } // namespace
 
 Paginator::Paginator(const Document &d) : doc(d), page(doc.data.pdf.page), m(doc.data.pdf.margins) {
-    font_styles.basic.name = doc.data.pdf.normal_style.name;
-    font_styles.basic.size = doc.data.pdf.normal_style.size;
-    font_styles.code.name = doc.data.pdf.code_style.name;
-    font_styles.code.size = doc.data.pdf.code_style.size;
-    font_styles.footnote.name = doc.data.pdf.footnote_style.name;
-    font_styles.footnote.size = doc.data.pdf.footnote_style.size;
-    font_styles.heading.name = doc.data.pdf.section_style.name;
-    font_styles.heading.size = doc.data.pdf.section_style.size;
-    font_styles.heading.type = FontStyle::Bold;
+    font_styles.basic = doc.data.pdf.normal_style.font;
+    font_styles.code = doc.data.pdf.code_style.font;
+    font_styles.footnote = doc.data.pdf.footnote_style.font;
+    font_styles.heading = doc.data.pdf.section_style.font;
 }
 
 void Paginator::generate_pdf(const char *outfile) {
@@ -120,6 +115,9 @@ void Paginator::generate_pdf(const char *outfile) {
     text_par.line_height = Point::from_value(13);
     text_par.paragraph_width = page.w - m.inner - m.outer;
     text_par.font = font_styles.basic;
+
+    ChapterParameters noindent_text_par = text_par;
+    noindent_text_par.indent = Millimeter::zero();
 
     ChapterParameters code_par = text_par;
     code_par.font = font_styles.code;
@@ -188,8 +186,7 @@ void Paginator::generate_pdf(const char *outfile) {
             first_paragraph = true;
         } else if(std::holds_alternative<Paragraph>(e)) {
             const Paragraph &p = std::get<Paragraph>(e);
-            auto cur_par = text_par;
-            cur_par.indent = first_paragraph ? Millimeter::zero() : text_par.indent;
+            const ChapterParameters &cur_par = first_paragraph ? noindent_text_par : text_par;
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
             ParagraphFormatter b(processed_words, cur_par, extras);
             auto lines = b.split_formatted_lines();

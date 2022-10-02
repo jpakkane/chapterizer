@@ -18,30 +18,47 @@
             "upper": 15,
             "lower": 20
         },
-        "text_styles": {
+        "styles": {
             "plain": {
-                "font": "Gentium Plus",
-                "type": "regular",
-                "pointsize": 10
+                "line_height": 14,
+                "indent": 5,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "regular",
+                    "pointsize": 10
+                }
             },
             "section": {
-                "font": "Noto Sans",
-                "type": "bold",
-                "pointsize": 14
+                "line_height": 16,
+                "indent": 0,
+                "font": {
+                    "name": "Noto Sans",
+                    "type": "bold",
+                    "pointsize": 14
+                }
             },
             "code": {
-                "font": "Liberation Mono",
-                "type": "regular",
-                "pointsize": 9
+                "line_height": 12,
+                "indent": 0,
+                "font": {
+                    "name": "Liberation Mono",
+                    "type": "regular",
+                    "pointsize": 9
+                }
             },
             "footnote": {
-                "font": "Gentium Plus",
-                "type": "regular",
-                "pointsize": 9
+                "line_height": 11,
+                "indent": 5,
+                "font": {
+                    "name": "Gentium Plus",
+                    "type": "regular",
+                    "pointsize": 9
+                }
             }
         },
         "spaces": {
-            "chapter_start": 30
+            "chapter_start": 30,
+            "codeblock_indent": 20
         }
     },
     "epub": {

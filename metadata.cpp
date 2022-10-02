@@ -75,18 +75,21 @@ int get_int(const json &data, const char *key) {
     return value.get<int>();
 }
 
-FontParameters parse_fontstyle(const json &data) {
-    FontParameters fontstyle;
-    fontstyle.name = get_string(data, "font");
-    const auto stylestr = get_string(data, "type");
+ChapterParameters parse_chapterstyle(const json &data) {
+    ChapterParameters chapter_style;
+    chapter_style.line_height = Point::from_value(get_double(data, "line_height"));
+    chapter_style.indent = Millimeter::from_value(get_double(data, "indent"));
+    auto font = data["font"];
+    chapter_style.font.name = get_string(font, "name");
+    const auto stylestr = get_string(font, "type");
     auto it = stylemap.find(stylestr);
     if(it == stylemap.end()) {
         printf("Unknown type \"%s\".", stylestr.c_str());
         std::abort();
     }
-    fontstyle.type = it->second;
-    fontstyle.size = Point::from_value(get_double(data, "pointsize"));
-    return fontstyle;
+    chapter_style.font.type = it->second;
+    chapter_style.font.size = Point::from_value(get_double(font, "pointsize"));
+    return chapter_style;
 }
 
 void load_pdf_element(Metadata &m, const json &pdf) {
@@ -99,11 +102,11 @@ void load_pdf_element(Metadata &m, const json &pdf) {
     m.pdf.margins.outer = Millimeter::from_value(get_int(margins, "outer"));
     m.pdf.margins.upper = Millimeter::from_value(get_int(margins, "upper"));
     m.pdf.margins.lower = Millimeter::from_value(get_int(margins, "lower"));
-    auto styles = pdf["text_styles"];
-    m.pdf.normal_style = parse_fontstyle(styles["plain"]);
-    m.pdf.section_style = parse_fontstyle(styles["section"]);
-    m.pdf.code_style = parse_fontstyle(styles["code"]);
-    m.pdf.footnote_style = parse_fontstyle(styles["footnote"]);
+    auto styles = pdf["styles"];
+    m.pdf.normal_style = parse_chapterstyle(styles["plain"]);
+    m.pdf.section_style = parse_chapterstyle(styles["section"]);
+    m.pdf.code_style = parse_chapterstyle(styles["code"]);
+    m.pdf.footnote_style = parse_chapterstyle(styles["footnote"]);
 }
 
 void load_epub_element(Metadata &m, const json &epub) {
