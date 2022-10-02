@@ -261,6 +261,7 @@ void Paginator::generate_pdf(const char *outfile) {
         }
     }
     if(!layout.empty()) {
+        render_page_num(styles.normal.font);
         flush_draw_commands();
     }
     rend.reset(nullptr);
@@ -281,7 +282,7 @@ void Paginator::add_top_image(const ImageInfo &image) {
 void Paginator::render_page_num(const FontParameters &par) {
     char buf[128];
     snprintf(buf, 128, "%d", current_page);
-    const Millimeter yloc = page.h - 2.0 * m.lower / 3.0;
+    const Millimeter yloc = page.h - 3.0 * m.lower / 4.0;
     const Millimeter xloc = current_left_margin() + (page.w - m.inner - m.outer) / 2;
     rend->render_line_centered(buf, par, xloc.topt(), yloc.topt());
 }
