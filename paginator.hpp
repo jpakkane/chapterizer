@@ -93,6 +93,8 @@ private:
     std::unique_ptr<PdfRenderer> rend;
     WordHyphenator hyphen;
     int current_page = 1;
+    int chapter_start_page = -1;
+    const bool debug_draw = true;
 
     // These keep track of the current page stats.
     PageLayout layout;

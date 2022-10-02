@@ -111,13 +111,28 @@ void PdfRenderer::draw_grid() {
 }
 
 void PdfRenderer::draw_box(Point x, Point y, Point w, Point h) {
+    cairo_save(cr);
     cairo_set_line_width(cr, 0.2);
+    cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
     cairo_move_to(cr, x.v, y.v);
     cairo_line_to(cr, (x + w).v, y.v);
     cairo_line_to(cr, (x + w).v, (y + h).v);
     cairo_line_to(cr, x.v, (y + h).v);
     cairo_close_path(cr);
     cairo_stroke(cr);
+    cairo_restore(cr);
+}
+
+void PdfRenderer::fill_box(Point x, Point y, Point w, Point h, double color) {
+    cairo_save(cr);
+    cairo_set_source_rgb(cr, color, color, color);
+    cairo_move_to(cr, x.v, y.v);
+    cairo_line_to(cr, (x + w).v, y.v);
+    cairo_line_to(cr, (x + w).v, (y + h).v);
+    cairo_line_to(cr, x.v, (y + h).v);
+    cairo_close_path(cr);
+    cairo_fill(cr);
+    cairo_restore(cr);
 }
 
 void PdfRenderer::render_line_justified(const std::string &line_text,

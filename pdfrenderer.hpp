@@ -32,7 +32,8 @@ struct ImageInfo {
 
 class PdfRenderer {
 public:
-    explicit PdfRenderer(const char *ofname, Point pagew, Point pageh, const char *title, const char *author);
+    explicit PdfRenderer(
+        const char *ofname, Point pagew, Point pageh, const char *title, const char *author);
     ~PdfRenderer();
 
     void render_line_justified(const std::string &text,
@@ -60,6 +61,7 @@ public:
     int page_num() const { return pages; }
 
     void draw_box(Point x, Point y, Point w, Point h);
+    void fill_box(Point x, Point y, Point w, Point h, double color);
 
     void draw_line(Point x0, Point y0, Point x1, Point y1, Point thickness);
 

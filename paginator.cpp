@@ -118,12 +118,10 @@ void Paginator::generate_pdf(const char *outfile) {
     const Millimeter title_above_space = Millimeter::from_value(30);
     const Millimeter title_below_space = Millimeter::from_value(10);
     const Millimeter different_paragraph_space = Millimeter::from_value(2);
-    Millimeter x = m.inner;
     Millimeter rel_y;
     const Millimeter footnote_separation = Millimeter::from_value(2);
     bool first_paragraph = true;
     bool first_section = true;
-    int chapter_start_page = rend->page_num();
 
     for(const auto &e : doc.elements) {
         if(std::holds_alternative<Section>(e)) {
@@ -137,15 +135,14 @@ void Paginator::generate_pdf(const char *outfile) {
             chapter_start_page = rend->page_num();
             first_section = false;
             rel_y = Millimeter::zero();
-            x = current_left_margin();
             rel_y += title_above_space;
             heights.whitespace_height += title_above_space;
             assert(s.level == 1);
             std::string full_title = std::to_string(s.number);
             full_title += ". ";
             full_title += s.text;
-            rend->render_markup_as_is(
-                full_title.c_str(), font_styles.heading, x.topt(), (rel_y + m.upper).topt());
+            layout.text.emplace_back(
+                MarkupDrawCommand{full_title, &font_styles.heading, Millimeter::zero(), rel_y});
             rel_y += font_styles.heading.size.tomm();
             heights.text_height += font_styles.heading.size.tomm();
             rel_y += title_below_space;
@@ -161,8 +158,6 @@ void Paginator::generate_pdf(const char *outfile) {
             auto lines = b.split_formatted_lines();
             auto built_lines = build_formatted_lines(lines, cur_par);
 
-            //            render_formatted_lines(lines, x, rel_y, bottom_watermark, cur_par,
-            //            heights.text_height);
             Millimeter current_y_origin = rel_y;
             int lines_in_paragraph = 0;
             for(auto &line : built_lines) {
@@ -170,7 +165,6 @@ void Paginator::generate_pdf(const char *outfile) {
                     new_page(true);
                     current_y_origin = -lines_in_paragraph * cur_par.line_height.tomm();
                     rel_y = Millimeter::zero();
-                    x = current_left_margin();
                 }
                 ++lines_in_paragraph;
                 layout.text.emplace_back(std::move(line));
@@ -205,7 +199,6 @@ void Paginator::generate_pdf(const char *outfile) {
             if(rel_y >= bottom_watermark) {
                 new_page(true);
                 rel_y = Millimeter::zero();
-                x = current_left_margin();
             }
             first_paragraph = true;
         } else if(std::holds_alternative<CodeBlock>(e)) {
@@ -216,10 +209,9 @@ void Paginator::generate_pdf(const char *outfile) {
                 if(heights.total_height() >= bottom_watermark) {
                     new_page(true);
                     rel_y = Millimeter::zero();
-                    x = current_left_margin();
                 }
-                rend->render_text_as_is(
-                    line.c_str(), code_par.font, x.topt(), (rel_y + m.upper).topt());
+                layout.text.emplace_back(
+                    MarkupDrawCommand{line.c_str(), &font_styles.code, Millimeter::zero(), rel_y});
                 rel_y += code_par.line_height.tomm();
                 heights.text_height += code_par.line_height.tomm();
             }
@@ -324,7 +316,6 @@ std::vector<EnrichedWord> Paginator::text_to_formatted_words(const std::string &
 }
 
 void Paginator::new_page(bool draw_page_num) {
-    const bool debug_draw = true;
     flush_draw_commands();
     if(draw_page_num) {
         render_page_num(font_styles.basic);
@@ -352,6 +343,16 @@ void Paginator::new_page(bool draw_page_num) {
 
 void Paginator::flush_draw_commands() {
     Millimeter footnote_block_start = page.h - m.lower - heights.footnote_height;
+    if(debug_draw && current_page == chapter_start_page) {
+        for(int i = 0; i < 6; ++i) {
+            const Point boxheight = Point::from_value(12);
+            rend->fill_box(current_left_margin().topt(),
+                           m.upper.topt() + 2 * i * boxheight,
+                           textblock_width().topt(),
+                           boxheight,
+                           0.9);
+        }
+    }
     for(const auto &c : layout.images) {
         rend->draw_image(c.i, current_left_margin(), m.upper, c.display_width, c.display_height);
     }
