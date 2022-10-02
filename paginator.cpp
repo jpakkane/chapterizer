@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 Jussi Pakkanen
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <paginator.hpp>
 #include <utils.hpp>
 #include <chaptercommon.hpp>
@@ -84,14 +100,14 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
 } // namespace
 
 Paginator::Paginator(const Document &d) : doc(d), page(doc.data.pdf.page), m(doc.data.pdf.margins) {
-    font_styles.basic.name = "Gentium Plus";
-    font_styles.basic.size = Point::from_value(10);
-    font_styles.code.name = "Liberation Mono";
-    font_styles.code.size = Point::from_value(8);
-    font_styles.footnote = font_styles.basic;
-    font_styles.footnote.size = Point::from_value(9);
-    font_styles.heading.name = "Noto sans";
-    font_styles.heading.size = Point::from_value(14);
+    font_styles.basic.name = doc.data.pdf.normal_style.name;
+    font_styles.basic.size = doc.data.pdf.normal_style.size;
+    font_styles.code.name = doc.data.pdf.code_style.name;
+    font_styles.code.size = doc.data.pdf.code_style.size;
+    font_styles.footnote.name = doc.data.pdf.footnote_style.name;
+    font_styles.footnote.size = doc.data.pdf.footnote_style.size;
+    font_styles.heading.name = doc.data.pdf.section_style.name;
+    font_styles.heading.size = doc.data.pdf.section_style.size;
     font_styles.heading.type = FontStyle::Bold;
 }
 
@@ -101,7 +117,7 @@ void Paginator::generate_pdf(const char *outfile) {
 
     ChapterParameters text_par;
     text_par.indent = Millimeter::from_value(5);
-    text_par.line_height = Point::from_value(14);
+    text_par.line_height = Point::from_value(13);
     text_par.paragraph_width = page.w - m.inner - m.outer;
     text_par.font = font_styles.basic;
 
@@ -123,7 +139,8 @@ void Paginator::generate_pdf(const char *outfile) {
     const Millimeter bottom_watermark = page.h - m.lower - m.upper;
     const Millimeter title_above_space = Millimeter::from_value(20);
     const Millimeter title_below_space = Millimeter::from_value(10);
-    const Millimeter different_paragraph_space = Millimeter::from_value(2);
+    const Millimeter different_paragraph_space = Millimeter::from_value(3);
+    const Millimeter codeblock_indent = Millimeter::from_value(10);
     Millimeter rel_y;
     const Millimeter footnote_separation = Millimeter::from_value(2);
     bool first_paragraph = true;
@@ -232,11 +249,8 @@ void Paginator::generate_pdf(const char *outfile) {
                     new_page(true);
                     rel_y = Millimeter::zero();
                 }
-                layout.text.emplace_back(MarkupDrawCommand{line.c_str(),
-                                                           &font_styles.code,
-                                                           Millimeter::zero(),
-                                                           rel_y,
-                                                           TextAlignment::Left});
+                layout.text.emplace_back(MarkupDrawCommand{
+                    line.c_str(), &font_styles.code, codeblock_indent, rel_y, TextAlignment::Left});
                 rel_y += code_par.line_height.tomm();
                 heights.text_height += code_par.line_height.tomm();
             }

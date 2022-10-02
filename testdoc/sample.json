@@ -21,27 +21,23 @@
         "text_styles": {
             "plain": {
                 "font": "Gentium Plus",
-                "style": "regular",
-                "pointsize": 10,
-                "line_height": 12
+                "type": "regular",
+                "pointsize": 10
             },
             "section": {
                 "font": "Noto Sans",
-                "style": "bold",
-                "pointsize": 14,
-                "line_height": 16
+                "type": "bold",
+                "pointsize": 14
             },
             "code": {
                 "font": "Liberation Mono",
-                "style": "regular",
-                "pointsize": 9,
-                "line_height": 12
+                "type": "regular",
+                "pointsize": 9
             },
             "footnote": {
                 "font": "Gentium Plus",
-                "style": "regular",
-                "pointsize": 9,
-                "line_height": 11
+                "type": "regular",
+                "pointsize": 9
             }
         },
         "spaces": {
