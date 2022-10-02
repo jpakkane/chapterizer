@@ -227,7 +227,6 @@ ChapterParameters get_params(App *app) {
     g_free(tmp);
     par.font.size = Point::from_value(gtk_spin_button_get_value(app->ptsize));
     par.font.type = (FontStyle)gtk_combo_box_get_active(GTK_COMBO_BOX(app->font_style));
-    par.paragraph_width = Millimeter::from_value(gtk_spin_button_get_value(app->chapter_width));
     par.line_height = Point::from_value(gtk_spin_button_get_value(app->row_height));
     par.indent = Millimeter::from_value(gtk_spin_button_get_value(app->indent));
     return par;
@@ -298,10 +297,11 @@ double populate_extra_store(App *app, const std::vector<ExtraPenaltyStatistics> 
 void text_changed(GtkTextBuffer *, gpointer data) {
     auto app = static_cast<App *>(data);
     ChapterParameters par = get_params(app);
+    auto paragraph_width = Millimeter::from_value(gtk_spin_button_get_value(app->chapter_width));
     double total_penalty = 0;
     auto lines = get_entry_widget_text_lines(app);
     ExtraPenaltyAmounts pen_amounts = get_penalties(app);
-    auto penalties = compute_stats(lines, par, pen_amounts);
+    auto penalties = compute_stats(lines, paragraph_width, par, pen_amounts);
     const int BIGBUF = 1024;
     char buf[BIGBUF];
     total_penalty += populate_line_store(app, lines, penalties.lines);
@@ -367,6 +367,8 @@ void run_optimization_cb(GtkButton *, gpointer data) {
     // FIXME: run as an async task.
     WordHyphenator hyp;
     ChapterParameters params = get_params(app);
+    auto paragraph_width = Millimeter::from_value(gtk_spin_button_get_value(app->chapter_width));
+
     ExtraPenaltyAmounts extras = get_penalties(app);
     auto words = get_entry_widget_text_words(app);
     auto hyphenated_words = hyp.hyphenate(words, Language::English);
@@ -377,7 +379,7 @@ void run_optimization_cb(GtkButton *, gpointer data) {
         rich_words.emplace_back(
             EnrichedWord{std::move(words[i]), std::move(hyphenated_words[i]), {}, empty_style});
     }
-    ParagraphFormatter builder{rich_words, params, extras};
+    ParagraphFormatter builder{rich_words, paragraph_width, params, extras};
     auto new_lines = builder.split_lines();
     std::string collator;
     for(const auto &l : new_lines) {
@@ -490,6 +492,9 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     App *a = static_cast<App *>(data);
     GdkRGBA color;
     ChapterParameters cp = get_params(a);
+    const auto paragraph_width =
+        Millimeter::from_value(gtk_spin_button_get_value(a->chapter_width));
+
     auto text = get_entry_widget_text_lines(a);
     auto *layout = pango_cairo_create_layout(cr);
     PangoContext *context = pango_layout_get_context(layout);
@@ -519,7 +524,7 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     const double zoom_ratio = gtk_spin_button_get_value(a->zoom);
     const double xoff = 10;
     const double yoff = 10;
-    const double parwid = zoom_ratio * mm2screenpt(cp.paragraph_width.v);
+    const double parwid = zoom_ratio * mm2screenpt(paragraph_width.v);
     const double parhei = zoom_ratio * text.size() * cp.line_height.v;
     cairo_set_line_width(cr, 1.0);
     cairo_rectangle(cr, xoff, yoff, parwid, parhei);

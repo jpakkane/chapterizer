@@ -80,6 +80,7 @@ struct SplitStates {
     void clear() { best_to.clear(); }
 
     bool abandon_search(const std::vector<LineStats> &new_splits,
+                        const Millimeter paragraph_width,
                         const ChapterParameters &params,
                         const ExtraPenaltyAmounts &extras);
 };
@@ -97,12 +98,14 @@ struct PenaltyStatistics {
 };
 
 PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
+                                const Millimeter paragraph_width,
                                 const ChapterParameters &par,
                                 const ExtraPenaltyAmounts &amounts);
 
 class ParagraphFormatter {
 public:
     ParagraphFormatter(const std::vector<EnrichedWord> &words,
+                       const Millimeter target_width,
                        const ChapterParameters &in_params,
                        const ExtraPenaltyAmounts &ea);
 
@@ -133,6 +136,7 @@ private:
     std::vector<std::string> build_line_words_markup(size_t from_split_ind,
                                                      size_t to_split_ind) const;
 
+    Millimeter paragraph_width;
     std::vector<EnrichedWord> words;
     std::vector<SplitPoint> split_points;
     std::vector<TextLocation> split_locations;

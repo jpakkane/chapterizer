@@ -195,14 +195,6 @@ void PdfRenderer::render_line_justified(const std::string &line_text,
         pango_cairo_show_layout(cr, layout);
         x += Point::from_value(double(r.width) / PANGO_SCALE);
         x += space_extra_width;
-
-        /*
-        cairo_show_text(cr, words[i].c_str());
-        cairo_show_text(cr, " ");
-        cairo_get_current_point(cr, &x, &y);
-        x += space_extra_width;
-        cairo_move_to(cr, x, y);
-        */
     }
 }
 

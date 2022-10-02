@@ -113,7 +113,7 @@ void Paginator::generate_pdf(const char *outfile) {
     ChapterParameters text_par;
     text_par.indent = Millimeter::from_value(5);
     text_par.line_height = Point::from_value(13);
-    text_par.paragraph_width = page.w - m.inner - m.outer;
+    const auto paragraph_width = page.w - m.inner - m.outer;
     text_par.font = font_styles.basic;
 
     ChapterParameters noindent_text_par = text_par;
@@ -131,7 +131,7 @@ void Paginator::generate_pdf(const char *outfile) {
     section_par.font = font_styles.heading;
     section_par.indent = Millimeter::zero();
     section_par.line_height = Point::from_value(14);
-    section_par.paragraph_width = 0.8 * text_par.paragraph_width;
+    const auto section_width = 0.8 * paragraph_width;
 
     ExtraPenaltyAmounts extras;
     const Millimeter bottom_watermark = page.h - m.lower - m.upper;
@@ -172,7 +172,7 @@ void Paginator::generate_pdf(const char *outfile) {
 
             // The title. Hyphenation is prohibited.
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(s.text, false);
-            ParagraphFormatter b(processed_words, section_par, extras);
+            ParagraphFormatter b(processed_words, section_width, section_par, extras);
             auto lines = b.split_formatted_lines();
             auto built_lines =
                 build_ragged_paragraph(lines, section_par, TextAlignment::Centered, rel_y);
@@ -188,7 +188,7 @@ void Paginator::generate_pdf(const char *outfile) {
             const Paragraph &p = std::get<Paragraph>(e);
             const ChapterParameters &cur_par = first_paragraph ? noindent_text_par : text_par;
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
-            ParagraphFormatter b(processed_words, cur_par, extras);
+            ParagraphFormatter b(processed_words, paragraph_width, cur_par, extras);
             auto lines = b.split_formatted_lines();
             auto built_lines = build_justified_paragraph(lines, cur_par);
 
@@ -215,7 +215,7 @@ void Paginator::generate_pdf(const char *outfile) {
             const Footnote &f = std::get<Footnote>(e);
             heights.whitespace_height += footnote_separation;
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text);
-            ParagraphFormatter b(processed_words, footnote_par, extras);
+            ParagraphFormatter b(processed_words, paragraph_width, footnote_par, extras);
             auto lines = b.split_formatted_lines();
             std::string fnum = std::to_string(f.number);
             fnum += '.';
@@ -320,7 +320,7 @@ Paginator::build_justified_paragraph(const std::vector<std::vector<std::string>>
                                            &text_par.font,
                                            (x + current_indent),
                                            rel_y,
-                                           text_par.paragraph_width - current_indent});
+                                           textblock_width() - current_indent});
         } else {
             std::string full_line;
             for(const auto &w : markup_words) {

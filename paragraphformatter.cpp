@@ -36,14 +36,15 @@ double line_penalty(const LineStats &line, Millimeter target_width) {
 }
 
 std::vector<LinePenaltyStatistics> compute_line_penalties(const std::vector<std::string> &lines,
-                                                          const ChapterParameters &par) {
+                                                          const ChapterParameters &par,
+                                                          const Millimeter paragraph_width) {
     TextStats shaper;
     std::vector<LinePenaltyStatistics> penalties;
     penalties.reserve(lines.size());
     Millimeter indent = par.indent;
     for(const auto &line : lines) {
         const Millimeter w = shaper.text_width(line, par.font);
-        const Millimeter delta = w - (par.paragraph_width - indent);
+        const Millimeter delta = w - (paragraph_width - indent);
         indent = Millimeter::from_value(0);
         penalties.emplace_back(LinePenaltyStatistics{delta, pow(delta.v, 2)});
     }
@@ -88,13 +89,14 @@ compute_multihyphen_penalties(const std::vector<T> &lines, const ExtraPenaltyAmo
 }
 
 double total_penalty(const std::vector<LineStats> &lines,
+                     const Millimeter paragraph_width,
                      const ChapterParameters &params,
                      const ExtraPenaltyAmounts &amounts) {
     double total = 0;
     double last_line_penalty = 0;
     Millimeter indent = params.indent;
     for(const auto &l : lines) {
-        last_line_penalty = line_penalty(l, params.paragraph_width - indent);
+        last_line_penalty = line_penalty(l, paragraph_width - indent);
         indent = Millimeter::from_value(0);
         total += last_line_penalty;
     }
@@ -192,17 +194,19 @@ void toggle_format(StyleStack &current_style, std::string &line, const char form
 } // namespace
 
 PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
+                                const Millimeter paragraph_width,
                                 const ChapterParameters &par,
                                 const ExtraPenaltyAmounts &amounts) {
 
-    return PenaltyStatistics{compute_line_penalties(lines, par),
+    return PenaltyStatistics{compute_line_penalties(lines, par, paragraph_width),
                              compute_extra_penalties(lines, amounts)};
 }
 
 ParagraphFormatter::ParagraphFormatter(const std::vector<EnrichedWord> &words_,
+                                       const Millimeter target_width,
                                        const ChapterParameters &in_params,
                                        const ExtraPenaltyAmounts &ea)
-    : words{words_}, params{in_params}, extras(ea) {}
+    : paragraph_width(target_width), words{words_}, params{in_params}, extras(ea) {}
 
 std::vector<std::string> ParagraphFormatter::split_lines() {
     precompute();
@@ -211,7 +215,7 @@ std::vector<std::string> ParagraphFormatter::split_lines() {
     best_split.clear();
     if(false) {
         best_split = simple_split(shaper);
-        best_penalty = total_penalty(best_split, params, extras);
+        best_penalty = total_penalty(best_split, paragraph_width, params, extras);
         std::abort();
     } else {
         std::abort();
@@ -235,7 +239,7 @@ std::vector<LineStats> ParagraphFormatter::simple_split(TextStats &shaper) {
         lines.emplace_back(line_end);
         current_split = line_end.end_split;
     }
-    const auto total = total_penalty(lines, params, extras);
+    const auto total = total_penalty(lines, paragraph_width, params, extras);
     printf("Total penalty: %.1f\n", total);
     return lines;
 }
@@ -254,9 +258,9 @@ ParagraphFormatter::stats_to_markup_lines(const std::vector<LineStats> &linestat
 
 Millimeter ParagraphFormatter::current_line_width(size_t line_num) const {
     if(line_num == 0) {
-        return params.paragraph_width - params.indent;
+        return paragraph_width - params.indent;
     }
-    return params.paragraph_width;
+    return paragraph_width;
 }
 
 std::vector<std::vector<std::string>>
@@ -274,14 +278,14 @@ ParagraphFormatter::global_split_markup(const TextStats &shaper) {
 void ParagraphFormatter::global_split_recursive(const TextStats &shaper,
                                                 std::vector<LineStats> &line_stats,
                                                 size_t current_split) {
-    if(state_cache.abandon_search(line_stats, params, extras)) {
+    if(state_cache.abandon_search(line_stats, paragraph_width, params, extras)) {
         return;
     }
     auto line_end_choices = get_line_end_choices(current_split, shaper, line_stats.size());
     if(line_end_choices.front().end_split == split_points.size() - 1) {
         // Text exhausted.
         line_stats.emplace_back(line_end_choices.front());
-        const auto current_penalty = total_penalty(line_stats, params, extras);
+        const auto current_penalty = total_penalty(line_stats, paragraph_width, params, extras);
         // printf("Total penalty: %.1f\n", current_penalty);
         // FIXME: change to include extra penalties here.
         if(current_penalty < best_penalty) {
@@ -529,9 +533,10 @@ std::vector<LineStats> ParagraphFormatter::get_line_end_choices(size_t start_spl
 }
 
 bool SplitStates::abandon_search(const std::vector<LineStats> &new_splits,
+                                 const Millimeter paragraph_width,
                                  const ChapterParameters &params,
                                  const ExtraPenaltyAmounts &extras) {
-    const double new_penalty = total_penalty(new_splits, params, extras);
+    const double new_penalty = total_penalty(new_splits, paragraph_width, params, extras);
     const auto current_index = new_splits.size();
     auto &current_slot = best_to[current_index];
     if(current_slot.size() >= cache_size && current_slot.back().penalty < new_penalty) {
