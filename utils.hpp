@@ -34,7 +34,11 @@ public:
     const char *data() const { return buf; }
     int64_t size() const { return bufsize; }
 
+    std::string_view view() const { return std::string_view(buf, bufsize); }
+
 private:
     const char *buf;
     int64_t bufsize;
 };
+
+std::vector<std::string> read_lines(const char *p);

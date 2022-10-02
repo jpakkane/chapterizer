@@ -15,7 +15,9 @@
  */
 
 #include "utils.hpp"
+#include <glib.h>
 #include <sstream>
+#include <fstream>
 
 #include <cassert>
 #include <sys/mman.h>
@@ -85,3 +87,17 @@ MMapper::MMapper(const char *path) {
 }
 
 MMapper::~MMapper() { munmap((void *)(buf), bufsize); }
+
+std::vector<std::string> read_lines(const char *p) {
+    std::vector<std::string> lines;
+    std::ifstream input(p);
+    assert(!input.fail());
+    for(std::string line; std::getline(input, line);) {
+        if(!g_utf8_validate(line.c_str(), line.length(), nullptr)) {
+            printf("Invalid UTF-8 in %s.\n", p);
+            std::abort();
+        }
+        lines.push_back(line);
+    }
+    return lines;
+}

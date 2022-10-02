@@ -47,6 +47,9 @@ struct ChapterStyles {
     ChapterParameters code;
     ChapterParameters section;
     ChapterParameters footnote;
+    ChapterParameters title;
+    ChapterParameters author;
+    ChapterParameters colophon;
 };
 
 struct Spaces {
@@ -59,6 +62,7 @@ struct Spaces {
 
 struct PdfMetadata {
     std::string ofname;
+    std::vector<std::string> colophon;
     PageSize page;
     Margins margins;
     ChapterStyles styles;

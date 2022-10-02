@@ -104,9 +104,13 @@ private:
     void flush_draw_commands();
 
     Millimeter textblock_width() const { return page.w - m.inner - m.outer; }
+    Millimeter textblock_height() const { return page.w - m.upper - m.lower; }
 
     void add_pending_figure(const ImageInfo &f);
     void add_top_image(const ImageInfo &image);
+
+    void create_title_page();
+    void create_colophon();
 
     const Document &doc;
     // These are just helpers to cut down on typing.

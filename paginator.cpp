@@ -107,6 +107,9 @@ void Paginator::generate_pdf(const char *outfile) {
     rend.reset(new PdfRenderer(
         outfile, page.w.topt(), page.h.topt(), doc.data.title.c_str(), doc.data.author.c_str()));
 
+    create_title_page();
+    create_colophon();
+
     const auto paragraph_width = page.w - m.inner - m.outer;
     const auto section_width = 0.8 * paragraph_width;
 
@@ -491,4 +494,36 @@ void Paginator::add_pending_figure(const ImageInfo &f) {
         std::abort();
     }
     pending_figure = f;
+}
+
+void Paginator::create_title_page() {
+    const auto middle = current_left_margin() + textblock_width() / 2;
+    auto y = m.upper + textblock_height() / 2;
+    rend->render_markup_as_is(doc.data.title.c_str(),
+                              styles.title.font,
+                              middle.topt(),
+                              y.topt(),
+                              TextAlignment::Centered);
+    y += styles.title.line_height.tomm();
+    rend->render_markup_as_is(doc.data.author.c_str(),
+                              styles.author.font,
+                              middle.topt(),
+                              y.topt(),
+                              TextAlignment::Centered);
+    new_page(false);
+}
+
+void Paginator::create_colophon() {
+    const auto x = current_left_margin();
+    auto y =
+        page.h - m.lower - (doc.data.pdf.colophon.size() + 1) * styles.colophon.line_height.tomm();
+    for(size_t i = 0; i < doc.data.pdf.colophon.size(); ++i) {
+        if(!doc.data.pdf.colophon[i].empty()) {
+            rend->render_text_as_is(
+                doc.data.pdf.colophon[i].c_str(), styles.colophon.font, x.topt(), y.topt());
+        }
+        y += styles.colophon.line_height.tomm();
+    }
+
+    new_page(false);
 }

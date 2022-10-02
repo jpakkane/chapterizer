@@ -7,6 +7,7 @@
         "chapter2.bd"
     ],
     "pdf": {
+        "colophon": "colophon.txt",
         "filename": "bookout.pdf",
         "page": {
             "width": 130,
@@ -46,7 +47,34 @@
                     "pointsize": 9
                 }
             },
+            "title": {
+                "line_height": 22,
+                "indent": 0,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "bold",
+                    "pointsize": 16
+                }
+            },
+            "author": {
+                "line_height": 16,
+                "indent": 0,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "regular",
+                    "pointsize": 14
+                }
+            },
             "footnote": {
+                "line_height": 11,
+                "indent": 5,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "regular",
+                    "pointsize": 9
+                }
+            },
+            "colophon": {
                 "line_height": 11,
                 "indent": 5,
                 "font": {

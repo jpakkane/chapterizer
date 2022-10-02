@@ -96,6 +96,11 @@ void load_pdf_element(Metadata &m, const json &pdf) {
     m.pdf.ofname = get_string(pdf, "filename");
     auto page = pdf["page"];
     auto margins = pdf["margins"];
+
+    auto colophon_file = m.top_dir / get_string(pdf, "colophon");
+
+    m.pdf.colophon = read_lines(colophon_file.c_str());
+
     m.pdf.page.w = Millimeter::from_value(get_int(page, "width"));
     m.pdf.page.h = Millimeter::from_value(get_int(page, "height"));
     m.pdf.margins.inner = Millimeter::from_value(get_int(margins, "inner"));
@@ -108,6 +113,9 @@ void load_pdf_element(Metadata &m, const json &pdf) {
     m.pdf.styles.section = parse_chapterstyle(styles["section"]);
     m.pdf.styles.code = parse_chapterstyle(styles["code"]);
     m.pdf.styles.footnote = parse_chapterstyle(styles["footnote"]);
+    m.pdf.styles.title = parse_chapterstyle(styles["title"]);
+    m.pdf.styles.author = parse_chapterstyle(styles["author"]);
+    m.pdf.styles.colophon = parse_chapterstyle(styles["colophon"]);
 
     auto spaces = pdf["spaces"];
     m.pdf.spaces.above_section = Millimeter::from_value(get_double(spaces, "above_section"));
