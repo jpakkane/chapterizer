@@ -132,6 +132,7 @@ void Paginator::generate_pdf(const char *outfile) {
                 }
             }
             chapter_start_page = rend->page_num();
+            rend->add_section_outline(s.number, s.text);
             first_section = false;
             rel_y = Millimeter::zero();
             rel_y += spaces.above_section;

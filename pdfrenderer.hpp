@@ -62,7 +62,8 @@ public:
 
     void render_text_as_is(const char *line, const FontParameters &par, Point x, Point y);
 
-    void render_markup_as_is(const char *line, const FontParameters &par, Point x, Point y, TextAlignment alignment);
+    void render_markup_as_is(
+        const char *line, const FontParameters &par, Point x, Point y, TextAlignment alignment);
     void render_markup_as_is(const std::vector<std::string> markup_words,
                              const FontParameters &par,
                              Point x,
@@ -85,6 +86,8 @@ public:
     void draw_dash_line(const std::vector<Coord> &points);
 
     void draw_poly_line(const std::vector<Coord> &points, Point thickness);
+
+    void add_section_outline(int section_number, const std::string &text);
 
 private:
     void draw_grid();

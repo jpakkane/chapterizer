@@ -354,3 +354,13 @@ void PdfRenderer::draw_image(
     cairo_fill(cr);
     cairo_restore(cr);
 }
+
+void PdfRenderer::add_section_outline(int section_number, const std::string &text) {
+    std::string outline = std::to_string(section_number);
+    outline += ". ";
+    outline += text;
+    std::string link = "page=";
+    link += std::to_string(page_num());
+    cairo_pdf_surface_add_outline(
+        surf, CAIRO_PDF_OUTLINE_ROOT, outline.c_str(), link.c_str(), (cairo_pdf_outline_flags_t)0);
+}
