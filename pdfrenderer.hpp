@@ -30,6 +30,11 @@ struct ImageInfo {
     int w, h;
 };
 
+struct Coord {
+    Point x;
+    Point y;
+};
+
 class PdfRenderer {
 public:
     explicit PdfRenderer(
@@ -68,6 +73,10 @@ public:
     ImageInfo get_image(const std::string &path);
 
     void draw_image(const ImageInfo &image, Millimeter x, Millimeter y, Millimeter w, Millimeter h);
+
+    void draw_dash_line(const std::vector<Coord> &points);
+
+    void draw_poly_line(const std::vector<Coord> &points, Point thickness);
 
 private:
     void draw_grid();

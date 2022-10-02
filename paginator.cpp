@@ -344,14 +344,47 @@ void Paginator::new_page(bool draw_page_num) {
 void Paginator::flush_draw_commands() {
     Millimeter footnote_block_start = page.h - m.lower - heights.footnote_height;
     if(debug_draw && current_page == chapter_start_page) {
+        const Point boxheight = Point::from_value(12);
+        const Millimeter chaffwidth = Millimeter::from_value(6);
         for(int i = 0; i < 6; ++i) {
-            const Point boxheight = Point::from_value(12);
             rend->fill_box(current_left_margin().topt(),
                            m.upper.topt() + 2 * i * boxheight,
                            textblock_width().topt(),
                            boxheight,
                            0.9);
         }
+        std::vector<Coord> dashcoords;
+        dashcoords.emplace_back(Coord{current_left_margin().topt(), m.upper.topt()});
+        dashcoords.emplace_back(
+            Coord{(current_left_margin() + textblock_width()).topt(), m.upper.topt()});
+        dashcoords.emplace_back(Coord{(current_left_margin() + textblock_width()).topt(),
+                                      m.upper.topt() + 12 * boxheight});
+        dashcoords.emplace_back(
+            Coord{current_left_margin().topt(), m.upper.topt() + 12 * boxheight});
+        dashcoords.emplace_back(Coord{current_left_margin().topt(), m.upper.topt()});
+        rend->draw_dash_line(dashcoords);
+        dashcoords.clear();
+
+        dashcoords.emplace_back(Coord{current_left_margin().topt(), m.upper.topt()});
+        dashcoords.emplace_back(Coord{(current_left_margin() - chaffwidth).topt(), m.upper.topt()});
+        dashcoords.emplace_back(
+            Coord{(current_left_margin() - chaffwidth).topt(), m.upper.topt() + 12 * boxheight});
+        dashcoords.emplace_back(
+            Coord{current_left_margin().topt(), m.upper.topt() + 12 * boxheight});
+        rend->draw_dash_line(dashcoords);
+        dashcoords.clear();
+        const auto hole_center_x = current_left_margin() - chaffwidth / 2;
+        const auto hole_center_y = m.upper + chaffwidth / 2.0;
+        const Millimeter minor_radius = Millimeter::from_value(1.5);
+        const Millimeter major_radius = Millimeter::from_value(1.0);
+        const int num_corners = 8;
+        for(int i = 0; i < (2 * num_corners + 1); ++i) {
+            const auto &current_radius = i % 2 ? major_radius : minor_radius;
+            dashcoords.emplace_back(Coord{
+                (hole_center_x + current_radius * cos(2 * M_PI * i / (num_corners * 2.0))).topt(),
+                (hole_center_y + current_radius * sin(2 * M_PI * i / (num_corners * 2.0))).topt()});
+        }
+        rend->draw_poly_line(dashcoords, Point::from_value(0.2));
     }
     for(const auto &c : layout.images) {
         rend->draw_image(c.i, current_left_margin(), m.upper, c.display_width, c.display_height);

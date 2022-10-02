@@ -135,6 +135,39 @@ void PdfRenderer::fill_box(Point x, Point y, Point w, Point h, double color) {
     cairo_restore(cr);
 }
 
+void PdfRenderer::draw_dash_line(const std::vector<Coord> &points) {
+    if(points.size() < 2) {
+        return;
+    }
+    cairo_save(cr);
+    cairo_set_source_rgb(cr, 0, 0, 0);
+    cairo_set_line_width(cr, 0.6);
+    const double dashes[2] = {4.0, 1.5};
+    cairo_set_dash(cr, dashes, 2, 0.0);
+    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+    cairo_move_to(cr, points[0].x.v, points[0].y.v);
+    for(size_t i = 1; i < points.size(); ++i) {
+        cairo_line_to(cr, points[i].x.v, points[i].y.v);
+    }
+    cairo_stroke(cr);
+    cairo_restore(cr);
+}
+
+void PdfRenderer::draw_poly_line(const std::vector<Coord> &points, Point thickness) {
+    if(points.size() < 2) {
+        return;
+    }
+    cairo_save(cr);
+    cairo_set_source_rgb(cr, 0, 0, 0);
+    cairo_set_line_width(cr, thickness.v);
+    cairo_move_to(cr, points[0].x.v, points[0].y.v);
+    for(size_t i = 1; i < points.size(); ++i) {
+        cairo_line_to(cr, points[i].x.v, points[i].y.v);
+    }
+    cairo_stroke(cr);
+    cairo_restore(cr);
+}
+
 void PdfRenderer::render_line_justified(const std::string &line_text,
                                         const FontParameters &par,
                                         Millimeter line_width,
