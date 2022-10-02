@@ -102,11 +102,21 @@ void load_pdf_element(Metadata &m, const json &pdf) {
     m.pdf.margins.outer = Millimeter::from_value(get_int(margins, "outer"));
     m.pdf.margins.upper = Millimeter::from_value(get_int(margins, "upper"));
     m.pdf.margins.lower = Millimeter::from_value(get_int(margins, "lower"));
+
     auto styles = pdf["styles"];
     m.pdf.styles.normal = parse_chapterstyle(styles["normal"]);
     m.pdf.styles.section = parse_chapterstyle(styles["section"]);
     m.pdf.styles.code = parse_chapterstyle(styles["code"]);
     m.pdf.styles.footnote = parse_chapterstyle(styles["footnote"]);
+
+    auto spaces = pdf["spaces"];
+    m.pdf.spaces.above_section = Millimeter::from_value(get_double(spaces, "above_section"));
+    m.pdf.spaces.below_section = Millimeter::from_value(get_double(spaces, "below_section"));
+    m.pdf.spaces.different_paragraphs =
+        Millimeter::from_value(get_double(spaces, "different_paragraphs"));
+    m.pdf.spaces.codeblock_indent = Millimeter::from_value(get_double(spaces, "codeblock_indent"));
+    m.pdf.spaces.footnote_separation =
+        Millimeter::from_value(get_double(spaces, "footnote_separation"));
 }
 
 void load_epub_element(Metadata &m, const json &epub) {

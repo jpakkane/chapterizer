@@ -49,11 +49,20 @@ struct ChapterStyles {
     ChapterParameters footnote;
 };
 
+struct Spaces {
+    Millimeter above_section;
+    Millimeter below_section;
+    Millimeter different_paragraphs;
+    Millimeter codeblock_indent;
+    Millimeter footnote_separation;
+};
+
 struct PdfMetadata {
     std::string ofname;
     PageSize page;
     Margins margins;
     ChapterStyles styles;
+    Spaces spaces;
 };
 
 struct EpubMetadata {

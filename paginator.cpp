@@ -100,7 +100,8 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
 } // namespace
 
 Paginator::Paginator(const Document &d)
-    : doc(d), page(doc.data.pdf.page), styles(d.data.pdf.styles), m(doc.data.pdf.margins) {}
+    : doc(d), page(doc.data.pdf.page), styles(d.data.pdf.styles), spaces(d.data.pdf.spaces),
+      m(doc.data.pdf.margins) {}
 
 void Paginator::generate_pdf(const char *outfile) {
     rend.reset(new PdfRenderer(
@@ -114,12 +115,7 @@ void Paginator::generate_pdf(const char *outfile) {
 
     ExtraPenaltyAmounts extras;
     const Millimeter bottom_watermark = page.h - m.lower - m.upper;
-    const Millimeter title_above_space = Millimeter::from_value(20);
-    const Millimeter title_below_space = Millimeter::from_value(10);
-    const Millimeter different_paragraph_space = Millimeter::from_value(3);
-    const Millimeter codeblock_indent = Millimeter::from_value(10);
     Millimeter rel_y;
-    const Millimeter footnote_separation = Millimeter::from_value(2);
     bool first_paragraph = true;
     bool first_section = true;
 
@@ -135,8 +131,8 @@ void Paginator::generate_pdf(const char *outfile) {
             chapter_start_page = rend->page_num();
             first_section = false;
             rel_y = Millimeter::zero();
-            rel_y += title_above_space;
-            heights.whitespace_height += title_above_space;
+            rel_y += spaces.above_section;
+            heights.whitespace_height += spaces.above_section;
             assert(s.level == 1);
             // Fancy stuff above the text.
             std::string title_number = std::to_string(s.number);
@@ -160,8 +156,8 @@ void Paginator::generate_pdf(const char *outfile) {
                 rel_y += styles.section.line_height.tomm();
                 heights.text_height += styles.section.line_height.tomm();
             }
-            rel_y += title_below_space;
-            heights.text_height += title_below_space;
+            rel_y += spaces.below_section;
+            heights.text_height += spaces.below_section;
             first_paragraph = true;
         } else if(std::holds_alternative<Paragraph>(e)) {
             const Paragraph &p = std::get<Paragraph>(e);
@@ -192,7 +188,7 @@ void Paginator::generate_pdf(const char *outfile) {
                 std::abort();
             }
             const Footnote &f = std::get<Footnote>(e);
-            heights.whitespace_height += footnote_separation;
+            heights.whitespace_height += spaces.footnote_separation;
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text);
             ParagraphFormatter b(processed_words, paragraph_width, styles.footnote, extras);
             auto lines = b.split_formatted_lines();
@@ -218,21 +214,24 @@ void Paginator::generate_pdf(const char *outfile) {
             first_paragraph = true;
         } else if(std::holds_alternative<CodeBlock>(e)) {
             const CodeBlock &cb = std::get<CodeBlock>(e);
-            rel_y += different_paragraph_space;
-            heights.whitespace_height += different_paragraph_space;
+            rel_y += spaces.different_paragraphs;
+            heights.whitespace_height += spaces.different_paragraphs;
             for(const auto &line : cb.raw_lines) {
                 if(heights.total_height() >= bottom_watermark) {
                     new_page(true);
                     rel_y = Millimeter::zero();
                 }
-                layout.text.emplace_back(MarkupDrawCommand{
-                    line.c_str(), &styles.code.font, codeblock_indent, rel_y, TextAlignment::Left});
+                layout.text.emplace_back(MarkupDrawCommand{line.c_str(),
+                                                           &styles.code.font,
+                                                           spaces.codeblock_indent,
+                                                           rel_y,
+                                                           TextAlignment::Left});
                 rel_y += styles.code.line_height.tomm();
                 heights.text_height += styles.code.line_height.tomm();
             }
             first_paragraph = true;
-            rel_y += different_paragraph_space;
-            heights.whitespace_height += different_paragraph_space;
+            rel_y += spaces.different_paragraphs;
+            heights.whitespace_height += spaces.different_paragraphs;
         } else if(std::holds_alternative<Figure>(e)) {
             const Figure &cb = std::get<Figure>(e);
             const auto fullpath = doc.data.top_dir / cb.file;

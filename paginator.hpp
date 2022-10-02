@@ -112,6 +112,7 @@ private:
     // These are just helpers to cut down on typing.
     const PageSize &page;
     const ChapterStyles &styles;
+    const Spaces &spaces;
     const Margins &m;
     std::unique_ptr<PdfRenderer> rend;
     WordHyphenator hyphen;

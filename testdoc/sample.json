@@ -57,8 +57,11 @@
             }
         },
         "spaces": {
-            "chapter_start": 30,
-            "codeblock_indent": 20
+            "above_section": 20,
+            "below_section": 10,
+            "different_paragraphs": 3,
+            "codeblock_indent": 10,
+            "footnote_separation": 2
         }
     },
     "epub": {
