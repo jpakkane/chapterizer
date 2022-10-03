@@ -282,8 +282,8 @@ void PdfRenderer::render_markup_as_is(
         cairo_move_to(cr, (x - Point::from_value(r.width / (2 * PANGO_SCALE))).v, y.v);
         break;
     case TextAlignment::Right:
-        printf("Right alignment not supported yet.\n");
-        std::abort();
+        pango_layout_get_extents(layout, nullptr, &r);
+        cairo_move_to(cr, (x - Point::from_value(r.width / PANGO_SCALE)).v, y.v);
     }
 
     pango_cairo_update_layout(cr, layout);

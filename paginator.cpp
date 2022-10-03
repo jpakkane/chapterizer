@@ -114,6 +114,18 @@ void Paginator::generate_pdf(const char *outfile) {
         new_page(false);
     }
 
+    create_maintext();
+
+    if(!layout.empty()) {
+        new_page(true);
+    }
+    create_credits();
+    flush_draw_commands();
+
+    rend.reset(nullptr);
+}
+
+void Paginator::create_maintext() {
     const auto paragraph_width = page.w - m.inner - m.outer;
     const auto section_width = 0.8 * paragraph_width;
 
@@ -264,11 +276,6 @@ void Paginator::generate_pdf(const char *outfile) {
             std::abort();
         }
     }
-    if(!layout.empty()) {
-        render_page_num(styles.normal.font);
-        flush_draw_commands();
-    }
-    rend.reset(nullptr);
 }
 
 void Paginator::add_top_image(const ImageInfo &image) {
@@ -555,4 +562,24 @@ void Paginator::create_dedication() {
         heights.text_height += styles.dedication.line_height.tomm();
     }
     new_page(false);
+}
+
+void Paginator::create_credits() {
+    const auto paragraph_width = page.w - m.inner - m.outer;
+    auto y = m.upper + (page.h - m.upper - m.lower) / 8;
+    const Millimeter halfgap = Millimeter::from_value(2);
+    const auto x1 = current_left_margin() + paragraph_width / 2 - halfgap;
+    const auto x2 = x1 + 2 * halfgap;
+
+    for(const auto &[key, value] : doc.data.credits) {
+        if(!key.empty()) {
+            rend->render_markup_as_is(
+                key.c_str(), styles.normal.font, x1.topt(), y.topt(), TextAlignment::Right);
+        }
+        if(!value.empty()) {
+            rend->render_markup_as_is(
+                value.c_str(), styles.normal.font, x2.topt(), y.topt(), TextAlignment::Left);
+        }
+        y += styles.normal.line_height.tomm();
+    }
 }

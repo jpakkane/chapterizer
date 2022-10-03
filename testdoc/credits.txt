@@ -1,0 +1,10 @@
+key + value
+key2 + value2
+graphics + Illustrator name
+layout + DTP program worker's name
+syntax + Not finalised yet
+a long key + Some value
+thanks + Person one
+ + Person Two
+ + Arthur Negus
+ + Fake Name

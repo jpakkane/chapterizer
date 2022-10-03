@@ -42,6 +42,11 @@ struct PageSize {
     Millimeter h;
 };
 
+struct Credits {
+    std::string key;
+    std::string value;
+};
+
 struct ChapterStyles {
     ChapterParameters normal;
     ChapterParameters code;
@@ -89,6 +94,7 @@ struct Metadata {
     PdfMetadata pdf;
     EpubMetadata epub;
     std::vector<std::string> dedication;
+    std::vector<Credits> credits;
 };
 
 struct Paragraph {

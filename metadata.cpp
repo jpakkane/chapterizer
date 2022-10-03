@@ -135,6 +135,37 @@ void load_epub_element(Metadata &m, const json &epub) {
     m.epub.file_as = get_string(epub, "file_as");
 }
 
+void strip(std::string &s) {
+    while(!s.empty() && s.back() == ' ') {
+        s.pop_back();
+    }
+    while(!s.empty() && s.front() == ' ') {
+        s.erase(0, 1);
+    }
+}
+
+std::vector<Credits> load_credits(const char *credits_path) {
+    std::vector<Credits> c;
+    std::string key, val;
+    for(const auto &l : read_lines(credits_path)) {
+        if(l.empty()) {
+            continue;
+        }
+        const auto p = l.find('+');
+        if(p == std::string::npos) {
+            key = "";
+            val = l;
+        } else {
+            key = l.substr(0, p);
+            val = l.substr(p + 1, std::string::npos);
+        }
+        strip(key);
+        strip(val);
+        c.emplace_back(Credits{std::move(key), std::move(val)});
+    }
+    return c;
+}
+
 Metadata load_book_json(const char *path) {
     Metadata m;
     std::filesystem::path json_file(path);
@@ -180,6 +211,8 @@ Metadata load_book_json(const char *path) {
         m.generate_pdf = false;
     }
 
+    auto credits_path = m.top_dir / data["credits"];
+    m.credits = load_credits(credits_path.c_str());
     if(data.contains("epub")) {
         m.generate_epub = true;
         load_epub_element(m, data["epub"]);

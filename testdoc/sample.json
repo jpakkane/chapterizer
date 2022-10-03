@@ -3,6 +3,7 @@
     "author": "Bob McBob",
     "language": "fi",
     "dedication": "dedication.txt",
+    "credits": "credits.txt",
     "sources": [
         "chapter1.bd",
         "chapter2.bd"
