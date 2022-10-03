@@ -1,0 +1,7 @@
+I dedicate this piece of code
+to someone for some reason. The source
+file has its own line separations but
+the final output does not follow them.
+
+This is a second dedication paragraph.
+It should stand alone.

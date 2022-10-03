@@ -50,6 +50,7 @@ struct ChapterStyles {
     ChapterParameters title;
     ChapterParameters author;
     ChapterParameters colophon;
+    ChapterParameters dedication;
 };
 
 struct Spaces {
@@ -87,6 +88,7 @@ struct Metadata {
     bool generate_epub;
     PdfMetadata pdf;
     EpubMetadata epub;
+    std::vector<std::string> dedication;
 };
 
 struct Paragraph {

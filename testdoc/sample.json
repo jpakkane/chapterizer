@@ -2,6 +2,7 @@
     "title": "The Super Book of Stuff",
     "author": "Bob McBob",
     "language": "fi",
+    "dedication": "dedication.txt",
     "sources": [
         "chapter1.bd",
         "chapter2.bd"
@@ -81,6 +82,15 @@
                     "name": "Liberation Serif",
                     "type": "regular",
                     "pointsize": 9
+                }
+            },
+            "dedication": {
+                "line_height": 12,
+                "indent": 0,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "italic",
+                    "pointsize": 10
                 }
             }
         },

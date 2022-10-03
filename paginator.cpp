@@ -109,6 +109,10 @@ void Paginator::generate_pdf(const char *outfile) {
 
     create_title_page();
     create_colophon();
+    if(!doc.data.dedication.empty()) {
+        create_dedication();
+        new_page(false);
+    }
 
     const auto paragraph_width = page.w - m.inner - m.outer;
     const auto section_width = 0.8 * paragraph_width;
@@ -327,6 +331,8 @@ Paginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &l
                                   const TextAlignment alignment,
                                   Millimeter rel_y) {
     std::vector<TextCommands> line_commands;
+    const auto rel_x =
+        alignment == TextAlignment::Centered ? textblock_width() / 2 : Millimeter::zero();
     line_commands.reserve(lines.size());
     for(const auto &markup_words : lines) {
         std::string full_line;
@@ -334,12 +340,8 @@ Paginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &l
             full_line += w;
         }
         assert(alignment != TextAlignment::Right);
-        line_commands.emplace_back(MarkupDrawCommand{
-            std::move(full_line),
-            &text_par.font,
-            alignment == TextAlignment::Centered ? textblock_width() / 2 : Millimeter::zero(),
-            rel_y,
-            alignment});
+        line_commands.emplace_back(
+            MarkupDrawCommand{std::move(full_line), &text_par.font, rel_x, rel_y, alignment});
         rel_y += text_par.line_height.tomm();
     }
     return line_commands;
@@ -527,5 +529,30 @@ void Paginator::create_colophon() {
         y += styles.colophon.line_height.tomm();
     }
 
+    new_page(false);
+}
+
+void Paginator::create_dedication() {
+    ExtraPenaltyAmounts extras;
+    const auto paragraph_width = page.w - m.inner - m.outer;
+    const auto dedication_width = 2 * paragraph_width / 3;
+    // FIXME, ragged_paragraph should take this as an argument.
+    // const auto x = current_left_margin() + paragraph_width / 2;
+    auto y = m.upper + (page.h - m.upper - m.lower) / 8;
+
+    for(const auto &text : doc.data.dedication) {
+        const auto processed_words = text_to_formatted_words(text);
+        ParagraphFormatter b(processed_words, dedication_width, styles.dedication, extras);
+        auto lines = b.split_formatted_lines();
+        auto built_lines =
+            build_ragged_paragraph(lines, styles.dedication, TextAlignment::Centered, y);
+        for(auto &line : built_lines) {
+            layout.text.emplace_back(std::move(line));
+            y += styles.dedication.line_height.tomm();
+            heights.text_height += styles.dedication.line_height.tomm();
+        }
+        y += styles.dedication.line_height.tomm();
+        heights.text_height += styles.dedication.line_height.tomm();
+    }
     new_page(false);
 }

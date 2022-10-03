@@ -111,6 +111,7 @@ private:
 
     void create_title_page();
     void create_colophon();
+    void create_dedication();
 
     const Document &doc;
     // These are just helpers to cut down on typing.

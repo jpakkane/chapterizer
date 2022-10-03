@@ -382,7 +382,11 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
             word_start = 0;
         }
         if(last_word && std::holds_alternative<WithinWordSplit>(to_split)) {
-            word_end = to_loc.offset + 1;
+            if(to_loc.offset == 0) {
+                word_end = 0;
+            } else {
+                word_end = to_loc.offset + 1;
+            }
         } else {
             word_end = current_word.text.length();
         }

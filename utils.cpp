@@ -101,3 +101,27 @@ std::vector<std::string> read_lines(const char *p) {
     }
     return lines;
 }
+
+std::vector<std::string> read_paragraphs(const char *p) {
+    std::vector<std::string> paragraphs;
+    std::string buf;
+    for(const auto &line : read_lines(p)) {
+        if(line.empty()) {
+            if(!buf.empty()) {
+                paragraphs.emplace_back(std::move(buf));
+                buf.clear();
+            }
+        } else {
+            if(buf.empty()) {
+                buf = line;
+            } else {
+                buf += ' ';
+                buf += line;
+            }
+        }
+    }
+    if(!buf.empty()) {
+        paragraphs.emplace_back(std::move(buf));
+    }
+    return paragraphs;
+}

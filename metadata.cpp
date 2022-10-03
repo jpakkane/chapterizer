@@ -116,6 +116,7 @@ void load_pdf_element(Metadata &m, const json &pdf) {
     m.pdf.styles.title = parse_chapterstyle(styles["title"]);
     m.pdf.styles.author = parse_chapterstyle(styles["author"]);
     m.pdf.styles.colophon = parse_chapterstyle(styles["colophon"]);
+    m.pdf.styles.dedication = parse_chapterstyle(styles["dedication"]);
 
     auto spaces = pdf["spaces"];
     m.pdf.spaces.above_section = Millimeter::from_value(get_double(spaces, "above_section"));
@@ -169,6 +170,9 @@ Metadata load_book_json(const char *path) {
         m.sources.push_back(e.get<std::string>());
     }
 
+    auto dedication_path = m.top_dir / data["dedication"];
+
+    m.dedication = read_paragraphs(dedication_path.c_str());
     if(data.contains("pdf")) {
         m.generate_pdf = true;
         load_pdf_element(m, data["pdf"]);
