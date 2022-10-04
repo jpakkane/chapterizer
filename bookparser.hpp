@@ -47,7 +47,7 @@ struct ReMatchOffsets {
 
 std::string get_normalized_string(std::string_view v);
 
-enum class SpecialBlockType : int { Code, Footnote, Unset };
+enum class SpecialBlockType : int { Code, Footnote, NumberList, Unset };
 
 struct ReMatchResult {
     re_match minfo;
@@ -103,7 +103,8 @@ public:
         section =
             g_regex_new("(#+)\\s+(.*)", GRegexCompileFlags(0), G_REGEX_MATCH_ANCHORED, nullptr);
         line = g_regex_new(".+", GRegexCompileFlags(0), G_REGEX_MATCH_ANCHORED, nullptr);
-        newline = g_regex_new("\\n+", G_REGEX_MULTILINE, G_REGEX_MATCH_ANCHORED, nullptr);
+        multi_newline = g_regex_new("\\n+", G_REGEX_MULTILINE, G_REGEX_MATCH_ANCHORED, nullptr);
+        single_newline = g_regex_new("\\n", G_REGEX_MULTILINE, G_REGEX_MATCH_ANCHORED, nullptr);
         directive = g_regex_new(
             "#(\\w+)( +[^ ].*)?", GRegexCompileFlags(0), G_REGEX_MATCH_ANCHORED, nullptr);
         specialblock_start =
@@ -113,7 +114,8 @@ public:
     }
 
     ~LineParser() {
-        g_regex_unref(newline);
+        g_regex_unref(multi_newline);
+        g_regex_unref(single_newline);
         g_regex_unref(section);
         g_regex_unref(line);
         g_regex_unref(whitespace);
@@ -143,7 +145,8 @@ private:
     GRegex *whitespace;
     GRegex *section;
     GRegex *line;
-    GRegex *newline;
+    GRegex *single_newline;
+    GRegex *multi_newline;
     GRegex *directive;
     GRegex *specialblock_start;
     GRegex *specialblock_end;
@@ -170,6 +173,8 @@ private:
     void build_element();
 
     std::string pop_lines_to_string();
+
+    std::vector<std::string> pop_lines_to_paragraphs();
 
     Document &doc;
     bool has_finished = false;

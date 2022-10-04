@@ -52,6 +52,7 @@ struct ChapterStyles {
     ChapterParameters code;
     ChapterParameters section;
     ChapterParameters footnote;
+    ChapterParameters lists;
     ChapterParameters title;
     ChapterParameters author;
     ChapterParameters colophon;
@@ -116,6 +117,10 @@ struct Footnote {
     std::string text;
 };
 
+struct NumberList {
+    std::vector<std::string> items;
+};
+
 struct Figure {
     std::string file;
 };
@@ -123,7 +128,8 @@ struct Figure {
 struct SceneChange {};
 
 // Also needs images, footnotes, unformatted text etc.
-typedef std::variant<Paragraph, Section, SceneChange, CodeBlock, Footnote, Figure> DocElement;
+typedef std::variant<Paragraph, Section, SceneChange, CodeBlock, Footnote, NumberList, Figure>
+    DocElement;
 
 struct Document {
     Metadata data;

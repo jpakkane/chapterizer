@@ -384,6 +384,7 @@ void Epub::write_chapters(const fs::path &outdir) {
         } else if(std::holds_alternative<CodeBlock>(e)) {
             write_codeblock(epubdoc, body, std::get<CodeBlock>(e));
         } else if(std::holds_alternative<SceneChange>(e)) {
+            assert(body);
             auto p = epubdoc.NewElement("p");
             p->SetText(" "); // There may be a smarter way of doing this.
             body->InsertEndChild(p);
@@ -392,6 +393,17 @@ void Epub::write_chapters(const fs::path &outdir) {
             // We just ignore them.
 
             // FIXME: add links to the footnote file.
+        } else if(std::holds_alternative<NumberList>(e)) {
+            const auto &nl = std::get<NumberList>(e);
+            auto p = epubdoc.NewElement("p");
+            body->InsertEndChild(p);
+            auto ol = epubdoc.NewElement("ol");
+            p->InsertEndChild(ol);
+            for(const auto &item : nl.items) {
+                auto li = epubdoc.NewElement("li");
+                li->SetText(item.c_str());
+                ol->InsertEndChild(li);
+            }
         } else if(std::holds_alternative<Figure>(e)) {
             const auto &figure = std::get<Figure>(e);
             const auto imagepath = get_epub_image_path(figure.file);

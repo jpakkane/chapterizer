@@ -88,7 +88,9 @@ private:
     void render_page_num(const FontParameters &par);
     std::vector<TextCommands>
     build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
-                              const ChapterParameters &text_par);
+                              const ChapterParameters &text_par, const Millimeter target_width,
+                              const Millimeter x_off = Millimeter::zero(),
+                              const Millimeter y_off = Millimeter::zero());
     std::vector<TextCommands>
     build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
                            const ChapterParameters &text_par,

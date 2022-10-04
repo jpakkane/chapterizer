@@ -113,6 +113,7 @@ void load_pdf_element(Metadata &m, const json &pdf) {
     m.pdf.styles.section = parse_chapterstyle(styles["section"]);
     m.pdf.styles.code = parse_chapterstyle(styles["code"]);
     m.pdf.styles.footnote = parse_chapterstyle(styles["footnote"]);
+    m.pdf.styles.lists = parse_chapterstyle(styles["lists"]);
     m.pdf.styles.title = parse_chapterstyle(styles["title"]);
     m.pdf.styles.author = parse_chapterstyle(styles["author"]);
     m.pdf.styles.colophon = parse_chapterstyle(styles["colophon"]);

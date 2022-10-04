@@ -185,7 +185,7 @@ void Paginator::create_maintext() {
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
             ParagraphFormatter b(processed_words, paragraph_width, cur_par, extras);
             auto lines = b.split_formatted_lines();
-            auto built_lines = build_justified_paragraph(lines, cur_par);
+            auto built_lines = build_justified_paragraph(lines, cur_par, textblock_width());
 
             Millimeter current_y_origin = rel_y;
             int lines_in_paragraph = 0;
@@ -220,7 +220,7 @@ void Paginator::create_maintext() {
                                                            Millimeter::zero(),
                                                            tmpy,
                                                            TextAlignment::Left});
-            auto built_lines = build_justified_paragraph(lines, styles.footnote);
+            auto built_lines = build_justified_paragraph(lines, styles.footnote, textblock_width());
             // FIXME, assumes there is always enough space for a footnote.
             heights.footnote_height += built_lines.size() * styles.footnote.line_height.tomm();
             layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
@@ -272,7 +272,38 @@ void Paginator::create_maintext() {
                 //  printf("Image is %d PPI\n", int(image.w / display_width.v * 25.4));
                 //   heights.figure_height += display_height;
             }
+        } else if(std::holds_alternative<NumberList>(e)) {
+            const NumberList &nl = std::get<NumberList>(e);
+            const Millimeter number_area = Millimeter::from_value(5);
+            const Millimeter indent = spaces.codeblock_indent; // FIXME
+            const Millimeter text_width = paragraph_width - number_area - indent;
+            const Millimeter item_separator = spaces.different_paragraphs / 2;
+            rel_y += spaces.different_paragraphs;
+            heights.whitespace_height += spaces.different_paragraphs;
+            for(size_t i = 0; i < nl.items.size(); ++i) {
+                if(i != 0) {
+                    rel_y += item_separator;
+                    heights.whitespace_height += item_separator;
+                }
+                std::vector<EnrichedWord> processed_words = text_to_formatted_words(nl.items[i]);
+                ParagraphFormatter b(processed_words, text_width, styles.lists, extras);
+                auto lines = b.split_formatted_lines();
+                std::string fnum = std::to_string(i + 1);
+                fnum += '.';
+                layout.text.emplace_back(MarkupDrawCommand{
+                    std::move(fnum), &styles.lists.font, indent, rel_y, TextAlignment::Left});
+                for(auto &line : build_justified_paragraph(
+                        lines, styles.lists, text_width, indent + number_area, rel_y)) {
+                    // FIXME, handle page changes.
+                    layout.text.emplace_back(std::move(line));
+                    heights.footnote_height += styles.footnote.line_height.tomm();
+                    rel_y += styles.lists.line_height.tomm();
+                }
+            }
+            rel_y += spaces.different_paragraphs;
+            heights.whitespace_height += spaces.different_paragraphs;
         } else {
+            printf("Unknown element in document array.\n");
             std::abort();
         }
     }
@@ -300,7 +331,10 @@ void Paginator::render_page_num(const FontParameters &par) {
 
 std::vector<TextCommands>
 Paginator::build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
-                                     const ChapterParameters &text_par) {
+                                     const ChapterParameters &text_par,
+                                     const Millimeter target_width,
+                                     const Millimeter x_off,
+                                     const Millimeter y_off) {
     Millimeter rel_y = Millimeter::zero();
     const Millimeter x = Millimeter::zero();
     std::vector<TextCommands> line_commands;
@@ -309,12 +343,11 @@ Paginator::build_justified_paragraph(const std::vector<std::vector<std::string>>
     for(const auto &markup_words : lines) {
         Millimeter current_indent = line_num == 0 ? text_par.indent : Millimeter{};
         if(line_num < lines.size() - 1) {
-            line_commands.emplace_back(
-                JustifiedMarkupDrawCommand{markup_words,
-                                           &text_par.font,
-                                           (x + current_indent),
-                                           rel_y,
-                                           textblock_width() - current_indent});
+            line_commands.emplace_back(JustifiedMarkupDrawCommand{markup_words,
+                                                                  &text_par.font,
+                                                                  (x + current_indent) + x_off,
+                                                                  rel_y + y_off,
+                                                                  target_width - current_indent});
         } else {
             std::string full_line;
             for(const auto &w : markup_words) {
@@ -322,8 +355,8 @@ Paginator::build_justified_paragraph(const std::vector<std::vector<std::string>>
             }
             line_commands.emplace_back(MarkupDrawCommand{std::move(full_line),
                                                          &text_par.font,
-                                                         x + current_indent,
-                                                         rel_y,
+                                                         x + current_indent + x_off,
+                                                         rel_y + y_off,
                                                          TextAlignment::Left});
         }
         line_num++;

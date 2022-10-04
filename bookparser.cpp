@@ -20,6 +20,15 @@
 
 #include <algorithm>
 
+namespace {
+
+const std::unordered_map<std::string, SpecialBlockType> specialmap{
+    {"code", SpecialBlockType::Code},
+    {"footnote", SpecialBlockType::Footnote},
+    {"numberlist", SpecialBlockType::NumberList}};
+
+}
+
 std::string get_normalized_string(std::string_view v) {
     gchar *norm = g_utf8_normalize(v.data(), v.length(), G_NORMALIZE_NFC);
     std::string result{norm};
@@ -51,7 +60,7 @@ line_token LineParser::next() {
             return EndOfSpecialBlock{};
         } else {
             auto full_line = try_match(line, GRegexMatchFlags(0));
-            auto nl = try_match(newline, GRegexMatchFlags(0));
+            auto nl = try_match(single_newline, GRegexMatchFlags(0));
             if(!nl) {
                 std::abort();
             }
@@ -61,7 +70,7 @@ line_token LineParser::next() {
             return PlainLine{std::string_view{}}; // Empty line.
         }
     }
-    auto match_result = try_match(newline, GRegexMatchFlags(0));
+    auto match_result = try_match(multi_newline, GRegexMatchFlags(0));
     if(match_result) {
         if(match_result->whole_match.length() > 1) {
             return NewBlock{};
@@ -75,15 +84,13 @@ line_token LineParser::next() {
             std::abort();
         }
         parsing_specialblock = true;
-        if(!try_match(newline, GRegexMatchFlags(0))) {
+        if(!try_match(multi_newline, GRegexMatchFlags(0))) {
             std::abort();
         }
         const auto block_name = match_result->view_for(1, data);
-        if(block_name == "code") {
-            return StartOfSpecialBlock{SpecialBlockType::Code};
-        }
-        if(block_name == "footnote") {
-            return StartOfSpecialBlock{SpecialBlockType::Footnote};
+        auto it = specialmap.find(std::string{block_name});
+        if(it != specialmap.end()) {
+            return StartOfSpecialBlock{it->second};
         }
         std::string tmp{block_name};
         printf("Unknown special block type: %s\n", tmp.c_str());
@@ -146,6 +153,31 @@ std::string StructureParser::pop_lines_to_string() {
     return line;
 }
 
+std::vector<std::string> StructureParser::pop_lines_to_paragraphs() {
+    std::vector<std::string> paras;
+    std::string buf;
+    for(auto &l : stored_lines) {
+        if(l.empty()) {
+            if(!buf.empty()) {
+                paras.emplace_back(std::move(buf));
+                buf.clear();
+            }
+        } else {
+            if(buf.empty()) {
+                buf = std::move(l);
+            } else {
+                buf += ' ';
+                buf += l;
+            }
+        }
+    }
+    if(!buf.empty()) {
+        paras.emplace_back(std::move(buf));
+    }
+    stored_lines.clear();
+    return paras;
+}
+
 void StructureParser::build_element() {
     switch(current_state) {
     case ParsingState::unset:
@@ -155,6 +187,8 @@ void StructureParser::build_element() {
             doc.elements.emplace_back(CodeBlock{std::move(stored_lines)});
         } else if(current_special == SpecialBlockType::Footnote) {
             doc.elements.emplace_back(Footnote{footnote_number, pop_lines_to_string()});
+        } else if(current_special == SpecialBlockType::NumberList) {
+            doc.elements.emplace_back(NumberList{pop_lines_to_paragraphs()});
         } else {
             std::abort();
         }
@@ -204,9 +238,8 @@ void StructureParser::push(const line_token &l) {
         stored_lines.emplace_back(std::get<SectionDecl>(l).text);
     } else if(std::holds_alternative<StartOfSpecialBlock>(l)) {
         set_state(ParsingState::specialblock);
-        const auto new_special = std::get<StartOfSpecialBlock>(l).type;
-        current_special = new_special;
-        if(new_special == SpecialBlockType::Footnote) {
+        current_special = std::get<StartOfSpecialBlock>(l).type;
+        if(current_special == SpecialBlockType::Footnote) {
             ++footnote_number;
         }
     } else if(std::holds_alternative<EndOfSpecialBlock>(l)) {

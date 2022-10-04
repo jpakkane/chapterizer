@@ -76,6 +76,15 @@
                     "pointsize": 9
                 }
             },
+            "lists": {
+                "line_height": 12,
+                "indent": 0,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "regular",
+                    "pointsize": 10
+                }
+            },
             "colophon": {
                 "line_height": 11,
                 "indent": 5,
@@ -99,7 +108,7 @@
             "above_section": 20,
             "below_section": 10,
             "different_paragraphs": 3,
-            "codeblock_indent": 10,
+            "codeblock_indent": 5,
             "footnote_separation": 2
         }
     },
