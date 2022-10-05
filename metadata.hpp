@@ -88,6 +88,7 @@ struct Metadata {
     std::filesystem::path top_dir;
     std::string title;
     std::string author;
+    bool draft = false;
     Language language;
     std::vector<std::string> sources;
     bool generate_pdf;

@@ -92,41 +92,86 @@ ChapterParameters parse_chapterstyle(const json &data) {
     return chapter_style;
 }
 
+void setup_draft_settings(Metadata &m) {
+    // Page
+    m.pdf.page.w = Millimeter::from_value(210);
+    m.pdf.page.h = Millimeter::from_value(297);
+    m.pdf.margins.inner = Millimeter::from_value(25.4);
+    m.pdf.margins.outer = Millimeter::from_value(25.4);
+    m.pdf.margins.upper = Millimeter::from_value(25.4);
+    m.pdf.margins.lower = Millimeter::from_value(25.4);
+
+    // Fonts
+    m.pdf.styles.normal.font.name = "Liberation Serif";
+    m.pdf.styles.normal.font.size = Point::from_value(12);
+    m.pdf.styles.normal.font.type = FontStyle::Regular;
+    m.pdf.styles.normal.indent = Millimeter::from_value(10);
+    m.pdf.styles.normal.line_height = Point::from_value(24);
+    const auto &normal = m.pdf.styles.normal;
+
+    m.pdf.styles.code = normal;
+    m.pdf.styles.code.font.name = "Liberation Mono";
+    m.pdf.styles.colophon = normal;
+    m.pdf.styles.dedication = normal;
+    m.pdf.styles.footnote = normal;
+    m.pdf.styles.lists = normal;
+
+    m.pdf.styles.section.font.name = "Liberation Sans";
+    m.pdf.styles.section.font.size = Point::from_value(14);
+    m.pdf.styles.section.font.type = FontStyle::Bold;
+    m.pdf.styles.section.line_height = Point::from_value(21);
+
+    m.pdf.styles.title = m.pdf.styles.section;
+    m.pdf.styles.author = m.pdf.styles.section;
+
+    // Spaces
+    m.pdf.spaces.below_section = Millimeter::from_value(10);
+    m.pdf.spaces.above_section = Millimeter::zero();
+    m.pdf.spaces.codeblock_indent = Millimeter::zero();
+    m.pdf.spaces.different_paragraphs = Millimeter::from_value(5);
+    m.pdf.spaces.footnote_separation = Millimeter::from_value(10);
+}
+
 void load_pdf_element(Metadata &m, const json &pdf) {
     m.pdf.ofname = get_string(pdf, "filename");
     auto page = pdf["page"];
     auto margins = pdf["margins"];
 
     auto colophon_file = m.top_dir / get_string(pdf, "colophon");
-
     m.pdf.colophon = read_lines(colophon_file.c_str());
 
-    m.pdf.page.w = Millimeter::from_value(get_int(page, "width"));
-    m.pdf.page.h = Millimeter::from_value(get_int(page, "height"));
-    m.pdf.margins.inner = Millimeter::from_value(get_int(margins, "inner"));
-    m.pdf.margins.outer = Millimeter::from_value(get_int(margins, "outer"));
-    m.pdf.margins.upper = Millimeter::from_value(get_int(margins, "upper"));
-    m.pdf.margins.lower = Millimeter::from_value(get_int(margins, "lower"));
+    if(m.draft) {
+        setup_draft_settings(m);
+    } else {
 
-    auto styles = pdf["styles"];
-    m.pdf.styles.normal = parse_chapterstyle(styles["normal"]);
-    m.pdf.styles.section = parse_chapterstyle(styles["section"]);
-    m.pdf.styles.code = parse_chapterstyle(styles["code"]);
-    m.pdf.styles.footnote = parse_chapterstyle(styles["footnote"]);
-    m.pdf.styles.lists = parse_chapterstyle(styles["lists"]);
-    m.pdf.styles.title = parse_chapterstyle(styles["title"]);
-    m.pdf.styles.author = parse_chapterstyle(styles["author"]);
-    m.pdf.styles.colophon = parse_chapterstyle(styles["colophon"]);
-    m.pdf.styles.dedication = parse_chapterstyle(styles["dedication"]);
+        m.pdf.page.w = Millimeter::from_value(get_int(page, "width"));
+        m.pdf.page.h = Millimeter::from_value(get_int(page, "height"));
+        m.pdf.margins.inner = Millimeter::from_value(get_int(margins, "inner"));
+        m.pdf.margins.outer = Millimeter::from_value(get_int(margins, "outer"));
+        m.pdf.margins.upper = Millimeter::from_value(get_int(margins, "upper"));
+        m.pdf.margins.lower = Millimeter::from_value(get_int(margins, "lower"));
 
-    auto spaces = pdf["spaces"];
-    m.pdf.spaces.above_section = Millimeter::from_value(get_double(spaces, "above_section"));
-    m.pdf.spaces.below_section = Millimeter::from_value(get_double(spaces, "below_section"));
-    m.pdf.spaces.different_paragraphs =
-        Millimeter::from_value(get_double(spaces, "different_paragraphs"));
-    m.pdf.spaces.codeblock_indent = Millimeter::from_value(get_double(spaces, "codeblock_indent"));
-    m.pdf.spaces.footnote_separation =
-        Millimeter::from_value(get_double(spaces, "footnote_separation"));
+        auto styles = pdf["styles"];
+        m.pdf.styles.normal = parse_chapterstyle(styles["normal"]);
+        m.pdf.styles.section = parse_chapterstyle(styles["section"]);
+        m.pdf.styles.code = parse_chapterstyle(styles["code"]);
+        m.pdf.styles.footnote = parse_chapterstyle(styles["footnote"]);
+        m.pdf.styles.lists = parse_chapterstyle(styles["lists"]);
+        m.pdf.styles.title = parse_chapterstyle(styles["title"]);
+        m.pdf.styles.author = parse_chapterstyle(styles["author"]);
+        m.pdf.styles.colophon = parse_chapterstyle(styles["colophon"]);
+        m.pdf.styles.dedication = parse_chapterstyle(styles["dedication"]);
+
+        auto spaces = pdf["spaces"];
+        m.pdf.spaces.above_section = Millimeter::from_value(get_double(spaces, "above_section"));
+        m.pdf.spaces.below_section = Millimeter::from_value(get_double(spaces, "below_section"));
+        m.pdf.spaces.different_paragraphs =
+            Millimeter::from_value(get_double(spaces, "different_paragraphs"));
+        m.pdf.spaces.codeblock_indent =
+            Millimeter::from_value(get_double(spaces, "codeblock_indent"));
+        m.pdf.spaces.footnote_separation =
+            Millimeter::from_value(get_double(spaces, "footnote_separation"));
+    }
 }
 
 void load_epub_element(Metadata &m, const json &epub) {
@@ -181,6 +226,15 @@ Metadata load_book_json(const char *path) {
     assert(data.is_object());
     m.author = get_string(data, "author");
     m.title = get_string(data, "title");
+    auto draft = data["draft"];
+    if(!draft.is_null()) {
+        if(draft.is_boolean()) {
+            m.draft = draft.get<bool>();
+        } else {
+            printf("The \"draft\" key must be a boolean.\n");
+            std::abort();
+        }
+    }
     const auto langstr = get_string(data, "language");
     auto it = langmap.find(langstr);
     if(it == langmap.end()) {
