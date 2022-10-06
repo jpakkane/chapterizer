@@ -49,6 +49,7 @@ struct Credits {
 
 struct ChapterStyles {
     ChapterParameters normal;
+    ChapterParameters normal_noindent;
     ChapterParameters code;
     ChapterParameters section;
     ChapterParameters footnote;

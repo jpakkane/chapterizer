@@ -108,6 +108,8 @@ void setup_draft_settings(Metadata &m) {
     m.pdf.styles.normal.indent = Millimeter::from_value(10);
     m.pdf.styles.normal.line_height = Point::from_value(24);
     const auto &normal = m.pdf.styles.normal;
+    m.pdf.styles.normal_noindent = normal;
+    m.pdf.styles.normal_noindent.indent = Millimeter::zero();
 
     m.pdf.styles.code = normal;
     m.pdf.styles.code.font.name = "Liberation Mono";
@@ -153,6 +155,8 @@ void load_pdf_element(Metadata &m, const json &pdf) {
 
         auto styles = pdf["styles"];
         m.pdf.styles.normal = parse_chapterstyle(styles["normal"]);
+        m.pdf.styles.normal_noindent = m.pdf.styles.normal;
+        m.pdf.styles.normal_noindent.indent = Millimeter::zero();
         m.pdf.styles.section = parse_chapterstyle(styles["section"]);
         m.pdf.styles.code = parse_chapterstyle(styles["code"]);
         m.pdf.styles.footnote = parse_chapterstyle(styles["footnote"]);

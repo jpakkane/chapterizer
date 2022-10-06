@@ -133,9 +133,6 @@ void Paginator::create_maintext() {
     const auto paragraph_width = page.w - m.inner - m.outer;
     const auto section_width = 0.8 * paragraph_width;
 
-    ChapterParameters noindent_text_par = styles.normal;
-    noindent_text_par.indent = Millimeter::zero();
-
     ExtraPenaltyAmounts extras;
     const Millimeter bottom_watermark = page.h - m.lower - m.upper;
     Millimeter rel_y;
@@ -192,12 +189,28 @@ void Paginator::create_maintext() {
             first_paragraph = true;
         } else if(std::holds_alternative<Paragraph>(e)) {
             const Paragraph &p = std::get<Paragraph>(e);
-            const ChapterParameters &cur_par = first_paragraph ? noindent_text_par : styles.normal;
+            const ChapterParameters &cur_par =
+                first_paragraph ? styles.normal_noindent : styles.normal;
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
             ParagraphFormatter b(processed_words, paragraph_width, cur_par, extras);
             auto lines = b.split_formatted_lines();
-            auto built_lines = build_justified_paragraph(lines, cur_par, textblock_width());
-
+            std::vector<TextCommands> built_lines;
+            if(doc.data.is_draft) {
+                built_lines =
+                    build_ragged_paragraph(lines, cur_par, TextAlignment::Left, Millimeter::zero());
+                if(!built_lines.empty()) {
+                    auto &first_line = built_lines[0];
+                    if(std::holds_alternative<MarkupDrawCommand>(first_line)) {
+                        std::get<MarkupDrawCommand>(first_line).x += cur_par.indent;
+                    } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(first_line)) {
+                        std::get<JustifiedMarkupDrawCommand>(first_line).x += cur_par.indent;
+                    } else {
+                        std::abort();
+                    }
+                }
+            } else {
+                built_lines = build_justified_paragraph(lines, cur_par, textblock_width());
+            }
             Millimeter current_y_origin = rel_y;
             int lines_in_paragraph = 0;
             for(auto &line : built_lines) {
@@ -236,6 +249,13 @@ void Paginator::create_maintext() {
             heights.footnote_height += built_lines.size() * styles.footnote.line_height.tomm();
             layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
         } else if(std::holds_alternative<SceneChange>(e)) {
+            if(doc.data.is_draft) {
+                layout.text.emplace_back(MarkupDrawCommand{"#",
+                                                           &styles.normal.font,
+                                                           textblock_width() / 2,
+                                                           rel_y,
+                                                           TextAlignment::Centered});
+            }
             rel_y += styles.normal.line_height.tomm();
             heights.whitespace_height += styles.normal.line_height.tomm();
             if(rel_y >= bottom_watermark) {
