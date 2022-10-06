@@ -93,20 +93,12 @@ ChapterParameters parse_chapterstyle(const json &data) {
 }
 
 void setup_draft_settings(Metadata &m) {
-    // Page
-    m.pdf.page.w = Millimeter::from_value(210);
-    m.pdf.page.h = Millimeter::from_value(297);
-    m.pdf.margins.inner = Millimeter::from_value(25.4);
-    m.pdf.margins.outer = Millimeter::from_value(25.4);
-    m.pdf.margins.upper = Millimeter::from_value(25.4);
-    m.pdf.margins.lower = Millimeter::from_value(25.4);
-
     // Fonts
     m.pdf.styles.normal.font.name = "Liberation Serif";
     m.pdf.styles.normal.font.size = Point::from_value(12);
     m.pdf.styles.normal.font.type = FontStyle::Regular;
     m.pdf.styles.normal.indent = Millimeter::from_value(10);
-    m.pdf.styles.normal.line_height = Point::from_value(24);
+    m.pdf.styles.normal.line_height = Point::from_value(20);
     const auto &normal = m.pdf.styles.normal;
     m.pdf.styles.normal_noindent = normal;
     m.pdf.styles.normal_noindent.indent = Millimeter::zero();
@@ -125,13 +117,22 @@ void setup_draft_settings(Metadata &m) {
 
     m.pdf.styles.title = m.pdf.styles.section;
     m.pdf.styles.author = m.pdf.styles.section;
+    m.pdf.styles.author.font.type = FontStyle::Regular;
+
+    // Page
+    m.pdf.page.w = Millimeter::from_value(210);
+    m.pdf.page.h = Millimeter::from_value(297);
+    m.pdf.margins.inner = Millimeter::from_value(25.4);
+    m.pdf.margins.outer = Millimeter::from_value(25.4);
+    m.pdf.margins.upper = Millimeter::from_value(25.4) + m.pdf.styles.normal.line_height.tomm();
+    m.pdf.margins.lower = Millimeter::from_value(25.4);
 
     // Spaces
-    m.pdf.spaces.below_section = Millimeter::from_value(10);
-    m.pdf.spaces.above_section = Millimeter::from_value(50);
+    m.pdf.spaces.below_section = Millimeter::from_value(0);
+    m.pdf.spaces.above_section = Millimeter::from_value(60);
     m.pdf.spaces.codeblock_indent = Millimeter::zero();
     m.pdf.spaces.different_paragraphs = Millimeter::from_value(5);
-    m.pdf.spaces.footnote_separation = Millimeter::from_value(10);
+    m.pdf.spaces.footnote_separation = Millimeter::from_value(5);
 }
 
 void load_pdf_element(Metadata &m, const json &pdf) {

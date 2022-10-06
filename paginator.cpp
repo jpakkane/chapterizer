@@ -361,7 +361,7 @@ void Paginator::render_page_num(const FontParameters &par) {
         rend->render_markup_as_is(text.c_str(),
                                   styles.normal.font,
                                   (current_left_margin() + textblock_width()).topt(),
-                                  m.upper.topt() - styles.normal.line_height,
+                                  m.upper.topt() - 2 * styles.normal.line_height,
                                   TextAlignment::Right);
     } else {
         char buf[128];
