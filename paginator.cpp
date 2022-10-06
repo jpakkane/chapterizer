@@ -107,21 +107,25 @@ void Paginator::generate_pdf(const char *outfile) {
     rend.reset(new PdfRenderer(
         outfile, page.w.topt(), page.h.topt(), doc.data.title.c_str(), doc.data.author.c_str()));
 
-    create_title_page();
-    create_colophon();
-    if(!doc.data.dedication.empty()) {
-        create_dedication();
-        new_page(false);
+    if(doc.data.is_draft) {
+        create_draft_title_page();
+    } else {
+        create_title_page();
+        create_colophon();
+        if(!doc.data.dedication.empty()) {
+            create_dedication();
+            new_page(false);
+        }
     }
 
     create_maintext();
-
     if(!layout.empty()) {
         new_page(true);
     }
-    create_credits();
-    flush_draw_commands();
-
+    if(!doc.data.is_draft) {
+        create_credits();
+        flush_draw_commands();
+    }
     rend.reset(nullptr);
 }
 
@@ -155,22 +159,29 @@ void Paginator::create_maintext() {
             heights.whitespace_height += spaces.above_section;
             assert(s.level == 1);
             // Fancy stuff above the text.
-            std::string title_number = std::to_string(s.number);
-            title_number += ".";
-            layout.text.emplace_back(MarkupDrawCommand{title_number,
-                                                       &styles.section.font,
-                                                       textblock_width() / 2,
-                                                       rel_y,
-                                                       TextAlignment::Centered});
-            rel_y += 2 * styles.section.line_height.tomm();
-            heights.text_height += 2 * styles.section.line_height.tomm();
-
+            std::string title_string = std::to_string(s.number);
+            title_string += ".";
+            TextAlignment section_alignment = TextAlignment::Centered;
+            if(doc.data.is_draft) {
+                title_string += s.text;
+                section_alignment = TextAlignment::Left;
+            } else {
+                layout.text.emplace_back(MarkupDrawCommand{title_string,
+                                                           &styles.section.font,
+                                                           textblock_width() / 2,
+                                                           rel_y,
+                                                           TextAlignment::Centered});
+                rel_y += 2 * styles.section.line_height.tomm();
+                heights.text_height += 2 * styles.section.line_height.tomm();
+                title_string = s.text;
+            }
             // The title. Hyphenation is prohibited.
-            std::vector<EnrichedWord> processed_words = text_to_formatted_words(s.text, false);
+            std::vector<EnrichedWord> processed_words =
+                text_to_formatted_words(title_string, false);
             ParagraphFormatter b(processed_words, section_width, styles.section, extras);
             auto lines = b.split_formatted_lines();
             auto built_lines =
-                build_ragged_paragraph(lines, styles.section, TextAlignment::Centered, rel_y);
+                build_ragged_paragraph(lines, styles.section, section_alignment, rel_y);
             for(auto &line : built_lines) {
                 layout.text.emplace_back(std::move(line));
                 rel_y += styles.section.line_height.tomm();
@@ -322,11 +333,23 @@ void Paginator::add_top_image(const ImageInfo &image) {
 }
 
 void Paginator::render_page_num(const FontParameters &par) {
-    char buf[128];
-    snprintf(buf, 128, "%d", current_page);
-    const Millimeter yloc = page.h - 3.0 * m.lower / 4.0;
-    const Millimeter xloc = current_left_margin() + (page.w - m.inner - m.outer) / 2;
-    rend->render_line_centered(buf, par, xloc.topt(), yloc.topt());
+    if(doc.data.is_draft) {
+        // In the official draft style the first page does not have a number
+        // so logical page numbers are offset from physical pages by one.
+        std::string text =
+            doc.data.draftdata.page_number_template + std::to_string(current_page - 1);
+        rend->render_markup_as_is(text.c_str(),
+                                  styles.normal.font,
+                                  (current_left_margin() + textblock_width()).topt(),
+                                  m.upper.topt() - styles.normal.line_height,
+                                  TextAlignment::Right);
+    } else {
+        char buf[128];
+        snprintf(buf, 128, "%d", current_page);
+        const Millimeter yloc = page.h - 3.0 * m.lower / 4.0;
+        const Millimeter xloc = current_left_margin() + (page.w - m.inner - m.outer) / 2;
+        rend->render_line_centered(buf, par, xloc.topt(), yloc.topt());
+    }
 }
 
 std::vector<TextCommands>
@@ -538,6 +561,49 @@ void Paginator::add_pending_figure(const ImageInfo &f) {
         std::abort();
     }
     pending_figure = f;
+}
+
+void Paginator::create_draft_title_page() {
+    const auto middle = current_left_margin() + textblock_width() / 2;
+    auto textblock_center = m.upper + textblock_height() / 2;
+    auto y = m.upper;
+    const auto single_line_height = styles.normal.font.size * 1.5;
+    const auto left = current_left_margin();
+    rend->render_markup_as_is(
+        doc.data.author.c_str(), styles.normal.font, left.topt(), y.topt(), TextAlignment::Left);
+    y += single_line_height.tomm();
+
+    rend->render_markup_as_is(doc.data.draftdata.phone.c_str(),
+                              styles.normal.font,
+                              left.topt(),
+                              y.topt(),
+                              TextAlignment::Left);
+    y += single_line_height.tomm();
+    rend->render_markup_as_is(doc.data.draftdata.email.c_str(),
+                              styles.code.font,
+                              left.topt(),
+                              y.topt(),
+                              TextAlignment::Left);
+
+    y = textblock_center - 3 * styles.title.line_height.tomm();
+    rend->render_markup_as_is(doc.data.title.c_str(),
+                              styles.title.font,
+                              middle.topt(),
+                              y.topt(),
+                              TextAlignment::Centered);
+    y += 2 * styles.title.line_height.tomm();
+    rend->render_markup_as_is(doc.data.author.c_str(),
+                              styles.author.font,
+                              middle.topt(),
+                              y.topt(),
+                              TextAlignment::Centered);
+
+    y += styles.title.line_height.tomm();
+    const std::string date = current_date();
+    rend->render_markup_as_is(
+        date.c_str(), styles.author.font, middle.topt(), y.topt(), TextAlignment::Centered);
+
+    new_page(false);
 }
 
 void Paginator::create_title_page() {

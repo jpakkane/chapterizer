@@ -44,3 +44,5 @@ private:
 std::vector<std::string> read_lines(const char *p);
 
 std::vector<std::string> read_paragraphs(const char *p);
+
+std::string current_date();

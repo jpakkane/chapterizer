@@ -23,6 +23,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <time.h>
 
 #include <filesystem>
 
@@ -124,4 +125,20 @@ std::vector<std::string> read_paragraphs(const char *p) {
         paragraphs.emplace_back(std::move(buf));
     }
     return paragraphs;
+}
+
+std::string current_date() {
+    char buf[200];
+    time_t t;
+    struct tm *tmp;
+    t = time(NULL);
+    tmp = localtime(&t);
+    if(tmp == NULL) {
+        std::abort();
+    }
+
+    if(strftime(buf, 200, "%Y-%m-%d", tmp) == 0) {
+        std::abort();
+    }
+    return std::string{buf};
 }

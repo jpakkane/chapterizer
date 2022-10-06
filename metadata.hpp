@@ -83,12 +83,20 @@ struct EpubMetadata {
     std::string file_as;
 };
 
+struct DraftData {
+    std::string surname;
+    std::string email;
+    std::string phone;
+    std::string page_number_template;
+};
+
 struct Metadata {
     // All paths in metadata are relative to this (i.e. where the JSON file was)
     std::filesystem::path top_dir;
     std::string title;
     std::string author;
-    bool draft = false;
+    bool is_draft = false;
+    DraftData draftdata;
     Language language;
     std::vector<std::string> sources;
     bool generate_pdf;

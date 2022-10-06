@@ -119,14 +119,14 @@ void setup_draft_settings(Metadata &m) {
     m.pdf.styles.section.font.name = "Liberation Sans";
     m.pdf.styles.section.font.size = Point::from_value(14);
     m.pdf.styles.section.font.type = FontStyle::Bold;
-    m.pdf.styles.section.line_height = Point::from_value(21);
+    m.pdf.styles.section.line_height = Point::from_value(25);
 
     m.pdf.styles.title = m.pdf.styles.section;
     m.pdf.styles.author = m.pdf.styles.section;
 
     // Spaces
     m.pdf.spaces.below_section = Millimeter::from_value(10);
-    m.pdf.spaces.above_section = Millimeter::zero();
+    m.pdf.spaces.above_section = Millimeter::from_value(50);
     m.pdf.spaces.codeblock_indent = Millimeter::zero();
     m.pdf.spaces.different_paragraphs = Millimeter::from_value(5);
     m.pdf.spaces.footnote_separation = Millimeter::from_value(10);
@@ -140,7 +140,7 @@ void load_pdf_element(Metadata &m, const json &pdf) {
     auto colophon_file = m.top_dir / get_string(pdf, "colophon");
     m.pdf.colophon = read_lines(colophon_file.c_str());
 
-    if(m.draft) {
+    if(m.is_draft) {
         setup_draft_settings(m);
     } else {
 
@@ -228,12 +228,11 @@ Metadata load_book_json(const char *path) {
     m.title = get_string(data, "title");
     auto draft = data["draft"];
     if(!draft.is_null()) {
-        if(draft.is_boolean()) {
-            m.draft = draft.get<bool>();
-        } else {
-            printf("The \"draft\" key must be a boolean.\n");
-            std::abort();
-        }
+        m.is_draft = true;
+        m.draftdata.email = get_string(draft, "email");
+        m.draftdata.phone = get_string(draft, "phone");
+        m.draftdata.surname = get_string(draft, "surname");
+        m.draftdata.page_number_template = m.draftdata.surname + " / " + m.title + " / ";
     }
     const auto langstr = get_string(data, "language");
     auto it = langmap.find(langstr);
