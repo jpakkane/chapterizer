@@ -144,7 +144,7 @@ void Paginator::create_maintext() {
             const Section &s = std::get<Section>(e);
             if(!first_section) {
                 new_page(true);
-                if(current_page % 2 == 0) {
+                if(!doc.data.is_draft && current_page % 2 == 0) {
                     new_page(false);
                 }
             }
