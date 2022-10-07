@@ -42,6 +42,8 @@ struct JustifiedMarkupDrawCommand {
 
 struct ImageCommand {
     ImageInfo i;
+    Millimeter x;
+    Millimeter y;
     Millimeter display_height;
     Millimeter display_width;
 };

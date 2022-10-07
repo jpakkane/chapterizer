@@ -287,8 +287,12 @@ void Paginator::create_maintext() {
             const Figure &cb = std::get<Figure>(e);
             const auto fullpath = doc.data.top_dir / cb.file;
             auto image = rend->get_image(fullpath.c_str());
-            const Millimeter display_width = textblock_width();
-            const Millimeter display_height = display_width * image.h / image.w;
+            Millimeter display_width = textblock_width();
+            Millimeter display_height = display_width * image.h / image.w;
+            if(doc.data.is_draft) {
+                display_height = display_height / 2;
+                display_width = display_width / 2;
+            }
             if(chapter_start_page == rend->page_num()) {
                 add_pending_figure(image);
             } else if(heights.figure_height > Millimeter::zero()) {
@@ -298,10 +302,6 @@ void Paginator::create_maintext() {
                 add_pending_figure(image);
             } else {
                 add_top_image(image);
-                // rend->draw_image(image, current_left_margin(), m.upper, display_width,
-                // display_height);
-                //  printf("Image is %d PPI\n", int(image.w / display_width.v * 25.4));
-                //   heights.figure_height += display_height;
             }
         } else if(std::holds_alternative<NumberList>(e)) {
             const NumberList &nl = std::get<NumberList>(e);
@@ -345,11 +345,19 @@ void Paginator::add_top_image(const ImageInfo &image) {
     cmd.i = image;
     cmd.display_width = textblock_width();
     cmd.display_height = cmd.display_width * image.h / image.w;
+    if(doc.data.is_draft) {
+        cmd.display_height = cmd.display_height / 2;
+        cmd.display_width = cmd.display_width / 2;
+    }
+    cmd.x = current_left_margin() + textblock_width() / 2 - cmd.display_width / 2;
+    cmd.y = m.upper;
     layout.images.emplace_back(std::move(cmd));
     assert(heights.figure_height < Millimeter::from_value(0.0001));
     heights.figure_height += cmd.display_height;
     heights.figure_height += image_separator;
     layout.images.emplace_back(std::move(cmd));
+    //  printf("Image is %d PPI\n", int(image.w / display_width.v * 25.4));
+    //   heights.figure_height += display_height;
 }
 
 void Paginator::render_page_num(const FontParameters &par) {
@@ -521,7 +529,7 @@ void Paginator::flush_draw_commands() {
         rend->draw_poly_line(dashcoords, Point::from_value(0.2));
     }
     for(const auto &c : layout.images) {
-        rend->draw_image(c.i, current_left_margin(), m.upper, c.display_width, c.display_height);
+        rend->draw_image(c.i, c.x, c.y, c.display_width, c.display_height);
     }
     for(const auto &c : layout.text) {
         if(std::holds_alternative<MarkupDrawCommand>(c)) {
