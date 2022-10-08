@@ -444,9 +444,19 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
 }
 
 StyleStack ParagraphFormatter::determine_style(TextLocation t) const {
-    const auto word = words[t.word_index].text;
+    const auto &current_word = words[t.word_index];
+    const auto &word = words[t.word_index].text;
     StyleStack style = words[t.word_index].start_style;
-    // FIXME, advance to the actual location.
+    size_t i = 0;
+    size_t style_point = 0;
+    std::string dummy;
+    while(i < t.offset) {
+        while(style_point < current_word.f.size() && current_word.f[style_point].offset == i) {
+            toggle_format(style, dummy, current_word.f[style_point].format);
+            ++style_point;
+        }
+        ++i;
+    }
     return style;
 }
 
