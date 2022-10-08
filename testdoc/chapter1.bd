@@ -18,7 +18,6 @@ pipe, \c{`} backtick, \c{#} hash, \c{\} backslash, \c{^} circumflex.
 All in one word: \c{/*|`#\^}. Lastly a word with multiple
 replacements: ping\c{/}pong\c{*}pung.
 
-
 After this paragraph there will be a scene change. The visual
 appearance should be such that there is an empty line and the next
 paragraph is not indented.

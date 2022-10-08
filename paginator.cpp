@@ -327,7 +327,7 @@ void Paginator::create_maintext() {
                         lines, styles.lists, text_width, indent + number_area, rel_y)) {
                     // FIXME, handle page changes.
                     layout.text.emplace_back(std::move(line));
-                    heights.footnote_height += styles.footnote.line_height.tomm();
+                    heights.text_height += styles.lists.line_height.tomm();
                     rel_y += styles.lists.line_height.tomm();
                 }
             }
