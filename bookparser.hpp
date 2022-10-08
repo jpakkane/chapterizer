@@ -154,7 +154,10 @@ private:
 
 class StructureParser {
 public:
-    explicit StructureParser(Document &in_doc) : doc(in_doc) {}
+    explicit StructureParser(Document &in_doc) : doc(in_doc) {
+        escaping_command =
+            g_regex_new(R"(\\c{([^}]+)})", GRegexCompileFlags(0), GRegexMatchFlags(0), nullptr);
+    }
 
     ~StructureParser();
     void push(const line_token &l);
@@ -167,6 +170,8 @@ private:
         section,
         specialblock,
     };
+
+    void unquote_lines();
 
     void set_state(ParsingState new_state);
 
@@ -184,4 +189,5 @@ private:
     ParsingState current_state = ParsingState::unset;
     SpecialBlockType current_special = SpecialBlockType::Unset;
     std::vector<std::string> stored_lines;
+    GRegex *escaping_command;
 };

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "bookparser.hpp"
-
+#include <bookparser.hpp>
+#include <utils.hpp>
 #include <cassert>
 
 #include <algorithm>
@@ -140,6 +140,7 @@ StructureParser::~StructureParser() {
         printf("Stored lines not fully drained.\n");
         std::abort();
     }
+    g_regex_unref(escaping_command);
 }
 
 std::string StructureParser::pop_lines_to_string() {
@@ -197,10 +198,47 @@ void StructureParser::build_element() {
         doc.elements.emplace_back(Section{1, section_number, pop_lines_to_string()});
         break;
     case ParsingState::paragraph:
+        unquote_lines();
         doc.elements.emplace_back(Paragraph{pop_lines_to_string()});
         break;
     default:
         std::abort();
+    }
+}
+
+static gboolean eval_cb(const GMatchInfo *info, GString *res, gpointer data) {
+    (void)data;
+    char tmp[2] = {0, 0};
+    gchar *match = g_match_info_fetch(info, 1);
+    gchar *cur = match;
+    while(*cur) {
+        tmp[0] = special2internal(*cur);
+        g_string_append(res, tmp);
+        ++cur;
+    }
+    g_free(match);
+    return FALSE;
+}
+
+void StructureParser::unquote_lines() {
+    std::string buf;
+    for(auto &line : stored_lines) {
+        GError *err = nullptr;
+        auto replaced = g_regex_replace_eval(escaping_command,
+                                             line.c_str(),
+                                             line.length(),
+                                             0,
+                                             GRegexMatchFlags(0),
+                                             eval_cb,
+                                             nullptr,
+                                             &err);
+        if(err) {
+            printf("Replacement error: %s\n", err->message);
+            g_error_free(err);
+            std::abort();
+        }
+        line = replaced;
+        g_free(replaced);
     }
 }
 

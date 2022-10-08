@@ -34,6 +34,23 @@ Document load_document(const char *fname) {
             printf("Invalid utf-8.\n");
             std::abort();
         }
+        for(const auto c : map.view()) {
+            if(c == '\t') {
+                printf("Input file %s contains a TAB character. These are prohibited in input "
+                       "files.\n",
+                       fpath.c_str());
+                std::abort();
+            }
+            if(c == 0 || c == '\n' || c >= 32 || c < 0) {
+                // OK.
+            } else {
+                printf(
+                    "Input file %s contains a prohibited invisible ASCII control character %d.\n",
+                    fpath.c_str(),
+                    int(c));
+                std::abort();
+            }
+        }
 
         GError *err = nullptr;
         if(err) {

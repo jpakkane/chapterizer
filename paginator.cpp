@@ -448,6 +448,7 @@ std::vector<EnrichedWord> Paginator::text_to_formatted_words(const std::string &
         auto working_word = word;
         auto start_style = current_style;
         auto formatting_data = extract_styling(current_style, working_word);
+        restore_special_chars(working_word);
         auto hyphenation_data = hyphen.hyphenate(working_word, lang);
         processed_words.emplace_back(EnrichedWord{std::move(working_word),
                                                   std::move(hyphenation_data),

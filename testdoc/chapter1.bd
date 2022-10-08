@@ -13,6 +13,12 @@ Empty line above.
 
 |The fifth cylinder| must t*hi*s *bol*d *Woking*.
 
+Escaping characters in output text: \c{/} slash, \c{*} asterisk, \c{|}
+pipe, \c{`} backtick, \c{#} hash, \c{\} backslash, \c{^} circumflex.
+All in one word: \c{/*|`#\^}. Lastly a word with multiple
+replacements: ping\c{/}pong\c{*}pung.
+
+
 After this paragraph there will be a scene change. The visual
 appearance should be such that there is an empty line and the next
 paragraph is not indented.
@@ -22,7 +28,8 @@ paragraph is not indented.
 This is the paragraph that should not be indented. Some more text here
 to make sure it takes more than one line in the final output.
 
-This paragraph should again be indented. Some math: /a/^2^ + /b/^2^ = /c/⁴
+This paragraph should again be indented. Some math: /a/^2^ + /b/^2^ =
+/c/⁴
 
 
 ```footnote

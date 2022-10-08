@@ -26,6 +26,19 @@
 #include <time.h>
 
 #include <filesystem>
+#include <unordered_map>
+namespace {
+
+// Store formatting characters in unused ASCII codepoints during processing.
+//
+// All characters under 33 are taken except 0, 10 (linefeed).
+
+std::unordered_map<char, char> to_internal{
+    {'/', 1}, {'*', 2}, {'|', 3}, {'`', 4}, {'#', 5}, {'\\', 6}, {'^', 7}};
+std::unordered_map<char, char> from_internal{
+    {1, '/'}, {2, '*'}, {3, '|'}, {4, '`'}, {5, '#'}, {6, '\\'}, {7, '^'}};
+
+} // namespace
 
 double mm2pt(const double x) { return x * 2.8346456693; }
 double pt2mm(const double x) { return x / 2.8346456693; }
@@ -141,4 +154,26 @@ std::string current_date() {
         std::abort();
     }
     return std::string{buf};
+}
+
+char special2internal(char c) {
+    auto it = to_internal.find(c);
+    if(it == to_internal.end()) {
+        return c;
+    }
+    return it->second;
+}
+
+char internal2special(char c) {
+    auto it = from_internal.find(c);
+    if(it == from_internal.end()) {
+        return c;
+    }
+    return it->second;
+}
+
+void restore_special_chars(std::string &s) {
+    for(size_t i = 0; i < s.size(); ++i) {
+        s[i] = internal2special(s[i]);
+    }
 }

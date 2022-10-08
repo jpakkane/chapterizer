@@ -46,3 +46,8 @@ std::vector<std::string> read_lines(const char *p);
 std::vector<std::string> read_paragraphs(const char *p);
 
 std::string current_date();
+
+char special2internal(char c);
+char internal2special(char c);
+
+void restore_special_chars(std::string &s);
