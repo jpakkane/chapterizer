@@ -88,7 +88,7 @@ PdfRenderer::~PdfRenderer() {
                "-dProcessColorModel=/DeviceGray -dCompatibilityLevel=1.6 -dNOPAUSE -dBATCH \"";
     graycmd += workname;
     graycmd += "\"";
-    printf("%s\n", graycmd.c_str());
+    // printf("%s\n", graycmd.c_str());
     auto rc = system(graycmd.c_str());
     if(rc != 0) {
         std::abort();

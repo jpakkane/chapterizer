@@ -445,7 +445,6 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
 
 StyleStack ParagraphFormatter::determine_style(TextLocation t) const {
     const auto &current_word = words[t.word_index];
-    const auto &word = words[t.word_index].text;
     StyleStack style = words[t.word_index].start_style;
     size_t i = 0;
     size_t style_point = 0;
