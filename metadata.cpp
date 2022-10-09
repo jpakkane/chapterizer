@@ -278,6 +278,9 @@ Metadata load_book_json(const char *path) {
     } else {
         m.generate_epub = false;
     }
+
+    auto post_path = m.top_dir / data["postcredits"];
+    m.postcredits = read_lines(post_path.c_str());
     return m;
 }
 

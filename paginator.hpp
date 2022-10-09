@@ -55,7 +55,7 @@ struct PageLayout {
     std::vector<TextCommands> text;
     std::vector<TextCommands> footnote;
 
-    bool empty() const { return text.empty() && footnote.empty(); }
+    bool empty() const { return text.empty() && footnote.empty() && images.empty(); }
 
     void clear() {
         images.clear();
@@ -85,7 +85,7 @@ public:
 
     void generate_pdf(const char *outfile);
 
-    void draw_debug_bars();
+    void draw_debug_bars(int num_bars);
 
 private:
     void render_page_num(const FontParameters &par);
@@ -120,6 +120,7 @@ private:
     void create_colophon();
     void create_dedication();
     void create_credits();
+    void create_postcredits();
     void create_maintext();
 
     const Document &doc;

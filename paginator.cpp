@@ -119,7 +119,7 @@ void Paginator::generate_pdf(const char *outfile) {
     }
 
     create_maintext();
-    if(!layout.empty()) {
+    while(!layout.empty()) {
         if(doc.data.is_draft) {
             render_page_num(styles.normal.font);
             flush_draw_commands();
@@ -130,6 +130,8 @@ void Paginator::generate_pdf(const char *outfile) {
     }
     if(!doc.data.is_draft) {
         create_credits();
+        new_page(false);
+        create_postcredits();
         flush_draw_commands();
     }
     rend.reset(nullptr);
@@ -162,8 +164,8 @@ void Paginator::create_maintext() {
             heights.whitespace_height += spaces.above_section;
             assert(s.level == 1);
             // Fancy stuff above the text.
-            std::string title_string = std::to_string(s.number);
-            title_string += ".";
+            std::string title_string = "§ ";          // std::to_string(s.number);
+            title_string += std::to_string(s.number); //".";
             TextAlignment section_alignment = TextAlignment::Centered;
             if(doc.data.is_draft) {
                 title_string += s.text;
@@ -473,6 +475,7 @@ void Paginator::new_page(bool draw_page_num) {
         pending_figures.erase(pending_figures.begin());
     }
     ++current_page;
+    /*
     if(doc.data.debug_draw) {
         if(current_page % 2) {
             rend->draw_box(
@@ -482,10 +485,10 @@ void Paginator::new_page(bool draw_page_num) {
                 m.outer, m.upper, page.w - m.inner - m.outer, page.h - m.upper - m.lower);
         }
     }
+    */
 }
 
-void Paginator::draw_debug_bars() {
-    const int num_bars = 4;
+void Paginator::draw_debug_bars(int num_bars) {
     const Length boxheight = styles.section.line_height;
     const Length chaffwidth = Length::from_mm(6);
     for(int i = 0; i < num_bars; ++i) {
@@ -545,7 +548,7 @@ void Paginator::draw_debug_bars() {
 void Paginator::flush_draw_commands() {
     Length footnote_block_start = page.h - m.lower - heights.footnote_height;
     if(doc.data.debug_draw && !doc.data.is_draft && current_page == chapter_start_page) {
-        draw_debug_bars();
+        draw_debug_bars(4);
     }
     for(const auto &c : layout.images) {
         rend->draw_image(c.i, c.x + current_left_margin(), c.y, c.display_width, c.display_height);
@@ -646,14 +649,15 @@ void Paginator::create_title_page() {
         doc.data.author.c_str(), styles.author.font, middle, y, TextAlignment::Centered);
     y += styles.author.line_height;
     const auto text_bottom = y;
-    const auto donut_width = 0.8 * textblock_width() / 2;
+    const auto donut_outer = 0.8 * textblock_width() / 2;
+    const auto donut_inner = 0.6 * donut_outer;
 
     // Fancy stuff here.
     y = text_top;
-    rend->draw_arc(middle, text_top - gap, donut_width, 0, M_PI, Length::from_pt(2));
-    rend->draw_arc(middle, text_top - gap, 0.6 * donut_width, 0, M_PI, Length::from_pt(2));
-    rend->draw_arc(middle, text_bottom + gap, donut_width, M_PI, 0, Length::from_pt(2));
-    rend->draw_arc(middle, text_bottom + gap, 0.6 * donut_width, M_PI, 0, Length::from_pt(2));
+    rend->draw_arc(middle, text_top - gap, donut_outer, 0, M_PI, Length::from_pt(2));
+    rend->draw_arc(middle, text_top - gap, donut_inner, 0, M_PI, Length::from_pt(2));
+    rend->draw_arc(middle, text_bottom + gap, donut_outer, M_PI, 0, Length::from_pt(2));
+    rend->draw_arc(middle, text_bottom + gap, donut_inner, M_PI, 0, Length::from_pt(2));
     new_page(false);
 }
 
@@ -717,5 +721,15 @@ void Paginator::create_credits() {
             rend->render_markup_as_is(buf.c_str(), styles.normal.font, x2, y, TextAlignment::Left);
         }
         y += styles.normal.line_height;
+    }
+}
+
+void Paginator::create_postcredits() {
+    draw_debug_bars(17);
+    const auto x = current_left_margin() + Length::from_mm(2);
+    Length y = m.upper + styles.section.line_height + Length::from_mm(0.5);
+    for(const auto &l : doc.data.postcredits) {
+        rend->render_text_as_is(l.c_str(), styles.code.font, x, y);
+        y += styles.section.line_height;
     }
 }
