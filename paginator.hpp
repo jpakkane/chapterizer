@@ -42,7 +42,7 @@ struct JustifiedMarkupDrawCommand {
 
 struct ImageCommand {
     ImageInfo i;
-    Length x;
+    Length x; // Relative to left edge of text block.
     Length y;
     Length display_height;
     Length display_width;
@@ -136,5 +136,5 @@ private:
     // These keep track of the current page stats.
     PageLayout layout;
     Heights heights;
-    std::optional<ImageInfo> pending_figure;
+    std::vector<ImageInfo> pending_figures;
 };

@@ -120,9 +120,13 @@ void Paginator::generate_pdf(const char *outfile) {
 
     create_maintext();
     if(!layout.empty()) {
-        render_page_num(styles.normal.font);
-        flush_draw_commands();
-        // FIXME add code that prints the "The End" page.
+        if(doc.data.is_draft) {
+            render_page_num(styles.normal.font);
+            flush_draw_commands();
+            // FIXME add code that prints the "The End" page.
+        } else {
+            new_page(true);
+        }
     }
     if(!doc.data.is_draft) {
         create_credits();
@@ -348,7 +352,7 @@ void Paginator::add_top_image(const ImageInfo &image) {
         cmd.display_height = cmd.display_height / 2;
         cmd.display_width = cmd.display_width / 2;
     }
-    cmd.x = current_left_margin() + textblock_width() / 2 - cmd.display_width / 2;
+    cmd.x = textblock_width() / 2 - cmd.display_width / 2;
     cmd.y = m.upper;
     layout.images.emplace_back(std::move(cmd));
     assert(heights.figure_height < Length::from_mm(0.0001));
@@ -463,9 +467,10 @@ void Paginator::new_page(bool draw_page_num) {
         render_page_num(styles.normal.font);
     }
     rend->new_page();
-    if(pending_figure) {
-        add_top_image(*pending_figure);
-        pending_figure.reset();
+    if(!pending_figures.empty()) {
+        // FIXME. Only one figure per page. Could have several.
+        add_top_image(pending_figures.front());
+        pending_figures.erase(pending_figures.begin());
     }
     ++current_page;
     if(doc.data.debug_draw) {
@@ -543,7 +548,7 @@ void Paginator::flush_draw_commands() {
         draw_debug_bars();
     }
     for(const auto &c : layout.images) {
-        rend->draw_image(c.i, c.x, c.y, c.display_width, c.display_height);
+        rend->draw_image(c.i, c.x + current_left_margin(), c.y, c.display_width, c.display_height);
     }
     for(const auto &c : layout.text) {
         if(std::holds_alternative<MarkupDrawCommand>(c)) {
@@ -597,13 +602,7 @@ void Paginator::flush_draw_commands() {
     heights.clear();
 }
 
-void Paginator::add_pending_figure(const ImageInfo &f) {
-    if(pending_figure) {
-        printf("Multiple pending figures not yet supported.\n");
-        std::abort();
-    }
-    pending_figure = f;
-}
+void Paginator::add_pending_figure(const ImageInfo &f) { pending_figures.push_back(f); }
 
 void Paginator::create_draft_title_page() {
     const auto middle = current_left_margin() + textblock_width() / 2;
