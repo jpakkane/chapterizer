@@ -1,4 +1,4 @@
-project('chapterizer', 'cpp', default_options : ['cpp_std=c++17'])
+project('chapterizer', 'cpp', default_options : ['cpp_std=c++20'])
 
 cpp = meson.get_compiler('cpp')
 hyphen_dep = cpp.find_library('hyphen')
