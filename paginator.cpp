@@ -520,7 +520,7 @@ void Paginator::draw_debug_bars() {
     rend->draw_dash_line(dashcoords);
 
     const auto hole_center_x = current_left_margin() - chaffwidth / 2;
-    const auto hole_center_y = m.upper + chaffwidth / 2.0;
+    const auto hole_center_y = m.upper + boxheight / 2.0;
     const auto hole_center_deltax = textblock_width() + chaffwidth;
     const auto hole_center_deltay = 2 * boxheight;
     const Length minor_radius = Length::from_mm(1.5);
@@ -636,12 +636,24 @@ void Paginator::create_draft_title_page() {
 
 void Paginator::create_title_page() {
     const auto middle = current_left_margin() + textblock_width() / 2;
-    auto y = m.upper + textblock_height() / 2 - 4 * styles.title.line_height;
+    const auto text_top = m.upper + textblock_height() / 2 - 4 * styles.title.line_height;
+    auto y = text_top;
+    const Length gap = Length::from_mm(10);
     rend->render_markup_as_is(
         doc.data.title.c_str(), styles.title.font, middle, y, TextAlignment::Centered);
     y += styles.title.line_height;
     rend->render_markup_as_is(
         doc.data.author.c_str(), styles.author.font, middle, y, TextAlignment::Centered);
+    y += styles.author.line_height;
+    const auto text_bottom = y;
+    const auto donut_width = 0.8 * textblock_width() / 2;
+
+    // Fancy stuff here.
+    y = text_top;
+    rend->draw_arc(middle, text_top - gap, donut_width, 0, M_PI, Length::from_pt(2));
+    rend->draw_arc(middle, text_top - gap, 0.6 * donut_width, 0, M_PI, Length::from_pt(2));
+    rend->draw_arc(middle, text_bottom + gap, donut_width, M_PI, 0, Length::from_pt(2));
+    rend->draw_arc(middle, text_bottom + gap, 0.6 * donut_width, M_PI, 0, Length::from_pt(2));
     new_page(false);
 }
 
@@ -685,18 +697,24 @@ void Paginator::create_dedication() {
 
 void Paginator::create_credits() {
     const auto paragraph_width = page.w - m.inner - m.outer;
-    auto y = m.upper + (page.h - m.upper - m.lower) / 8;
+    auto y = m.upper;
     const Length halfgap = Length::from_mm(2);
     const auto x1 = current_left_margin() + paragraph_width / 2 - halfgap;
     const auto x2 = x1 + 2 * halfgap;
 
+    std::string buf;
     for(const auto &[key, value] : doc.data.credits) {
+        buf = R"(<span variant="small-caps" letter_spacing="100">)";
+        buf += key.c_str();
+        buf += "</span>";
         if(!key.empty()) {
-            rend->render_markup_as_is(key.c_str(), styles.normal.font, x1, y, TextAlignment::Right);
+            rend->render_markup_as_is(buf.c_str(), styles.normal.font, x1, y, TextAlignment::Right);
         }
+        buf = R"(<span variant="small-caps" letter_spacing="100">)";
+        buf += value.c_str();
+        buf += "</span>";
         if(!value.empty()) {
-            rend->render_markup_as_is(
-                value.c_str(), styles.normal.font, x2, y, TextAlignment::Left);
+            rend->render_markup_as_is(buf.c_str(), styles.normal.font, x2, y, TextAlignment::Left);
         }
         y += styles.normal.line_height;
     }
