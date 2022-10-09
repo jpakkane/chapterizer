@@ -16,6 +16,11 @@
 
 #pragma once
 
+#include <compare>
+
+inline double mm2pt(const double x) { return x * 2.8346456693; }
+inline double pt2mm(const double x) { return x / 2.8346456693; }
+
 struct Millimeter;
 
 struct Point {
@@ -104,3 +109,45 @@ public:
 };
 
 inline Millimeter operator*(const double mul, const Millimeter &p) { return p * mul; }
+
+class Length {
+private:
+    explicit Length(double d) : v_m(d){};
+
+public:
+    double v_m = 0.0;
+
+    static Length from_mm(double val) { return Length(val * 1000); }
+    static Length from_pt(double val) { return Length::from_mm(pt2mm(val)); }
+
+    Length() : v_m(0.0) {}
+    Length(const Length &d) : v_m(d.v_m){};
+
+    static Length from_value(double mm) { return Length{mm}; }
+    static Length zero() { return Length{0.0}; }
+
+    Length operator-() const { return Length{-v_m}; }
+
+    Length &operator=(const Length &p) {
+        v_m = p.v_m;
+        return *this;
+    }
+
+    Length &operator+=(const Length &p) {
+        v_m += p.v_m;
+        return *this;
+    }
+
+    Length operator+(const Length &o) const { return Length{v_m + o.v_m}; }
+
+    Length operator-(const Length &o) const { return Length{v_m - o.v_m}; }
+
+    Length operator*(const double o) const { return Length{v_m * o}; }
+
+    Length operator/(const double o) const { return Length{v_m / o}; }
+
+    std::partial_ordering operator<=>(const Length &o) const { return v_m <=> o.v_m; }
+
+    double pt() const { return mm2pt(mm()); }
+    double mm() const { return 1000 * v_m; }
+};

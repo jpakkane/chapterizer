@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "utils.hpp"
+#include <utils.hpp>
 #include <glib.h>
 #include <sstream>
 #include <fstream>
@@ -39,9 +39,6 @@ std::unordered_map<char, char> from_internal{
     {1, '/'}, {2, '*'}, {3, '|'}, {4, '`'}, {5, '#'}, {6, '\\'}, {7, '^'}};
 
 } // namespace
-
-double mm2pt(const double x) { return x * 2.8346456693; }
-double pt2mm(const double x) { return x / 2.8346456693; }
 
 std::vector<std::string> split_to_lines(const std::string &in_text) {
     std::vector<std::string> lines;
