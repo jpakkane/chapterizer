@@ -86,6 +86,8 @@ public:
 
     void generate_pdf(const char *outfile);
 
+    void draw_debug_bars();
+
 private:
     void render_page_num(const FontParameters &par);
     std::vector<TextCommands>
@@ -131,7 +133,6 @@ private:
     WordHyphenator hyphen;
     int current_page = 1;
     int chapter_start_page = -1;
-    const bool debug_draw = false;
 
     // These keep track of the current page stats.
     PageLayout layout;

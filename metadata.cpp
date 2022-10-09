@@ -239,6 +239,9 @@ Metadata load_book_json(const char *path) {
         m.draftdata.surname = get_string(draft, "surname");
         m.draftdata.page_number_template = m.draftdata.surname + " / " + m.title + " / ";
     }
+    if(data.contains("debug_draw")) {
+        m.debug_draw = data["debug_draw"].get<bool>();
+    }
     const auto langstr = get_string(data, "language");
     auto it = langmap.find(langstr);
     if(it == langmap.end()) {

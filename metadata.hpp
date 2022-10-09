@@ -106,6 +106,7 @@ struct Metadata {
     EpubMetadata epub;
     std::vector<std::string> dedication;
     std::vector<Credits> credits;
+    bool debug_draw = false;
 };
 
 struct Paragraph {

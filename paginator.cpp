@@ -469,7 +469,7 @@ void Paginator::new_page(bool draw_page_num) {
         pending_figure.reset();
     }
     ++current_page;
-    if(debug_draw) {
+    if(doc.data.debug_draw) {
         if(current_page % 2) {
             rend->draw_box(m.inner.topt(),
                            m.upper.topt(),
@@ -484,50 +484,78 @@ void Paginator::new_page(bool draw_page_num) {
     }
 }
 
+void Paginator::draw_debug_bars() {
+    const int num_bars = 4;
+    const Point boxheight = styles.section.line_height;
+    const Millimeter chaffwidth = Millimeter::from_value(6);
+    for(int i = 0; i < num_bars; ++i) {
+        rend->fill_box(current_left_margin().topt(),
+                       m.upper.topt() + 2 * i * boxheight,
+                       textblock_width().topt(),
+                       boxheight,
+                       0.9);
+    }
+    // Text area box
+    std::vector<Coord> dashcoords;
+    dashcoords.emplace_back(Coord{current_left_margin().topt(), m.upper.topt()});
+    dashcoords.emplace_back(
+        Coord{(current_left_margin() + textblock_width()).topt(), m.upper.topt()});
+    dashcoords.emplace_back(Coord{(current_left_margin() + textblock_width()).topt(),
+                                  m.upper.topt() + 2 * num_bars * boxheight});
+    dashcoords.emplace_back(
+        Coord{current_left_margin().topt(), m.upper.topt() + 2 * num_bars * boxheight});
+    dashcoords.emplace_back(Coord{current_left_margin().topt(), m.upper.topt()});
+    rend->draw_dash_line(dashcoords);
+    dashcoords.clear();
+
+    dashcoords.emplace_back(Coord{current_left_margin().topt(), m.upper.topt()});
+    dashcoords.emplace_back(Coord{(current_left_margin() - chaffwidth).topt(), m.upper.topt()});
+    dashcoords.emplace_back(Coord{(current_left_margin() - chaffwidth).topt(),
+                                  m.upper.topt() + 2 * num_bars * boxheight});
+    dashcoords.emplace_back(
+        Coord{current_left_margin().topt(), m.upper.topt() + 2 * num_bars * boxheight});
+    rend->draw_dash_line(dashcoords);
+
+    dashcoords.clear();
+    dashcoords.emplace_back(
+        Coord{(current_left_margin() + textblock_width()).topt(), m.upper.topt()});
+    dashcoords.emplace_back(
+        Coord{(current_left_margin() + textblock_width() + chaffwidth).topt(), m.upper.topt()});
+    dashcoords.emplace_back(Coord{(current_left_margin() + textblock_width() + chaffwidth).topt(),
+                                  m.upper.topt() + 2 * num_bars * boxheight});
+    dashcoords.emplace_back(Coord{(current_left_margin() + textblock_width()).topt(),
+                                  m.upper.topt() + 2 * num_bars * boxheight});
+    rend->draw_dash_line(dashcoords);
+
+    const auto hole_center_x = current_left_margin() - chaffwidth / 2;
+    const auto hole_center_y = m.upper + chaffwidth / 2.0;
+    const auto hole_center_deltax = textblock_width() + chaffwidth;
+    const auto hole_center_deltay = 2 * boxheight.tomm();
+    const Millimeter minor_radius = Millimeter::from_value(1.5);
+    const Millimeter major_radius = Millimeter::from_value(1.0);
+    const int num_corners = 8;
+    for(int xind = 0; xind < 2; ++xind) {
+        for(int yind = 0; yind < num_bars; ++yind) {
+            dashcoords.clear();
+            for(int i = 0; i < (2 * num_corners + 1); ++i) {
+                const auto &current_radius = i % 2 ? major_radius : minor_radius;
+                dashcoords.emplace_back(
+                    Coord{(hole_center_x + xind * hole_center_deltax +
+                           current_radius * cos(2 * M_PI * i / (num_corners * 2.0)))
+                              .topt(),
+                          (hole_center_y + yind * hole_center_deltay +
+                           current_radius * sin(2 * M_PI * i / (num_corners * 2.0)))
+                              .topt()});
+            }
+            rend->draw_poly_line(dashcoords, Point::from_value(0.2));
+        }
+    }
+}
+
 void Paginator::flush_draw_commands() {
     Millimeter footnote_block_start = page.h - m.lower - heights.footnote_height;
-    if(debug_draw && current_page == chapter_start_page) {
-        const Point boxheight = Point::from_value(12);
-        const Millimeter chaffwidth = Millimeter::from_value(6);
-        for(int i = 0; i < 6; ++i) {
-            rend->fill_box(current_left_margin().topt(),
-                           m.upper.topt() + 2 * i * boxheight,
-                           textblock_width().topt(),
-                           boxheight,
-                           0.9);
-        }
-        std::vector<Coord> dashcoords;
-        dashcoords.emplace_back(Coord{current_left_margin().topt(), m.upper.topt()});
-        dashcoords.emplace_back(
-            Coord{(current_left_margin() + textblock_width()).topt(), m.upper.topt()});
-        dashcoords.emplace_back(Coord{(current_left_margin() + textblock_width()).topt(),
-                                      m.upper.topt() + 12 * boxheight});
-        dashcoords.emplace_back(
-            Coord{current_left_margin().topt(), m.upper.topt() + 12 * boxheight});
-        dashcoords.emplace_back(Coord{current_left_margin().topt(), m.upper.topt()});
-        rend->draw_dash_line(dashcoords);
-        dashcoords.clear();
-
-        dashcoords.emplace_back(Coord{current_left_margin().topt(), m.upper.topt()});
-        dashcoords.emplace_back(Coord{(current_left_margin() - chaffwidth).topt(), m.upper.topt()});
-        dashcoords.emplace_back(
-            Coord{(current_left_margin() - chaffwidth).topt(), m.upper.topt() + 12 * boxheight});
-        dashcoords.emplace_back(
-            Coord{current_left_margin().topt(), m.upper.topt() + 12 * boxheight});
-        rend->draw_dash_line(dashcoords);
-        dashcoords.clear();
-        const auto hole_center_x = current_left_margin() - chaffwidth / 2;
-        const auto hole_center_y = m.upper + chaffwidth / 2.0;
-        const Millimeter minor_radius = Millimeter::from_value(1.5);
-        const Millimeter major_radius = Millimeter::from_value(1.0);
-        const int num_corners = 8;
-        for(int i = 0; i < (2 * num_corners + 1); ++i) {
-            const auto &current_radius = i % 2 ? major_radius : minor_radius;
-            dashcoords.emplace_back(Coord{
-                (hole_center_x + current_radius * cos(2 * M_PI * i / (num_corners * 2.0))).topt(),
-                (hole_center_y + current_radius * sin(2 * M_PI * i / (num_corners * 2.0))).topt()});
-        }
-        rend->draw_poly_line(dashcoords, Point::from_value(0.2));
+    if(doc.data.debug_draw && current_page == chapter_start_page) {
+        draw_debug_bars();
     }
     for(const auto &c : layout.images) {
         rend->draw_image(c.i, c.x, c.y, c.display_width, c.display_height);
@@ -637,7 +665,7 @@ void Paginator::create_draft_title_page() {
 
 void Paginator::create_title_page() {
     const auto middle = current_left_margin() + textblock_width() / 2;
-    auto y = m.upper + textblock_height() / 2;
+    auto y = m.upper + textblock_height() / 2 - 4 * styles.title.line_height.tomm();
     rend->render_markup_as_is(doc.data.title.c_str(),
                               styles.title.font,
                               middle.topt(),
