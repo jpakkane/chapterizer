@@ -53,18 +53,18 @@ enum class FontStyle : int {
 };
 
 struct FontParameters {
-    std::string name;                     // Fontconfig name as a string.
-    Point size = Point::from_value(1000); // Be careful with comparisons.
+    std::string name;                    // Fontconfig name as a string.
+    Length size = Length::from_pt(1000); // Be careful with comparisons.
     FontStyle type = FontStyle::Regular;
 
     bool operator==(const FontParameters &o) const noexcept {
-        return name == o.name && (fabs((size - o.size).v) < 0.05) && type == o.type;
+        return name == o.name && (fabs((size - o.size).pt()) < 0.05) && type == o.type;
     }
 };
 
 template<> struct std::hash<FontParameters> {
     std::size_t operator()(FontParameters const &s) const noexcept {
-        auto h1 = std::hash<int>{}(int(10 * s.size.v));
+        auto h1 = std::hash<int>{}(int(10 * s.size.pt()));
         auto h2 = std::hash<int>{}(int(s.type));
         auto h3 = std::hash<std::string>{}(s.name);
         return ((h1 * 13) + h2) * 13 + h3;
@@ -72,8 +72,8 @@ template<> struct std::hash<FontParameters> {
 };
 
 struct ChapterParameters {
-    Point line_height;
-    Millimeter indent; // Of first line.
+    Length line_height;
+    Length indent; // Of first line.
     FontParameters font;
 };
 

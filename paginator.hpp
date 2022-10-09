@@ -27,25 +27,25 @@
 struct MarkupDrawCommand {
     std::string markup;
     const FontParameters *font;
-    Millimeter x;
-    Millimeter y;
+    Length x;
+    Length y;
     TextAlignment alignment;
 };
 
 struct JustifiedMarkupDrawCommand {
     std::vector<std::string> markup_words;
     const FontParameters *font;
-    Millimeter x;
-    Millimeter y;
-    Millimeter width;
+    Length x;
+    Length y;
+    Length width;
 };
 
 struct ImageCommand {
     ImageInfo i;
-    Millimeter x;
-    Millimeter y;
-    Millimeter display_height;
-    Millimeter display_width;
+    Length x;
+    Length y;
+    Length display_height;
+    Length display_width;
 };
 
 typedef std::variant<MarkupDrawCommand, JustifiedMarkupDrawCommand> TextCommands;
@@ -65,18 +65,17 @@ struct PageLayout {
 };
 
 struct Heights {
-    Millimeter figure_height;
-    Millimeter text_height;
-    Millimeter footnote_height;
-    Millimeter whitespace_height;
+    Length figure_height;
+    Length text_height;
+    Length footnote_height;
+    Length whitespace_height;
 
-    Millimeter total_height() const {
+    Length total_height() const {
         return figure_height + text_height + footnote_height + whitespace_height;
     }
 
     void clear() {
-        figure_height = text_height = footnote_height = whitespace_height =
-            Millimeter::from_value(0);
+        figure_height = text_height = footnote_height = whitespace_height = Length::zero();
     }
 };
 
@@ -93,25 +92,25 @@ private:
     std::vector<TextCommands>
     build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
                               const ChapterParameters &text_par,
-                              const Millimeter target_width,
-                              const Millimeter x_off = Millimeter::zero(),
-                              const Millimeter y_off = Millimeter::zero());
+                              const Length target_width,
+                              const Length x_off = Length::zero(),
+                              const Length y_off = Length::zero());
     std::vector<TextCommands>
     build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
                            const ChapterParameters &text_par,
                            const TextAlignment alignment,
-                           Millimeter rel_y);
+                           Length rel_y);
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
                                                       bool permit_hyphenation = true);
 
-    Millimeter current_left_margin() const { return current_page % 2 ? m.inner : m.outer; }
+    Length current_left_margin() const { return current_page % 2 ? m.inner : m.outer; }
 
     void new_page(bool draw_page_num);
 
     void flush_draw_commands();
 
-    Millimeter textblock_width() const { return page.w - m.inner - m.outer; }
-    Millimeter textblock_height() const { return page.h - m.upper - m.lower; }
+    Length textblock_width() const { return page.w - m.inner - m.outer; }
+    Length textblock_height() const { return page.h - m.upper - m.lower; }
 
     void add_pending_figure(const ImageInfo &f);
     void add_top_image(const ImageInfo &image);

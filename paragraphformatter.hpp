@@ -61,7 +61,7 @@ struct TextLocation {
 
 struct LineStats {
     size_t end_split;
-    Millimeter text_width;
+    Length text_width;
     // int num_spaces;
     bool ends_in_dash;
 };
@@ -80,13 +80,13 @@ struct SplitStates {
     void clear() { best_to.clear(); }
 
     bool abandon_search(const std::vector<LineStats> &new_splits,
-                        const Millimeter paragraph_width,
+                        const Length paragraph_width,
                         const ChapterParameters &params,
                         const ExtraPenaltyAmounts &extras);
 };
 
 struct LinePenaltyStatistics {
-    Millimeter delta;
+    Length delta;
     double penalty;
 };
 
@@ -98,14 +98,14 @@ struct PenaltyStatistics {
 };
 
 PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
-                                const Millimeter paragraph_width,
+                                const Length paragraph_width,
                                 const ChapterParameters &par,
                                 const ExtraPenaltyAmounts &amounts);
 
 class ParagraphFormatter {
 public:
     ParagraphFormatter(const std::vector<EnrichedWord> &words,
-                       const Millimeter target_width,
+                       const Length target_width,
                        const ChapterParameters &in_params,
                        const ExtraPenaltyAmounts &ea);
 
@@ -130,13 +130,13 @@ private:
                                 size_t split_pos);
     std::vector<std::vector<std::string>>
     stats_to_markup_lines(const std::vector<LineStats> &linestats) const;
-    Millimeter current_line_width(size_t line_num) const;
+    Length current_line_width(size_t line_num) const;
 
     std::string build_line_markup(size_t from_split_ind, size_t to_split_ind) const;
     std::vector<std::string> build_line_words_markup(size_t from_split_ind,
                                                      size_t to_split_ind) const;
 
-    Millimeter paragraph_width;
+    Length paragraph_width;
     std::vector<EnrichedWord> words;
     std::vector<SplitPoint> split_points;
     std::vector<TextLocation> split_locations;

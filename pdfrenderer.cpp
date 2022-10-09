@@ -53,8 +53,8 @@ std::vector<std::string> hack_split(const std::string &in_text) {
 } // namespace
 
 PdfRenderer::PdfRenderer(
-    const char *ofname, Point pagew, Point pageh, const char *title, const char *author) {
-    surf = cairo_pdf_surface_create(workname, pagew.v, pageh.v);
+    const char *ofname, Length pagew, Length pageh, const char *title, const char *author) {
+    surf = cairo_pdf_surface_create(workname, pagew.pt(), pageh.pt());
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_TITLE, title);
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_AUTHOR, author);
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_CREATOR, "Superpdf from Outer Space!");
@@ -110,26 +110,26 @@ void PdfRenderer::draw_grid() {
     cairo_stroke(cr);
 }
 
-void PdfRenderer::draw_box(Point x, Point y, Point w, Point h) {
+void PdfRenderer::draw_box(Length x, Length y, Length w, Length h) {
     cairo_save(cr);
     cairo_set_line_width(cr, 0.2);
     cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
-    cairo_move_to(cr, x.v, y.v);
-    cairo_line_to(cr, (x + w).v, y.v);
-    cairo_line_to(cr, (x + w).v, (y + h).v);
-    cairo_line_to(cr, x.v, (y + h).v);
+    cairo_move_to(cr, x.pt(), y.pt());
+    cairo_line_to(cr, (x + w).pt(), y.pt());
+    cairo_line_to(cr, (x + w).pt(), (y + h).pt());
+    cairo_line_to(cr, x.pt(), (y + h).pt());
     cairo_close_path(cr);
     cairo_stroke(cr);
     cairo_restore(cr);
 }
 
-void PdfRenderer::fill_box(Point x, Point y, Point w, Point h, double color) {
+void PdfRenderer::fill_box(Length x, Length y, Length w, Length h, double color) {
     cairo_save(cr);
     cairo_set_source_rgb(cr, color, color, color);
-    cairo_move_to(cr, x.v, y.v);
-    cairo_line_to(cr, (x + w).v, y.v);
-    cairo_line_to(cr, (x + w).v, (y + h).v);
-    cairo_line_to(cr, x.v, (y + h).v);
+    cairo_move_to(cr, x.pt(), y.pt());
+    cairo_line_to(cr, (x + w).pt(), y.pt());
+    cairo_line_to(cr, (x + w).pt(), (y + h).pt());
+    cairo_line_to(cr, x.pt(), (y + h).pt());
     cairo_close_path(cr);
     cairo_fill(cr);
     cairo_restore(cr);
@@ -145,24 +145,24 @@ void PdfRenderer::draw_dash_line(const std::vector<Coord> &points) {
     const double dashes[2] = {4.0, 1.5};
     cairo_set_dash(cr, dashes, 2, 0.0);
     cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
-    cairo_move_to(cr, points[0].x.v, points[0].y.v);
+    cairo_move_to(cr, points[0].x.pt(), points[0].y.pt());
     for(size_t i = 1; i < points.size(); ++i) {
-        cairo_line_to(cr, points[i].x.v, points[i].y.v);
+        cairo_line_to(cr, points[i].x.pt(), points[i].y.pt());
     }
     cairo_stroke(cr);
     cairo_restore(cr);
 }
 
-void PdfRenderer::draw_poly_line(const std::vector<Coord> &points, Point thickness) {
+void PdfRenderer::draw_poly_line(const std::vector<Coord> &points, Length thickness) {
     if(points.size() < 2) {
         return;
     }
     cairo_save(cr);
     cairo_set_source_rgb(cr, 0, 0, 0);
-    cairo_set_line_width(cr, thickness.v);
-    cairo_move_to(cr, points[0].x.v, points[0].y.v);
+    cairo_set_line_width(cr, thickness.pt());
+    cairo_move_to(cr, points[0].x.pt(), points[0].y.pt());
     for(size_t i = 1; i < points.size(); ++i) {
-        cairo_line_to(cr, points[i].x.v, points[i].y.v);
+        cairo_line_to(cr, points[i].x.pt(), points[i].y.pt());
     }
     cairo_stroke(cr);
     cairo_restore(cr);
@@ -170,20 +170,20 @@ void PdfRenderer::draw_poly_line(const std::vector<Coord> &points, Point thickne
 
 void PdfRenderer::render_line_justified(const std::string &line_text,
                                         const FontParameters &par,
-                                        Millimeter line_width,
-                                        Point x,
-                                        Point y) {
+                                        Length line_width,
+                                        Length x,
+                                        Length y) {
     assert(line_text.find('\n') == std::string::npos);
     setup_pango(par);
     const auto words = hack_split(line_text);
-    Millimeter text_width = hack.text_width(line_text.c_str(), par);
+    Length text_width = hack.text_width(line_text.c_str(), par);
     const double num_spaces = std::count(line_text.begin(), line_text.end(), ' ');
-    const Point space_extra_width{num_spaces > 0 ? ((line_width - text_width) / num_spaces).topt()
-                                                 : Point{}};
+    const Length space_extra_width{num_spaces > 0 ? ((line_width - text_width) / num_spaces)
+                                                  : Length::zero()};
 
     std::string tmp;
     for(size_t i = 0; i < words.size(); ++i) {
-        cairo_move_to(cr, x.v, y.v);
+        cairo_move_to(cr, x.pt(), y.pt());
         PangoRectangle r;
 
         tmp = words[i];
@@ -193,16 +193,16 @@ void PdfRenderer::render_line_justified(const std::string &line_text,
         pango_layout_get_extents(layout, nullptr, &r);
         pango_cairo_update_layout(cr, layout);
         pango_cairo_show_layout(cr, layout);
-        x += Point::from_value(double(r.width) / PANGO_SCALE);
+        x += Length::from_pt(double(r.width) / PANGO_SCALE);
         x += space_extra_width;
     }
 }
 
 void PdfRenderer::render_line_justified(const std::vector<std::string> &markup_words,
                                         const FontParameters &par,
-                                        Millimeter line_width,
-                                        Point x,
-                                        Point y) {
+                                        Length line_width,
+                                        Length x,
+                                        Length y) {
     setup_pango(par);
     std::string full_line;
     for(const auto &w : markup_words) {
@@ -215,16 +215,16 @@ void PdfRenderer::render_line_justified(const std::vector<std::string> &markup_w
     pango_layout_set_text(layout, "A", 1);
     const auto desired_baseline = pango_layout_get_baseline(layout) / PANGO_SCALE;
 
-    const Point target_width = line_width.topt();
+    const Length target_width = line_width;
     pango_layout_set_markup(layout, full_line.c_str(), full_line.length());
-    const Point text_width = hack.markup_width(full_line.c_str(), par).topt();
+    const Length text_width = hack.markup_width(full_line.c_str(), par);
     const double num_spaces = double(markup_words.size() - 1);
-    const Point space_extra_width =
-        num_spaces > 0 ? (target_width - text_width) / num_spaces : Point();
+    const Length space_extra_width =
+        num_spaces > 0 ? (target_width - text_width) / num_spaces : Length::zero();
 
     std::string tmp;
     for(const auto &markup_word : markup_words) {
-        cairo_move_to(cr, x.v, y.v);
+        cairo_move_to(cr, x.pt(), y.pt());
         PangoRectangle r;
 
         pango_layout_set_attributes(layout, nullptr);
@@ -235,7 +235,7 @@ void PdfRenderer::render_line_justified(const std::vector<std::string> &markup_w
         pango_layout_get_extents(layout, nullptr, &r);
         pango_cairo_update_layout(cr, layout);
         pango_cairo_show_layout(cr, layout);
-        x += Point::from_value(double(r.width) / PANGO_SCALE);
+        x += Length::from_pt(double(r.width) / PANGO_SCALE);
         x += space_extra_width;
     }
 }
@@ -252,14 +252,17 @@ void PdfRenderer::setup_pango(const FontParameters &par) {
     } else {
         pango_font_description_set_style(desc, PANGO_STYLE_NORMAL);
     }
-    pango_font_description_set_absolute_size(desc, par.size.v * PANGO_SCALE);
+    pango_font_description_set_absolute_size(desc, par.size.pt() * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 }
 
-void PdfRenderer::render_text_as_is(const char *line, const FontParameters &par, Point x, Point y) {
+void PdfRenderer::render_text_as_is(const char *line,
+                                    const FontParameters &par,
+                                    Length x,
+                                    Length y) {
     setup_pango(par);
-    cairo_move_to(cr, x.v, y.v);
+    cairo_move_to(cr, x.pt(), y.pt());
     pango_layout_set_attributes(layout, nullptr);
     pango_layout_set_text(layout, line, -1);
     pango_cairo_update_layout(cr, layout);
@@ -267,23 +270,23 @@ void PdfRenderer::render_text_as_is(const char *line, const FontParameters &par,
 }
 
 void PdfRenderer::render_markup_as_is(
-    const char *line, const FontParameters &par, Point x, Point y, TextAlignment alignment) {
+    const char *line, const FontParameters &par, Length x, Length y, TextAlignment alignment) {
     setup_pango(par);
     pango_layout_set_attributes(layout, nullptr);
     pango_layout_set_markup(layout, line, -1);
 
     switch(alignment) {
     case TextAlignment::Left:
-        cairo_move_to(cr, x.v, y.v);
+        cairo_move_to(cr, x.pt(), y.pt());
         break;
     case TextAlignment::Centered:
         PangoRectangle r;
         pango_layout_get_extents(layout, nullptr, &r);
-        cairo_move_to(cr, (x - Point::from_value(r.width / (2 * PANGO_SCALE))).v, y.v);
+        cairo_move_to(cr, (x - Length::from_pt(r.width / (2 * PANGO_SCALE))).pt(), y.pt());
         break;
     case TextAlignment::Right:
         pango_layout_get_extents(layout, nullptr, &r);
-        cairo_move_to(cr, (x - Point::from_value(r.width / PANGO_SCALE)).v, y.v);
+        cairo_move_to(cr, (x - Length::from_pt(r.width / PANGO_SCALE)).pt(), y.pt());
     }
 
     pango_cairo_update_layout(cr, layout);
@@ -292,8 +295,8 @@ void PdfRenderer::render_markup_as_is(
 
 void PdfRenderer::render_markup_as_is(const std::vector<std::string> markup_words,
                                       const FontParameters &par,
-                                      Point x,
-                                      Point y,
+                                      Length x,
+                                      Length y,
                                       TextAlignment alignment) {
     std::string full_line;
     for(const auto &w : markup_words) {
@@ -304,14 +307,14 @@ void PdfRenderer::render_markup_as_is(const std::vector<std::string> markup_word
 
 void PdfRenderer::render_line_centered(const char *line,
                                        const FontParameters &par,
-                                       Point x,
-                                       Point y) {
+                                       Length x,
+                                       Length y) {
     PangoRectangle r;
 
     pango_layout_set_attributes(layout, nullptr);
     pango_layout_set_text(layout, line, -1);
     pango_layout_get_extents(layout, nullptr, &r);
-    render_text_as_is(line, par, x - Point::from_value(r.width / (2 * PANGO_SCALE)), y);
+    render_text_as_is(line, par, x - Length::from_pt(r.width / (2 * PANGO_SCALE)), y);
 }
 
 void PdfRenderer::new_page() {
@@ -319,10 +322,10 @@ void PdfRenderer::new_page() {
     ++pages;
 }
 
-void PdfRenderer::draw_line(Point x0, Point y0, Point x1, Point y1, Point thickness) {
-    cairo_set_line_width(cr, thickness.v);
-    cairo_move_to(cr, x0.v, y0.v);
-    cairo_line_to(cr, x1.v, y1.v);
+void PdfRenderer::draw_line(Length x0, Length y0, Length x1, Length y1, Length thickness) {
+    cairo_set_line_width(cr, thickness.pt());
+    cairo_move_to(cr, x0.pt(), y0.pt());
+    cairo_line_to(cr, x1.pt(), y1.pt());
     cairo_stroke(cr);
 }
 
@@ -344,12 +347,11 @@ ImageInfo PdfRenderer::get_image(const std::string &path) {
     return result;
 }
 
-void PdfRenderer::draw_image(
-    const ImageInfo &image, Millimeter x, Millimeter y, Millimeter w, Millimeter h) {
+void PdfRenderer::draw_image(const ImageInfo &image, Length x, Length y, Length w, Length h) {
     cairo_save(cr);
-    cairo_rectangle(cr, x.topt().v, y.topt().v, w.topt().v, h.topt().v);
-    cairo_translate(cr, x.topt().v, y.topt().v);
-    cairo_scale(cr, w.topt().v / image.w, h.topt().v / image.h);
+    cairo_rectangle(cr, x.pt(), y.pt(), w.pt(), h.pt());
+    cairo_translate(cr, x.pt(), y.pt());
+    cairo_scale(cr, w.pt() / image.w, h.pt() / image.h);
     cairo_set_source_surface(cr, image.surf, 0, 0);
     cairo_fill(cr);
     cairo_restore(cr);

@@ -62,13 +62,13 @@ public:
     TextStats();
     ~TextStats();
 
-    Millimeter text_width(const char *utf8_text, const FontParameters &font) const;
+    Length text_width(const char *utf8_text, const FontParameters &font) const;
 
-    Millimeter text_width(const std::string &s, const FontParameters &font) const {
+    Length text_width(const std::string &s, const FontParameters &font) const {
         return text_width(s.c_str(), font);
     };
 
-    Millimeter markup_width(const char *utf8_text, const FontParameters &font) const;
+    Length markup_width(const char *utf8_text, const FontParameters &font) const;
 
 private:
     void set_pango_state(const char *utf8_text,
@@ -78,6 +78,6 @@ private:
     cairo_t *cr;
     cairo_surface_t *surface;
     PangoLayout *layout;
-    mutable std::unordered_map<StyledPlainText, Millimeter> plaintext_widths;
-    mutable std::unordered_map<StyledMarkupText, Millimeter> markup_widths;
+    mutable std::unordered_map<StyledPlainText, Length> plaintext_widths;
+    mutable std::unordered_map<StyledMarkupText, Length> markup_widths;
 };

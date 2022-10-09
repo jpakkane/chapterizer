@@ -101,8 +101,8 @@ struct App {
 };
 
 struct Outdents {
-    Point left;
-    Point right;
+    Length left;
+    Length right;
 };
 
 /*
@@ -113,7 +113,7 @@ static void quitfunc(GtkButton *, gpointer user_data) {
 */
 double mm2screenpt(double mm) { return mm / 25.4 * 72; }
 
-Outdents compute_outdents(const std::string &s, Point point_size) {
+Outdents compute_outdents(const std::string &s, Length point_size) {
     Outdents r;
     if(s.size() < 2) {
         return r;
@@ -225,10 +225,10 @@ ChapterParameters get_params(App *app) {
     auto *tmp = gtk_combo_box_text_get_active_text(app->fonts);
     par.font.name = tmp;
     g_free(tmp);
-    par.font.size = Point::from_value(gtk_spin_button_get_value(app->ptsize));
+    par.font.size = Length::from_pt(gtk_spin_button_get_value(app->ptsize));
     par.font.type = (FontStyle)gtk_combo_box_get_active(GTK_COMBO_BOX(app->font_style));
-    par.line_height = Point::from_value(gtk_spin_button_get_value(app->row_height));
-    par.indent = Millimeter::from_value(gtk_spin_button_get_value(app->indent));
+    par.line_height = Length::from_pt(gtk_spin_button_get_value(app->row_height));
+    par.indent = Length::from_mm(gtk_spin_button_get_value(app->indent));
     return par;
 }
 
@@ -264,7 +264,7 @@ double populate_line_store(App *app,
                            TEXT_LINE_COLUMN,
                            workarea.c_str(),
                            DELTA_LINE_COLUMN,
-                           stats.delta.v,
+                           stats.delta.mm(),
                            PENALTY_LINE_COLUMN,
                            stats.penalty,
                            -1);
@@ -297,7 +297,7 @@ double populate_extra_store(App *app, const std::vector<ExtraPenaltyStatistics> 
 void text_changed(GtkTextBuffer *, gpointer data) {
     auto app = static_cast<App *>(data);
     ChapterParameters par = get_params(app);
-    auto paragraph_width = Millimeter::from_value(gtk_spin_button_get_value(app->chapter_width));
+    auto paragraph_width = Length::from_mm(gtk_spin_button_get_value(app->chapter_width));
     double total_penalty = 0;
     auto lines = get_entry_widget_text_lines(app);
     ExtraPenaltyAmounts pen_amounts = get_penalties(app);
@@ -367,7 +367,7 @@ void run_optimization_cb(GtkButton *, gpointer data) {
     // FIXME: run as an async task.
     WordHyphenator hyp;
     ChapterParameters params = get_params(app);
-    auto paragraph_width = Millimeter::from_value(gtk_spin_button_get_value(app->chapter_width));
+    auto paragraph_width = Length::from_mm(gtk_spin_button_get_value(app->chapter_width));
 
     ExtraPenaltyAmounts extras = get_penalties(app);
     auto words = get_entry_widget_text_words(app);
@@ -442,16 +442,16 @@ void connect_stuffs(App *app) {
 
 void render_line_justified(cairo_t *cr,
                            PangoLayout *layout,
-                           Point size,
+                           Length size,
                            const std::string &line_text,
-                           Point x,
-                           Point y,
-                           Point chapter_width) {
+                           Length x,
+                           Length y,
+                           Length chapter_width) {
     assert(!line_text.empty());
     const auto words = split_to_words(std::string_view(line_text));
     assert(!words.empty());
     const int num_spaces = int(words.size() - 1);
-    Point text_width;
+    Length text_width;
     cairo_move_to(cr, -1000, -1000);
     const auto outdents = compute_outdents(line_text, size);
     const auto total_outdent = outdents.left + outdents.right;
@@ -461,21 +461,21 @@ void render_line_justified(cairo_t *cr,
         pango_layout_set_text(layout, word.c_str(), -1);
         pango_layout_get_extents(layout, nullptr, &r);
         pango_cairo_update_layout(cr, layout);
-        text_width += Point::from_value(double(r.width) / PANGO_SCALE);
+        text_width += Length::from_pt(double(r.width) / PANGO_SCALE);
     }
-    const Point space_extra_width =
-        num_spaces > 0 ? (chapter_width - text_width + total_outdent) / num_spaces : Point{};
+    const Length space_extra_width =
+        num_spaces > 0 ? (chapter_width - text_width + total_outdent) / num_spaces : Length{};
 
     x -= outdents.left;
     for(size_t i = 0; i < words.size(); ++i) {
-        cairo_move_to(cr, x.v, y.v);
+        cairo_move_to(cr, x.pt(), y.pt());
         PangoRectangle r;
 
         pango_layout_set_text(layout, words[i].c_str(), -1);
         pango_layout_get_extents(layout, nullptr, &r);
         pango_cairo_update_layout(cr, layout);
         pango_cairo_show_layout(cr, layout);
-        x += Point::from_value(double(r.width) / PANGO_SCALE);
+        x += Length::from_pt(double(r.width) / PANGO_SCALE);
         x += space_extra_width;
     }
 }
@@ -492,8 +492,7 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     App *a = static_cast<App *>(data);
     GdkRGBA color;
     ChapterParameters cp = get_params(a);
-    const auto paragraph_width =
-        Millimeter::from_value(gtk_spin_button_get_value(a->chapter_width));
+    const auto paragraph_width = Length::from_mm(gtk_spin_button_get_value(a->chapter_width));
 
     auto text = get_entry_widget_text_lines(a);
     auto *layout = pango_cairo_create_layout(cr);
@@ -511,7 +510,7 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     } else {
         pango_font_description_set_style(desc, PANGO_STYLE_NORMAL);
     }
-    pango_font_description_set_absolute_size(desc, cp.font.size.v * PANGO_SCALE);
+    pango_font_description_set_absolute_size(desc, cp.font.size.pt() * PANGO_SCALE);
     pango_layout_set_font_description(layout, desc);
     pango_font_description_free(desc);
 
@@ -524,8 +523,8 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
     const double zoom_ratio = gtk_spin_button_get_value(a->zoom);
     const double xoff = 10;
     const double yoff = 10;
-    const double parwid = zoom_ratio * mm2screenpt(paragraph_width.v);
-    const double parhei = zoom_ratio * text.size() * cp.line_height.v;
+    const double parwid = zoom_ratio * mm2screenpt(paragraph_width.pt());
+    const double parhei = zoom_ratio * text.size() * cp.line_height.pt();
     cairo_set_line_width(cr, 1.0);
     cairo_rectangle(cr, xoff, yoff, parwid, parhei);
     color.red = color.green = 0.0;
@@ -539,28 +538,29 @@ void draw_function(GtkDrawingArea *, cairo_t *cr, int width, int height, gpointe
         gdk_cairo_set_source_rgba(cr, &color);
         if(gtk_toggle_button_get_active(a->justify)) {
             for(size_t i = 0; i < text.size() - 1; ++i) {
-                double indent = i == 0 ? zoom_ratio * mm2screenpt(cp.indent.v) : 0;
-                render_line_justified(cr,
-                                      layout,
-                                      cp.font.size,
-                                      text[i],
-                                      Point::from_value((xoff + indent) / zoom_ratio),
-                                      Point::from_value((yoff / zoom_ratio + cp.line_height.v * i)),
-                                      Point::from_value((parwid - indent) / zoom_ratio));
+                double indent = i == 0 ? zoom_ratio * mm2screenpt(cp.indent.mm()) : 0;
+                render_line_justified(
+                    cr,
+                    layout,
+                    cp.font.size,
+                    text[i],
+                    Length::from_pt((xoff + indent) / zoom_ratio),
+                    Length::from_pt((yoff / zoom_ratio + cp.line_height.pt() * i)),
+                    Length::from_pt((parwid - indent) / zoom_ratio));
             }
             render_line_as_is(cr,
                               layout,
                               text.back(),
                               xoff / zoom_ratio,
-                              yoff / zoom_ratio + cp.line_height.v * (text.size() - 1));
+                              yoff / zoom_ratio + cp.line_height.pt() * (text.size() - 1));
         } else {
             for(size_t i = 0; i < text.size(); ++i) {
-                double indent = i == 0 ? zoom_ratio * mm2screenpt(cp.indent.v) : 0;
+                double indent = i == 0 ? zoom_ratio * mm2screenpt(cp.indent.mm()) : 0;
                 render_line_as_is(cr,
                                   layout,
                                   text[i],
                                   (xoff + indent) / zoom_ratio,
-                                  yoff / zoom_ratio + cp.line_height.v * i);
+                                  yoff / zoom_ratio + cp.line_height.pt() * i);
             }
         }
     }

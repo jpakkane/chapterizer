@@ -31,15 +31,15 @@ enum class Language : int {
 };
 
 struct Margins {
-    Millimeter inner = Millimeter::from_value(20);
-    Millimeter outer = Millimeter::from_value(15);
-    Millimeter upper = Millimeter::from_value(15);
-    Millimeter lower = Millimeter::from_value(15);
+    Length inner = Length::from_mm(20);
+    Length outer = Length::from_mm(15);
+    Length upper = Length::from_mm(15);
+    Length lower = Length::from_mm(15);
 };
 
 struct PageSize {
-    Millimeter w;
-    Millimeter h;
+    Length w;
+    Length h;
 };
 
 struct Credits {
@@ -61,11 +61,11 @@ struct ChapterStyles {
 };
 
 struct Spaces {
-    Millimeter above_section;
-    Millimeter below_section;
-    Millimeter different_paragraphs;
-    Millimeter codeblock_indent;
-    Millimeter footnote_separation;
+    Length above_section;
+    Length below_section;
+    Length different_paragraphs;
+    Length codeblock_indent;
+    Length footnote_separation;
 };
 
 struct PdfMetadata {

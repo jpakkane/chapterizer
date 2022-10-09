@@ -41,7 +41,7 @@ void TextStats::set_pango_state(const char *utf8_text,
                                 bool is_markup) const {
     auto *desc = pango_font_description_from_string(font.name.c_str());
     assert(desc);
-    pango_font_description_set_absolute_size(desc, font.size.v * PANGO_SCALE);
+    pango_font_description_set_absolute_size(desc, font.size.pt() * PANGO_SCALE);
     if(font.type == FontStyle::Bold || font.type == FontStyle::BoldItalic) {
         pango_font_description_set_weight(desc, PANGO_WEIGHT_BOLD);
     } else {
@@ -63,7 +63,7 @@ void TextStats::set_pango_state(const char *utf8_text,
     pango_font_description_free(desc);
 }
 
-Millimeter TextStats::text_width(const char *utf8_text, const FontParameters &font) const {
+Length TextStats::text_width(const char *utf8_text, const FontParameters &font) const {
     StyledPlainText k;
     k.text = utf8_text;
     k.font = font;
@@ -75,12 +75,12 @@ Millimeter TextStats::text_width(const char *utf8_text, const FontParameters &fo
     PangoRectangle ink_rect, logical_rect;
     pango_layout_get_extents(layout, &ink_rect, &logical_rect);
     // printf("Text width is %.2f mm\n", double(logical_rect.width) / PANGO_SCALE / 595 * 220);
-    Millimeter w = Point::from_value(double(logical_rect.width) / PANGO_SCALE).tomm();
+    Length w = Length::from_pt(double(logical_rect.width) / PANGO_SCALE);
     plaintext_widths[k] = w;
     return w;
 }
 
-Millimeter TextStats::markup_width(const char *utf8_text, const FontParameters &font) const {
+Length TextStats::markup_width(const char *utf8_text, const FontParameters &font) const {
     StyledMarkupText k;
     k.text = utf8_text;
     k.font = font;
@@ -92,7 +92,7 @@ Millimeter TextStats::markup_width(const char *utf8_text, const FontParameters &
     PangoRectangle ink_rect, logical_rect;
     pango_layout_get_extents(layout, &ink_rect, &logical_rect);
 
-    Millimeter w = Point::from_value(double(logical_rect.width) / PANGO_SCALE).tomm();
+    Length w = Length::from_pt(double(logical_rect.width) / PANGO_SCALE);
     markup_widths[k] = w;
     return w;
 }

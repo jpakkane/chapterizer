@@ -38,54 +38,54 @@ struct ImageInfo {
 };
 
 struct Coord {
-    Point x;
-    Point y;
+    Length x;
+    Length y;
 };
 
 class PdfRenderer {
 public:
     explicit PdfRenderer(
-        const char *ofname, Point pagew, Point pageh, const char *title, const char *author);
+        const char *ofname, Length pagew, Length pageh, const char *title, const char *author);
     ~PdfRenderer();
 
     void render_line_justified(const std::string &text,
                                const FontParameters &par,
-                               Millimeter line_width_mm,
-                               Point x,
-                               Point y);
+                               Length line_width_mm,
+                               Length x,
+                               Length y);
 
     void render_line_justified(const std::vector<std::string> &markup_words,
                                const FontParameters &par,
-                               Millimeter line_width,
-                               Point x,
-                               Point y);
+                               Length line_width,
+                               Length x,
+                               Length y);
 
-    void render_text_as_is(const char *line, const FontParameters &par, Point x, Point y);
+    void render_text_as_is(const char *line, const FontParameters &par, Length x, Length y);
 
     void render_markup_as_is(
-        const char *line, const FontParameters &par, Point x, Point y, TextAlignment alignment);
+        const char *line, const FontParameters &par, Length x, Length y, TextAlignment alignment);
     void render_markup_as_is(const std::vector<std::string> markup_words,
                              const FontParameters &par,
-                             Point x,
-                             Point y,
+                             Length x,
+                             Length y,
                              TextAlignment alignment);
-    void render_line_centered(const char *line, const FontParameters &par, Point x, Point y);
+    void render_line_centered(const char *line, const FontParameters &par, Length x, Length y);
 
     void new_page();
     int page_num() const { return pages; }
 
-    void draw_box(Point x, Point y, Point w, Point h);
-    void fill_box(Point x, Point y, Point w, Point h, double color);
+    void draw_box(Length x, Length y, Length w, Length h);
+    void fill_box(Length x, Length y, Length w, Length h, double color);
 
-    void draw_line(Point x0, Point y0, Point x1, Point y1, Point thickness);
+    void draw_line(Length x0, Length y0, Length x1, Length y1, Length thickness);
 
     ImageInfo get_image(const std::string &path);
 
-    void draw_image(const ImageInfo &image, Millimeter x, Millimeter y, Millimeter w, Millimeter h);
+    void draw_image(const ImageInfo &image, Length x, Length y, Length w, Length h);
 
     void draw_dash_line(const std::vector<Coord> &points);
 
-    void draw_poly_line(const std::vector<Coord> &points, Point thickness);
+    void draw_poly_line(const std::vector<Coord> &points, Length thickness);
 
     void add_section_outline(int section_number, const std::string &text);
 

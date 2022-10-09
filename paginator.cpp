@@ -25,7 +25,7 @@
 
 namespace {
 
-const Millimeter image_separator = Millimeter::from_value(4);
+const Length image_separator = Length::from_mm(4);
 
 template<typename T> void style_change(T &stack, typename T::value_type val) {
     if(stack.contains(val)) {
@@ -35,7 +35,7 @@ template<typename T> void style_change(T &stack, typename T::value_type val) {
     }
 }
 
-void adjust_y(TextCommands &c, Millimeter diff) {
+void adjust_y(TextCommands &c, Length diff) {
     if(std::holds_alternative<MarkupDrawCommand>(c)) {
         auto &mc = std::get<MarkupDrawCommand>(c);
         mc.y += diff;
@@ -104,8 +104,8 @@ Paginator::Paginator(const Document &d)
       m(doc.data.pdf.margins) {}
 
 void Paginator::generate_pdf(const char *outfile) {
-    rend.reset(new PdfRenderer(
-        outfile, page.w.topt(), page.h.topt(), doc.data.title.c_str(), doc.data.author.c_str()));
+    rend.reset(
+        new PdfRenderer(outfile, page.w, page.h, doc.data.title.c_str(), doc.data.author.c_str()));
 
     if(doc.data.is_draft) {
         create_draft_title_page();
@@ -134,8 +134,8 @@ void Paginator::create_maintext() {
     const auto section_width = 0.8 * paragraph_width;
 
     ExtraPenaltyAmounts extras;
-    const Millimeter bottom_watermark = page.h - m.lower - m.upper;
-    Millimeter rel_y;
+    const Length bottom_watermark = page.h - m.lower - m.upper;
+    Length rel_y;
     bool first_paragraph = true;
     bool first_section = true;
 
@@ -151,7 +151,7 @@ void Paginator::create_maintext() {
             chapter_start_page = rend->page_num();
             rend->add_section_outline(s.number, s.text);
             first_section = false;
-            rel_y = Millimeter::zero();
+            rel_y = Length::zero();
             rel_y += spaces.above_section;
             heights.whitespace_height += spaces.above_section;
             assert(s.level == 1);
@@ -168,8 +168,8 @@ void Paginator::create_maintext() {
                                                            textblock_width() / 2,
                                                            rel_y,
                                                            TextAlignment::Centered});
-                rel_y += 2 * styles.section.line_height.tomm();
-                heights.text_height += 2 * styles.section.line_height.tomm();
+                rel_y += 2 * styles.section.line_height;
+                heights.text_height += 2 * styles.section.line_height;
                 title_string = s.text;
             }
             // The title. Hyphenation is prohibited.
@@ -181,8 +181,8 @@ void Paginator::create_maintext() {
                 build_ragged_paragraph(lines, styles.section, section_alignment, rel_y);
             for(auto &line : built_lines) {
                 layout.text.emplace_back(std::move(line));
-                rel_y += styles.section.line_height.tomm();
-                heights.text_height += styles.section.line_height.tomm();
+                rel_y += styles.section.line_height;
+                heights.text_height += styles.section.line_height;
             }
             rel_y += spaces.below_section;
             heights.text_height += spaces.below_section;
@@ -197,7 +197,7 @@ void Paginator::create_maintext() {
             std::vector<TextCommands> built_lines;
             if(doc.data.is_draft) {
                 built_lines =
-                    build_ragged_paragraph(lines, cur_par, TextAlignment::Left, Millimeter::zero());
+                    build_ragged_paragraph(lines, cur_par, TextAlignment::Left, Length::zero());
                 if(!built_lines.empty()) {
                     auto &first_line = built_lines[0];
                     if(std::holds_alternative<MarkupDrawCommand>(first_line)) {
@@ -211,19 +211,19 @@ void Paginator::create_maintext() {
             } else {
                 built_lines = build_justified_paragraph(lines, cur_par, textblock_width());
             }
-            Millimeter current_y_origin = rel_y;
+            Length current_y_origin = rel_y;
             int lines_in_paragraph = 0;
             for(auto &line : built_lines) {
-                if(heights.total_height() + cur_par.line_height.tomm() > bottom_watermark) {
+                if(heights.total_height() + cur_par.line_height > bottom_watermark) {
                     new_page(true);
-                    current_y_origin = -lines_in_paragraph * cur_par.line_height.tomm();
-                    rel_y = Millimeter::zero();
+                    current_y_origin = -lines_in_paragraph * cur_par.line_height;
+                    rel_y = Length::zero();
                 }
                 ++lines_in_paragraph;
                 layout.text.emplace_back(std::move(line));
                 adjust_y(layout.text.back(), current_y_origin);
-                rel_y += cur_par.line_height.tomm();
-                heights.text_height += cur_par.line_height.tomm();
+                rel_y += cur_par.line_height;
+                heights.text_height += cur_par.line_height;
             }
             first_paragraph = false;
         } else if(std::holds_alternative<Footnote>(e)) {
@@ -239,14 +239,11 @@ void Paginator::create_maintext() {
             std::string fnum = std::to_string(f.number);
             fnum += '.';
             auto tmpy = heights.footnote_height;
-            layout.footnote.emplace_back(MarkupDrawCommand{std::move(fnum),
-                                                           &styles.footnote.font,
-                                                           Millimeter::zero(),
-                                                           tmpy,
-                                                           TextAlignment::Left});
+            layout.footnote.emplace_back(MarkupDrawCommand{
+                std::move(fnum), &styles.footnote.font, Length::zero(), tmpy, TextAlignment::Left});
             auto built_lines = build_justified_paragraph(lines, styles.footnote, textblock_width());
             // FIXME, assumes there is always enough space for a footnote.
-            heights.footnote_height += built_lines.size() * styles.footnote.line_height.tomm();
+            heights.footnote_height += built_lines.size() * styles.footnote.line_height;
             layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
         } else if(std::holds_alternative<SceneChange>(e)) {
             if(doc.data.is_draft) {
@@ -256,11 +253,11 @@ void Paginator::create_maintext() {
                                                            rel_y,
                                                            TextAlignment::Centered});
             }
-            rel_y += styles.normal.line_height.tomm();
-            heights.whitespace_height += styles.normal.line_height.tomm();
+            rel_y += styles.normal.line_height;
+            heights.whitespace_height += styles.normal.line_height;
             if(rel_y >= bottom_watermark) {
                 new_page(true);
-                rel_y = Millimeter::zero();
+                rel_y = Length::zero();
             }
             first_paragraph = true;
         } else if(std::holds_alternative<CodeBlock>(e)) {
@@ -270,15 +267,15 @@ void Paginator::create_maintext() {
             for(const auto &line : cb.raw_lines) {
                 if(heights.total_height() >= bottom_watermark) {
                     new_page(true);
-                    rel_y = Millimeter::zero();
+                    rel_y = Length::zero();
                 }
                 layout.text.emplace_back(MarkupDrawCommand{line.c_str(),
                                                            &styles.code.font,
                                                            spaces.codeblock_indent,
                                                            rel_y,
                                                            TextAlignment::Left});
-                rel_y += styles.code.line_height.tomm();
-                heights.text_height += styles.code.line_height.tomm();
+                rel_y += styles.code.line_height;
+                heights.text_height += styles.code.line_height;
             }
             first_paragraph = true;
             rel_y += spaces.different_paragraphs;
@@ -287,15 +284,15 @@ void Paginator::create_maintext() {
             const Figure &cb = std::get<Figure>(e);
             const auto fullpath = doc.data.top_dir / cb.file;
             auto image = rend->get_image(fullpath.c_str());
-            Millimeter display_width = textblock_width();
-            Millimeter display_height = display_width * image.h / image.w;
+            Length display_width = textblock_width();
+            Length display_height = display_width * image.h / image.w;
             if(doc.data.is_draft) {
                 display_height = display_height / 2;
                 display_width = display_width / 2;
             }
             if(chapter_start_page == rend->page_num()) {
                 add_pending_figure(image);
-            } else if(heights.figure_height > Millimeter::zero()) {
+            } else if(heights.figure_height > Length::zero()) {
                 add_pending_figure(image);
             } else if(heights.total_height() + display_height + image_separator >
                       bottom_watermark) {
@@ -305,10 +302,10 @@ void Paginator::create_maintext() {
             }
         } else if(std::holds_alternative<NumberList>(e)) {
             const NumberList &nl = std::get<NumberList>(e);
-            const Millimeter number_area = Millimeter::from_value(5);
-            const Millimeter indent = spaces.codeblock_indent; // FIXME
-            const Millimeter text_width = paragraph_width - number_area - indent;
-            const Millimeter item_separator = spaces.different_paragraphs / 2;
+            const Length number_area = Length::from_mm(5);
+            const Length indent = spaces.codeblock_indent; // FIXME
+            const Length text_width = paragraph_width - number_area - indent;
+            const Length item_separator = spaces.different_paragraphs / 2;
             rel_y += spaces.different_paragraphs;
             heights.whitespace_height += spaces.different_paragraphs;
             for(size_t i = 0; i < nl.items.size(); ++i) {
@@ -327,8 +324,8 @@ void Paginator::create_maintext() {
                         lines, styles.lists, text_width, indent + number_area, rel_y)) {
                     // FIXME, handle page changes.
                     layout.text.emplace_back(std::move(line));
-                    heights.text_height += styles.lists.line_height.tomm();
-                    rel_y += styles.lists.line_height.tomm();
+                    heights.text_height += styles.lists.line_height;
+                    rel_y += styles.lists.line_height;
                 }
             }
             rel_y += spaces.different_paragraphs;
@@ -352,7 +349,7 @@ void Paginator::add_top_image(const ImageInfo &image) {
     cmd.x = current_left_margin() + textblock_width() / 2 - cmd.display_width / 2;
     cmd.y = m.upper;
     layout.images.emplace_back(std::move(cmd));
-    assert(heights.figure_height < Millimeter::from_value(0.0001));
+    assert(heights.figure_height < Length::from_mm(0.0001));
     heights.figure_height += cmd.display_height;
     heights.figure_height += image_separator;
     layout.images.emplace_back(std::move(cmd));
@@ -368,31 +365,31 @@ void Paginator::render_page_num(const FontParameters &par) {
             doc.data.draftdata.page_number_template + std::to_string(current_page - 1);
         rend->render_markup_as_is(text.c_str(),
                                   styles.normal.font,
-                                  (current_left_margin() + textblock_width()).topt(),
-                                  m.upper.topt() - 2 * styles.normal.line_height,
+                                  current_left_margin() + textblock_width(),
+                                  m.upper - 2 * styles.normal.line_height,
                                   TextAlignment::Right);
     } else {
         char buf[128];
         snprintf(buf, 128, "%d", current_page);
-        const Millimeter yloc = page.h - 3.0 * m.lower / 4.0;
-        const Millimeter xloc = current_left_margin() + (page.w - m.inner - m.outer) / 2;
-        rend->render_line_centered(buf, par, xloc.topt(), yloc.topt());
+        const Length yloc = page.h - 3.0 * m.lower / 4.0;
+        const Length xloc = current_left_margin() + (page.w - m.inner - m.outer) / 2;
+        rend->render_line_centered(buf, par, xloc, yloc);
     }
 }
 
 std::vector<TextCommands>
 Paginator::build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
                                      const ChapterParameters &text_par,
-                                     const Millimeter target_width,
-                                     const Millimeter x_off,
-                                     const Millimeter y_off) {
-    Millimeter rel_y = Millimeter::zero();
-    const Millimeter x = Millimeter::zero();
+                                     const Length target_width,
+                                     const Length x_off,
+                                     const Length y_off) {
+    Length rel_y;
+    const Length x;
     std::vector<TextCommands> line_commands;
     line_commands.reserve(lines.size());
     size_t line_num = 0;
     for(const auto &markup_words : lines) {
-        Millimeter current_indent = line_num == 0 ? text_par.indent : Millimeter{};
+        Length current_indent = line_num == 0 ? text_par.indent : Length{};
         if(line_num < lines.size() - 1) {
             line_commands.emplace_back(JustifiedMarkupDrawCommand{markup_words,
                                                                   &text_par.font,
@@ -411,7 +408,7 @@ Paginator::build_justified_paragraph(const std::vector<std::vector<std::string>>
                                                          TextAlignment::Left});
         }
         line_num++;
-        rel_y += text_par.line_height.tomm();
+        rel_y += text_par.line_height;
     }
     return line_commands;
 }
@@ -420,10 +417,10 @@ std::vector<TextCommands>
 Paginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
                                   const ChapterParameters &text_par,
                                   const TextAlignment alignment,
-                                  Millimeter rel_y) {
+                                  Length rel_y) {
     std::vector<TextCommands> line_commands;
     const auto rel_x =
-        alignment == TextAlignment::Centered ? textblock_width() / 2 : Millimeter::zero();
+        alignment == TextAlignment::Centered ? textblock_width() / 2 : Length::zero();
     line_commands.reserve(lines.size());
     for(const auto &markup_words : lines) {
         std::string full_line;
@@ -433,7 +430,7 @@ Paginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &l
         assert(alignment != TextAlignment::Right);
         line_commands.emplace_back(
             MarkupDrawCommand{std::move(full_line), &text_par.font, rel_x, rel_y, alignment});
-        rel_y += text_par.line_height.tomm();
+        rel_y += text_par.line_height;
     }
     return line_commands;
 }
@@ -471,68 +468,56 @@ void Paginator::new_page(bool draw_page_num) {
     ++current_page;
     if(doc.data.debug_draw) {
         if(current_page % 2) {
-            rend->draw_box(m.inner.topt(),
-                           m.upper.topt(),
-                           (page.w - m.inner - m.outer).topt(),
-                           (page.h - m.upper - m.lower).topt());
+            rend->draw_box(
+                m.inner, m.upper, page.w - m.inner - m.outer, page.h - m.upper - m.lower);
         } else {
-            rend->draw_box(m.outer.topt(),
-                           m.upper.topt(),
-                           (page.w - m.inner - m.outer).topt(),
-                           (page.h - m.upper - m.lower).topt());
+            rend->draw_box(
+                m.outer, m.upper, page.w - m.inner - m.outer, page.h - m.upper - m.lower);
         }
     }
 }
 
 void Paginator::draw_debug_bars() {
     const int num_bars = 4;
-    const Point boxheight = styles.section.line_height;
-    const Millimeter chaffwidth = Millimeter::from_value(6);
+    const Length boxheight = styles.section.line_height;
+    const Length chaffwidth = Length::from_mm(6);
     for(int i = 0; i < num_bars; ++i) {
-        rend->fill_box(current_left_margin().topt(),
-                       m.upper.topt() + 2 * i * boxheight,
-                       textblock_width().topt(),
-                       boxheight,
-                       0.9);
+        rend->fill_box(
+            current_left_margin(), m.upper + 2 * i * boxheight, textblock_width(), boxheight, 0.9);
     }
     // Text area box
     std::vector<Coord> dashcoords;
-    dashcoords.emplace_back(Coord{current_left_margin().topt(), m.upper.topt()});
+    dashcoords.emplace_back(Coord{current_left_margin(), m.upper});
+    dashcoords.emplace_back(Coord{(current_left_margin() + textblock_width()), m.upper});
     dashcoords.emplace_back(
-        Coord{(current_left_margin() + textblock_width()).topt(), m.upper.topt()});
-    dashcoords.emplace_back(Coord{(current_left_margin() + textblock_width()).topt(),
-                                  m.upper.topt() + 2 * num_bars * boxheight});
-    dashcoords.emplace_back(
-        Coord{current_left_margin().topt(), m.upper.topt() + 2 * num_bars * boxheight});
-    dashcoords.emplace_back(Coord{current_left_margin().topt(), m.upper.topt()});
+        Coord{(current_left_margin() + textblock_width()), m.upper + 2 * num_bars * boxheight});
+    dashcoords.emplace_back(Coord{current_left_margin(), m.upper + 2 * num_bars * boxheight});
+    dashcoords.emplace_back(Coord{current_left_margin(), m.upper});
     rend->draw_dash_line(dashcoords);
     dashcoords.clear();
 
-    dashcoords.emplace_back(Coord{current_left_margin().topt(), m.upper.topt()});
-    dashcoords.emplace_back(Coord{(current_left_margin() - chaffwidth).topt(), m.upper.topt()});
-    dashcoords.emplace_back(Coord{(current_left_margin() - chaffwidth).topt(),
-                                  m.upper.topt() + 2 * num_bars * boxheight});
+    dashcoords.emplace_back(Coord{current_left_margin(), m.upper});
+    dashcoords.emplace_back(Coord{current_left_margin() - chaffwidth, m.upper});
     dashcoords.emplace_back(
-        Coord{current_left_margin().topt(), m.upper.topt() + 2 * num_bars * boxheight});
+        Coord{current_left_margin() - chaffwidth, m.upper + 2 * num_bars * boxheight});
+    dashcoords.emplace_back(Coord{current_left_margin(), m.upper + 2 * num_bars * boxheight});
     rend->draw_dash_line(dashcoords);
 
     dashcoords.clear();
+    dashcoords.emplace_back(Coord{current_left_margin() + textblock_width(), m.upper});
+    dashcoords.emplace_back(Coord{current_left_margin() + textblock_width() + chaffwidth, m.upper});
+    dashcoords.emplace_back(Coord{current_left_margin() + textblock_width() + chaffwidth,
+                                  m.upper + 2 * num_bars * boxheight});
     dashcoords.emplace_back(
-        Coord{(current_left_margin() + textblock_width()).topt(), m.upper.topt()});
-    dashcoords.emplace_back(
-        Coord{(current_left_margin() + textblock_width() + chaffwidth).topt(), m.upper.topt()});
-    dashcoords.emplace_back(Coord{(current_left_margin() + textblock_width() + chaffwidth).topt(),
-                                  m.upper.topt() + 2 * num_bars * boxheight});
-    dashcoords.emplace_back(Coord{(current_left_margin() + textblock_width()).topt(),
-                                  m.upper.topt() + 2 * num_bars * boxheight});
+        Coord{current_left_margin() + textblock_width(), m.upper + 2 * num_bars * boxheight});
     rend->draw_dash_line(dashcoords);
 
     const auto hole_center_x = current_left_margin() - chaffwidth / 2;
     const auto hole_center_y = m.upper + chaffwidth / 2.0;
     const auto hole_center_deltax = textblock_width() + chaffwidth;
-    const auto hole_center_deltay = 2 * boxheight.tomm();
-    const Millimeter minor_radius = Millimeter::from_value(1.5);
-    const Millimeter major_radius = Millimeter::from_value(1.0);
+    const auto hole_center_deltay = 2 * boxheight;
+    const Length minor_radius = Length::from_mm(1.5);
+    const Length major_radius = Length::from_mm(1.0);
     const int num_corners = 8;
     for(int xind = 0; xind < 2; ++xind) {
         for(int yind = 0; yind < num_bars; ++yind) {
@@ -540,21 +525,19 @@ void Paginator::draw_debug_bars() {
             for(int i = 0; i < (2 * num_corners + 1); ++i) {
                 const auto &current_radius = i % 2 ? major_radius : minor_radius;
                 dashcoords.emplace_back(
-                    Coord{(hole_center_x + xind * hole_center_deltax +
-                           current_radius * cos(2 * M_PI * i / (num_corners * 2.0)))
-                              .topt(),
-                          (hole_center_y + yind * hole_center_deltay +
-                           current_radius * sin(2 * M_PI * i / (num_corners * 2.0)))
-                              .topt()});
+                    Coord{hole_center_x + xind * hole_center_deltax +
+                              current_radius * cos(2 * M_PI * i / (num_corners * 2.0)),
+                          hole_center_y + yind * hole_center_deltay +
+                              current_radius * sin(2 * M_PI * i / (num_corners * 2.0))});
             }
-            rend->draw_poly_line(dashcoords, Point::from_value(0.2));
+            rend->draw_poly_line(dashcoords, Length::from_pt(0.2));
         }
     }
 }
 
 void Paginator::flush_draw_commands() {
-    Millimeter footnote_block_start = page.h - m.lower - heights.footnote_height;
-    if(doc.data.debug_draw && current_page == chapter_start_page) {
+    Length footnote_block_start = page.h - m.lower - heights.footnote_height;
+    if(doc.data.debug_draw && !doc.data.is_draft && current_page == chapter_start_page) {
         draw_debug_bars();
     }
     for(const auto &c : layout.images) {
@@ -565,16 +548,16 @@ void Paginator::flush_draw_commands() {
             const auto &md = std::get<MarkupDrawCommand>(c);
             rend->render_markup_as_is(md.markup.c_str(),
                                       *md.font,
-                                      (md.x + current_left_margin()).topt(),
-                                      (md.y + m.upper + heights.figure_height).topt(),
+                                      md.x + current_left_margin(),
+                                      md.y + m.upper + heights.figure_height,
                                       md.alignment);
         } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(c)) {
             const auto &md = std::get<JustifiedMarkupDrawCommand>(c);
             rend->render_line_justified(md.markup_words,
                                         *md.font,
                                         md.width,
-                                        (current_left_margin() + md.x).topt(),
-                                        (md.y + m.upper + heights.figure_height).topt());
+                                        current_left_margin() + md.x,
+                                        md.y + m.upper + heights.figure_height);
         } else {
             printf("Unknown draw command.\n");
         }
@@ -585,28 +568,28 @@ void Paginator::flush_draw_commands() {
             const auto &md = std::get<MarkupDrawCommand>(c);
             rend->render_markup_as_is(md.markup.c_str(),
                                       *md.font,
-                                      (current_left_margin() + md.x).topt(),
-                                      (md.y + footnote_block_start).topt(),
+                                      current_left_margin() + md.x,
+                                      md.y + footnote_block_start,
                                       md.alignment);
         } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(c)) {
             const auto &md = std::get<JustifiedMarkupDrawCommand>(c);
             rend->render_line_justified(md.markup_words,
                                         *md.font,
                                         md.width,
-                                        (current_left_margin() + md.x).topt(),
-                                        (md.y + footnote_block_start).topt());
+                                        current_left_margin() + md.x,
+                                        md.y + footnote_block_start);
         } else {
             printf("Unknown draw command.\n");
         }
     }
     if(!layout.footnote.empty()) {
-        const Point line_thickness = Point::from_value(1);
-        const Millimeter line_distance = Millimeter::from_value(2);
-        const Millimeter line_indent = Millimeter::from_value(-5);
-        const Millimeter line_width = Millimeter::from_value(20);
-        const Millimeter x0 = m.inner + line_indent;
-        const Millimeter y0 = footnote_block_start - line_distance;
-        rend->draw_line(x0.topt(), y0.topt(), (x0 + line_width).topt(), y0.topt(), line_thickness);
+        const Length line_thickness = Length::from_pt(1);
+        const Length line_distance = Length::from_mm(2);
+        const Length line_indent = Length::from_mm(-5);
+        const Length line_width = Length::from_mm(20);
+        const Length x0 = m.inner + line_indent;
+        const Length y0 = footnote_block_start - line_distance;
+        rend->draw_line(x0, y0, x0 + line_width, y0, line_thickness);
     }
     layout.clear();
     heights.clear();
@@ -627,69 +610,48 @@ void Paginator::create_draft_title_page() {
     const auto single_line_height = styles.normal.font.size * 1.5;
     const auto left = current_left_margin();
     rend->render_markup_as_is(
-        doc.data.author.c_str(), styles.normal.font, left.topt(), y.topt(), TextAlignment::Left);
-    y += single_line_height.tomm();
+        doc.data.author.c_str(), styles.normal.font, left, y, TextAlignment::Left);
+    y += single_line_height;
 
-    rend->render_markup_as_is(doc.data.draftdata.phone.c_str(),
-                              styles.normal.font,
-                              left.topt(),
-                              y.topt(),
-                              TextAlignment::Left);
-    y += single_line_height.tomm();
-    rend->render_markup_as_is(doc.data.draftdata.email.c_str(),
-                              styles.code.font,
-                              left.topt(),
-                              y.topt(),
-                              TextAlignment::Left);
-
-    y = textblock_center - 3 * styles.title.line_height.tomm();
-    rend->render_markup_as_is(doc.data.title.c_str(),
-                              styles.title.font,
-                              middle.topt(),
-                              y.topt(),
-                              TextAlignment::Centered);
-    y += 2 * styles.title.line_height.tomm();
-    rend->render_markup_as_is(doc.data.author.c_str(),
-                              styles.author.font,
-                              middle.topt(),
-                              y.topt(),
-                              TextAlignment::Centered);
-
-    y += styles.title.line_height.tomm();
-    const std::string date = current_date();
     rend->render_markup_as_is(
-        date.c_str(), styles.author.font, middle.topt(), y.topt(), TextAlignment::Centered);
+        doc.data.draftdata.phone.c_str(), styles.normal.font, left, y, TextAlignment::Left);
+    y += single_line_height;
+    rend->render_markup_as_is(
+        doc.data.draftdata.email.c_str(), styles.code.font, left, y, TextAlignment::Left);
+
+    y = textblock_center - 3 * styles.title.line_height;
+    rend->render_markup_as_is(
+        doc.data.title.c_str(), styles.title.font, middle, y, TextAlignment::Centered);
+    y += 2 * styles.title.line_height;
+    rend->render_markup_as_is(
+        doc.data.author.c_str(), styles.author.font, middle, y, TextAlignment::Centered);
+
+    y += styles.title.line_height;
+    const std::string date = current_date();
+    rend->render_markup_as_is(date.c_str(), styles.author.font, middle, y, TextAlignment::Centered);
 
     new_page(false);
 }
 
 void Paginator::create_title_page() {
     const auto middle = current_left_margin() + textblock_width() / 2;
-    auto y = m.upper + textblock_height() / 2 - 4 * styles.title.line_height.tomm();
-    rend->render_markup_as_is(doc.data.title.c_str(),
-                              styles.title.font,
-                              middle.topt(),
-                              y.topt(),
-                              TextAlignment::Centered);
-    y += styles.title.line_height.tomm();
-    rend->render_markup_as_is(doc.data.author.c_str(),
-                              styles.author.font,
-                              middle.topt(),
-                              y.topt(),
-                              TextAlignment::Centered);
+    auto y = m.upper + textblock_height() / 2 - 4 * styles.title.line_height;
+    rend->render_markup_as_is(
+        doc.data.title.c_str(), styles.title.font, middle, y, TextAlignment::Centered);
+    y += styles.title.line_height;
+    rend->render_markup_as_is(
+        doc.data.author.c_str(), styles.author.font, middle, y, TextAlignment::Centered);
     new_page(false);
 }
 
 void Paginator::create_colophon() {
     const auto x = current_left_margin();
-    auto y =
-        page.h - m.lower - (doc.data.pdf.colophon.size() + 1) * styles.colophon.line_height.tomm();
+    auto y = page.h - m.lower - (doc.data.pdf.colophon.size() + 1) * styles.colophon.line_height;
     for(size_t i = 0; i < doc.data.pdf.colophon.size(); ++i) {
         if(!doc.data.pdf.colophon[i].empty()) {
-            rend->render_text_as_is(
-                doc.data.pdf.colophon[i].c_str(), styles.colophon.font, x.topt(), y.topt());
+            rend->render_text_as_is(doc.data.pdf.colophon[i].c_str(), styles.colophon.font, x, y);
         }
-        y += styles.colophon.line_height.tomm();
+        y += styles.colophon.line_height;
     }
 
     new_page(false);
@@ -711,11 +673,11 @@ void Paginator::create_dedication() {
             build_ragged_paragraph(lines, styles.dedication, TextAlignment::Centered, y);
         for(auto &line : built_lines) {
             layout.text.emplace_back(std::move(line));
-            y += styles.dedication.line_height.tomm();
-            heights.text_height += styles.dedication.line_height.tomm();
+            y += styles.dedication.line_height;
+            heights.text_height += styles.dedication.line_height;
         }
-        y += styles.dedication.line_height.tomm();
-        heights.text_height += styles.dedication.line_height.tomm();
+        y += styles.dedication.line_height;
+        heights.text_height += styles.dedication.line_height;
     }
     new_page(false);
 }
@@ -723,19 +685,18 @@ void Paginator::create_dedication() {
 void Paginator::create_credits() {
     const auto paragraph_width = page.w - m.inner - m.outer;
     auto y = m.upper + (page.h - m.upper - m.lower) / 8;
-    const Millimeter halfgap = Millimeter::from_value(2);
+    const Length halfgap = Length::from_mm(2);
     const auto x1 = current_left_margin() + paragraph_width / 2 - halfgap;
     const auto x2 = x1 + 2 * halfgap;
 
     for(const auto &[key, value] : doc.data.credits) {
         if(!key.empty()) {
-            rend->render_markup_as_is(
-                key.c_str(), styles.normal.font, x1.topt(), y.topt(), TextAlignment::Right);
+            rend->render_markup_as_is(key.c_str(), styles.normal.font, x1, y, TextAlignment::Right);
         }
         if(!value.empty()) {
             rend->render_markup_as_is(
-                value.c_str(), styles.normal.font, x2.topt(), y.topt(), TextAlignment::Left);
+                value.c_str(), styles.normal.font, x2, y, TextAlignment::Left);
         }
-        y += styles.normal.line_height.tomm();
+        y += styles.normal.line_height;
     }
 }

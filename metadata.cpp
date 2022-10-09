@@ -34,8 +34,6 @@ const std::unordered_map<std::string, FontStyle> stylemap{{"regular", FontStyle:
 
 using json = nlohmann::json;
 
-Millimeter Point::tomm() const { return Millimeter::from_value(pt2mm(v)); }
-
 std::string get_string(const json &data, const char *key) {
     if(!data.contains(key)) {
         printf("Missing required key %s.\n", key);
@@ -77,8 +75,8 @@ int get_int(const json &data, const char *key) {
 
 ChapterParameters parse_chapterstyle(const json &data) {
     ChapterParameters chapter_style;
-    chapter_style.line_height = Point::from_value(get_double(data, "line_height"));
-    chapter_style.indent = Millimeter::from_value(get_double(data, "indent"));
+    chapter_style.line_height = Length::from_pt(get_double(data, "line_height"));
+    chapter_style.indent = Length::from_mm(get_double(data, "indent"));
     auto font = data["font"];
     chapter_style.font.name = get_string(font, "name");
     const auto stylestr = get_string(font, "type");
@@ -88,20 +86,20 @@ ChapterParameters parse_chapterstyle(const json &data) {
         std::abort();
     }
     chapter_style.font.type = it->second;
-    chapter_style.font.size = Point::from_value(get_double(font, "pointsize"));
+    chapter_style.font.size = Length::from_pt(get_double(font, "pointsize"));
     return chapter_style;
 }
 
 void setup_draft_settings(Metadata &m) {
     // Fonts
     m.pdf.styles.normal.font.name = "Liberation Serif";
-    m.pdf.styles.normal.font.size = Point::from_value(12);
+    m.pdf.styles.normal.font.size = Length::from_pt(12);
     m.pdf.styles.normal.font.type = FontStyle::Regular;
-    m.pdf.styles.normal.indent = Millimeter::from_value(10);
-    m.pdf.styles.normal.line_height = Point::from_value(20);
+    m.pdf.styles.normal.indent = Length::from_mm(10);
+    m.pdf.styles.normal.line_height = Length::from_pt(20);
     const auto &normal = m.pdf.styles.normal;
     m.pdf.styles.normal_noindent = normal;
-    m.pdf.styles.normal_noindent.indent = Millimeter::zero();
+    m.pdf.styles.normal_noindent.indent = Length::zero();
 
     m.pdf.styles.code = normal;
     m.pdf.styles.code.font.name = "Liberation Mono";
@@ -111,28 +109,28 @@ void setup_draft_settings(Metadata &m) {
     m.pdf.styles.lists = normal;
 
     m.pdf.styles.section.font.name = "Liberation Sans";
-    m.pdf.styles.section.font.size = Point::from_value(14);
+    m.pdf.styles.section.font.size = Length::from_pt(14);
     m.pdf.styles.section.font.type = FontStyle::Bold;
-    m.pdf.styles.section.line_height = Point::from_value(25);
+    m.pdf.styles.section.line_height = Length::from_pt(25);
 
     m.pdf.styles.title = m.pdf.styles.section;
     m.pdf.styles.author = m.pdf.styles.section;
     m.pdf.styles.author.font.type = FontStyle::Regular;
 
     // Page
-    m.pdf.page.w = Millimeter::from_value(210);
-    m.pdf.page.h = Millimeter::from_value(297);
-    m.pdf.margins.inner = Millimeter::from_value(25.4);
-    m.pdf.margins.outer = Millimeter::from_value(25.4);
-    m.pdf.margins.upper = Millimeter::from_value(25.4) + m.pdf.styles.normal.line_height.tomm();
-    m.pdf.margins.lower = Millimeter::from_value(25.4);
+    m.pdf.page.w = Length::from_mm(210);
+    m.pdf.page.h = Length::from_mm(297);
+    m.pdf.margins.inner = Length::from_mm(25.4);
+    m.pdf.margins.outer = Length::from_mm(25.4);
+    m.pdf.margins.upper = Length::from_mm(25.4) + m.pdf.styles.normal.line_height;
+    m.pdf.margins.lower = Length::from_mm(25.4);
 
     // Spaces
-    m.pdf.spaces.below_section = Millimeter::from_value(0);
-    m.pdf.spaces.above_section = Millimeter::from_value(60);
-    m.pdf.spaces.codeblock_indent = Millimeter::zero();
-    m.pdf.spaces.different_paragraphs = Millimeter::from_value(5);
-    m.pdf.spaces.footnote_separation = Millimeter::from_value(5);
+    m.pdf.spaces.below_section = Length::from_mm(0);
+    m.pdf.spaces.above_section = Length::from_mm(60);
+    m.pdf.spaces.codeblock_indent = Length::zero();
+    m.pdf.spaces.different_paragraphs = Length::from_mm(5);
+    m.pdf.spaces.footnote_separation = Length::from_mm(5);
 }
 
 void load_pdf_element(Metadata &m, const json &pdf) {
@@ -147,17 +145,17 @@ void load_pdf_element(Metadata &m, const json &pdf) {
         setup_draft_settings(m);
     } else {
 
-        m.pdf.page.w = Millimeter::from_value(get_int(page, "width"));
-        m.pdf.page.h = Millimeter::from_value(get_int(page, "height"));
-        m.pdf.margins.inner = Millimeter::from_value(get_int(margins, "inner"));
-        m.pdf.margins.outer = Millimeter::from_value(get_int(margins, "outer"));
-        m.pdf.margins.upper = Millimeter::from_value(get_int(margins, "upper"));
-        m.pdf.margins.lower = Millimeter::from_value(get_int(margins, "lower"));
+        m.pdf.page.w = Length::from_mm(get_int(page, "width"));
+        m.pdf.page.h = Length::from_mm(get_int(page, "height"));
+        m.pdf.margins.inner = Length::from_mm(get_int(margins, "inner"));
+        m.pdf.margins.outer = Length::from_mm(get_int(margins, "outer"));
+        m.pdf.margins.upper = Length::from_mm(get_int(margins, "upper"));
+        m.pdf.margins.lower = Length::from_mm(get_int(margins, "lower"));
 
         auto styles = pdf["styles"];
         m.pdf.styles.normal = parse_chapterstyle(styles["normal"]);
         m.pdf.styles.normal_noindent = m.pdf.styles.normal;
-        m.pdf.styles.normal_noindent.indent = Millimeter::zero();
+        m.pdf.styles.normal_noindent.indent = Length::zero();
         m.pdf.styles.section = parse_chapterstyle(styles["section"]);
         m.pdf.styles.code = parse_chapterstyle(styles["code"]);
         m.pdf.styles.footnote = parse_chapterstyle(styles["footnote"]);
@@ -168,14 +166,13 @@ void load_pdf_element(Metadata &m, const json &pdf) {
         m.pdf.styles.dedication = parse_chapterstyle(styles["dedication"]);
 
         auto spaces = pdf["spaces"];
-        m.pdf.spaces.above_section = Millimeter::from_value(get_double(spaces, "above_section"));
-        m.pdf.spaces.below_section = Millimeter::from_value(get_double(spaces, "below_section"));
+        m.pdf.spaces.above_section = Length::from_mm(get_double(spaces, "above_section"));
+        m.pdf.spaces.below_section = Length::from_mm(get_double(spaces, "below_section"));
         m.pdf.spaces.different_paragraphs =
-            Millimeter::from_value(get_double(spaces, "different_paragraphs"));
-        m.pdf.spaces.codeblock_indent =
-            Millimeter::from_value(get_double(spaces, "codeblock_indent"));
+            Length::from_mm(get_double(spaces, "different_paragraphs"));
+        m.pdf.spaces.codeblock_indent = Length::from_mm(get_double(spaces, "codeblock_indent"));
         m.pdf.spaces.footnote_separation =
-            Millimeter::from_value(get_double(spaces, "footnote_separation"));
+            Length::from_mm(get_double(spaces, "footnote_separation"));
     }
 }
 
@@ -295,5 +292,3 @@ int Document::num_footnotes() const {
         return std::holds_alternative<Footnote>(e);
     });
 }
-
-Point Millimeter::topt() const { return Point::from_value(mm2pt(v)); }
