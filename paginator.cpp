@@ -120,7 +120,9 @@ void Paginator::generate_pdf(const char *outfile) {
 
     create_maintext();
     if(!layout.empty()) {
-        new_page(true);
+        render_page_num(styles.normal.font);
+        flush_draw_commands();
+        // FIXME add code that prints the "The End" page.
     }
     if(!doc.data.is_draft) {
         create_credits();
