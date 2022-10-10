@@ -26,9 +26,11 @@ namespace {
 
 double difference_penalty(Length actual_width, Length target_width) {
     // assert(actual_width >= 0);
+    const double multiplier = actual_width > target_width ? 5.0 : 1.0;
     assert(target_width > Length::zero());
     const auto delta = abs((actual_width - target_width).mm());
-    return delta * delta;
+    // A potential change would be to divide by the number of spaces on this line.
+    return multiplier * delta * delta;
 }
 
 double line_penalty(const LineStats &line, Length target_width) {
