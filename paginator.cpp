@@ -165,13 +165,16 @@ void Paginator::create_maintext() {
             heights.whitespace_height += spaces.above_section;
             assert(s.level == 1);
             // Fancy stuff above the text.
-            std::string title_string = "§ ";          // std::to_string(s.number);
-            title_string += std::to_string(s.number); //".";
+            std::string title_string;
             TextAlignment section_alignment = TextAlignment::Centered;
             if(doc.data.is_draft) {
+                title_string = std::to_string(s.number);
+                title_string += ". ";
                 title_string += s.text;
                 section_alignment = TextAlignment::Left;
             } else {
+                title_string = "§ ";
+                title_string += std::to_string(s.number);
                 layout.text.emplace_back(MarkupDrawCommand{title_string,
                                                            &styles.section.font,
                                                            textblock_width() / 2,
@@ -516,32 +519,22 @@ void Paginator::draw_debug_bars(int num_bars) {
         rend->fill_box(
             current_left_margin(), m.upper + 2 * i * boxheight, textblock_width(), boxheight, 0.9);
     }
+    rend->draw_box(current_left_margin() - chaffwidth,
+                   m.upper,
+                   textblock_width() + 2 * chaffwidth,
+                   2 * num_bars * boxheight,
+                   Length::from_pt(0.1));
     // Text area box
     std::vector<Coord> dashcoords;
     dashcoords.emplace_back(Coord{current_left_margin(), m.upper});
-    dashcoords.emplace_back(Coord{(current_left_margin() + textblock_width()), m.upper});
-    dashcoords.emplace_back(
-        Coord{(current_left_margin() + textblock_width()), m.upper + 2 * num_bars * boxheight});
-    dashcoords.emplace_back(Coord{current_left_margin(), m.upper + 2 * num_bars * boxheight});
-    dashcoords.emplace_back(Coord{current_left_margin(), m.upper});
-    rend->draw_dash_line(dashcoords);
-    dashcoords.clear();
-
-    dashcoords.emplace_back(Coord{current_left_margin(), m.upper});
-    dashcoords.emplace_back(Coord{current_left_margin() - chaffwidth, m.upper});
-    dashcoords.emplace_back(
-        Coord{current_left_margin() - chaffwidth, m.upper + 2 * num_bars * boxheight});
     dashcoords.emplace_back(Coord{current_left_margin(), m.upper + 2 * num_bars * boxheight});
     rend->draw_dash_line(dashcoords);
-
     dashcoords.clear();
     dashcoords.emplace_back(Coord{current_left_margin() + textblock_width(), m.upper});
-    dashcoords.emplace_back(Coord{current_left_margin() + textblock_width() + chaffwidth, m.upper});
-    dashcoords.emplace_back(Coord{current_left_margin() + textblock_width() + chaffwidth,
-                                  m.upper + 2 * num_bars * boxheight});
     dashcoords.emplace_back(
         Coord{current_left_margin() + textblock_width(), m.upper + 2 * num_bars * boxheight});
     rend->draw_dash_line(dashcoords);
+    dashcoords.clear();
 
     const auto hole_center_x = current_left_margin() - chaffwidth / 2;
     const auto hole_center_y = m.upper + boxheight / 2.0;

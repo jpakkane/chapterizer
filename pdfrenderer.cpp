@@ -110,9 +110,9 @@ void PdfRenderer::draw_grid() {
     cairo_stroke(cr);
 }
 
-void PdfRenderer::draw_box(Length x, Length y, Length w, Length h) {
+void PdfRenderer::draw_box(Length x, Length y, Length w, Length h, Length thickness) {
     cairo_save(cr);
-    cairo_set_line_width(cr, 0.2);
+    cairo_set_line_width(cr, thickness.pt());
     cairo_set_source_rgb(cr, 0.0, 0.0, 0.0);
     cairo_move_to(cr, x.pt(), y.pt());
     cairo_line_to(cr, (x + w).pt(), y.pt());
