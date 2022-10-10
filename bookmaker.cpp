@@ -76,7 +76,8 @@ int main(int argc, char **argv) {
     auto doc = load_document(argv[1]);
     if(doc.data.generate_pdf) {
         Paginator p(doc);
-        p.generate_pdf("bookout.pdf");
+        auto ofile = doc.data.top_dir / doc.data.pdf.ofname;
+        p.generate_pdf(ofile.c_str());
     }
     if(doc.data.generate_epub) {
         Epub epub(doc);
