@@ -142,7 +142,7 @@ void Paginator::create_maintext() {
     const auto section_width = 0.8 * paragraph_width;
 
     ExtraPenaltyAmounts extras;
-    const Length bottom_watermark = page.h - m.lower - m.upper;
+    const Length bottom_watermark = page.h - m.lower - m.upper - Length::from_mm(2);
     Length rel_y;
     bool first_paragraph = true;
     bool first_section = true;
@@ -150,6 +150,7 @@ void Paginator::create_maintext() {
     for(const auto &e : doc.elements) {
         if(std::holds_alternative<Section>(e)) {
             const Section &s = std::get<Section>(e);
+            printf("Processing section: %s\n", s.text.c_str());
             if(!first_section) {
                 new_page(true);
                 if(!doc.data.is_draft && current_page % 2 == 0) {
@@ -247,12 +248,28 @@ void Paginator::create_maintext() {
             std::string fnum = std::to_string(f.number);
             fnum += '.';
             auto tmpy = heights.footnote_height;
-            layout.footnote.emplace_back(MarkupDrawCommand{
-                std::move(fnum), &styles.footnote.font, Length::zero(), tmpy, TextAlignment::Left});
             auto built_lines = build_justified_paragraph(lines, styles.footnote, textblock_width());
-            // FIXME, assumes there is always enough space for a footnote.
-            heights.footnote_height += built_lines.size() * styles.footnote.line_height;
-            layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
+            const auto footnote_total_height = built_lines.size() * styles.footnote.line_height;
+            // FIXME, split the footnote over two pages.
+            if(heights.total_height() + footnote_total_height >= bottom_watermark) {
+                pending_footnotes.emplace_back(MarkupDrawCommand{std::move(fnum),
+                                                                 &styles.footnote.font,
+                                                                 Length::zero(),
+                                                                 tmpy,
+                                                                 TextAlignment::Left});
+                pending_footnotes.insert(
+                    pending_footnotes.end(), built_lines.begin(), built_lines.end());
+            } else {
+                // FIXME: draw in flush_commands instead?
+                layout.footnote.emplace_back(MarkupDrawCommand{std::move(fnum),
+                                                               &styles.footnote.font,
+                                                               Length::zero(),
+                                                               tmpy,
+                                                               TextAlignment::Left});
+                heights.footnote_height += footnote_total_height;
+                layout.footnote.insert(
+                    layout.footnote.end(), built_lines.begin(), built_lines.end());
+            }
         } else if(std::holds_alternative<SceneChange>(e)) {
             if(doc.data.is_draft) {
                 layout.text.emplace_back(MarkupDrawCommand{"#",
@@ -470,22 +487,26 @@ void Paginator::new_page(bool draw_page_num) {
     }
     rend->new_page();
     if(!pending_figures.empty()) {
+        const auto image_only_page_height = 0.6 * textblock_height();
         // FIXME. Only one figure per page. Could have several.
+        assert(layout.images.empty());
         add_top_image(pending_figures.front());
         pending_figures.erase(pending_figures.begin());
-    }
-    ++current_page;
-    /*
-    if(doc.data.debug_draw) {
-        if(current_page % 2) {
-            rend->draw_box(
-                m.inner, m.upper, page.w - m.inner - m.outer, page.h - m.upper - m.lower);
-        } else {
-            rend->draw_box(
-                m.outer, m.upper, page.w - m.inner - m.outer, page.h - m.upper - m.lower);
+        assert(!layout.images.empty());
+        if(layout.images.front().display_height > image_only_page_height) {
+            ++current_page;
+            new_page(draw_page_num);
+            return;
         }
     }
-    */
+    ++current_page;
+    if(!pending_footnotes.empty()) {
+        assert(layout.footnote.empty());
+        layout.footnote = std::move(pending_footnotes);
+        pending_footnotes.clear();
+        heights.footnote_height += layout.footnote.size() * styles.footnote.line_height +
+                                   doc.data.pdf.spaces.footnote_separation;
+    }
 }
 
 void Paginator::draw_debug_bars(int num_bars) {
@@ -594,7 +615,7 @@ void Paginator::flush_draw_commands() {
     }
     if(!layout.footnote.empty()) {
         const Length line_thickness = Length::from_pt(1);
-        const Length line_distance = Length::from_mm(2);
+        const Length line_distance = doc.data.pdf.spaces.footnote_separation;
         const Length line_indent = Length::from_mm(-5);
         const Length line_width = Length::from_mm(20);
         const Length x0 = current_left_margin() + line_indent;

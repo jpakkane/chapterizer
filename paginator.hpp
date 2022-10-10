@@ -138,4 +138,5 @@ private:
     PageLayout layout;
     Heights heights;
     std::vector<ImageInfo> pending_figures;
+    std::vector<TextCommands> pending_footnotes;
 };
