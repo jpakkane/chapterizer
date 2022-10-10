@@ -597,7 +597,7 @@ void Paginator::flush_draw_commands() {
         const Length line_distance = Length::from_mm(2);
         const Length line_indent = Length::from_mm(-5);
         const Length line_width = Length::from_mm(20);
-        const Length x0 = m.inner + line_indent;
+        const Length x0 = current_left_margin() + line_indent;
         const Length y0 = footnote_block_start - line_distance;
         rend->draw_line(x0, y0, x0 + line_width, y0, line_thickness);
     }
