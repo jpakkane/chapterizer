@@ -70,6 +70,8 @@ public:
 
     Length markup_width(const char *utf8_text, const FontParameters &font) const;
 
+    Length codepoint_right_overhang(const uint32_t uchar, const FontParameters &font) const;
+
 private:
     void set_pango_state(const char *utf8_text,
                          const FontParameters &font,

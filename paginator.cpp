@@ -239,7 +239,7 @@ void Paginator::create_maintext() {
             }
             first_paragraph = false;
         } else if(std::holds_alternative<Footnote>(e)) {
-            if(!layout.footnote.empty()) {
+            if(!layout.footnote.empty() || !pending_footnotes.empty()) {
                 printf("More than one footnote per page is not yet supported.");
                 std::abort();
             }
@@ -563,6 +563,13 @@ void Paginator::flush_draw_commands() {
     Length footnote_block_start = page.h - m.lower - heights.footnote_height;
     if(doc.data.debug_draw && !doc.data.is_draft && current_page == chapter_start_page) {
         draw_debug_bars(4);
+    }
+    if(doc.data.debug_draw) {
+        rend->draw_box(current_left_margin(),
+                       m.upper,
+                       textblock_width(),
+                       textblock_height(),
+                       Length::from_pt(0.1));
     }
     for(const auto &c : layout.images) {
         rend->draw_image(c.i, c.x + current_left_margin(), c.y, c.display_width, c.display_height);

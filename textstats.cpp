@@ -20,6 +20,34 @@
 #include <cairo-pdf.h>
 #include <cassert>
 
+namespace {
+
+const std::unordered_map<uint32_t, double> overhang_right{
+    {'.', 0.8},
+    {',', 0.8},
+    {':', 0.8},
+    {';', 0.8},
+    {'!', 0.7},
+
+    {'o', 0.2},
+    {'p', 0.2},
+    {'v', 0.2},
+    {'b', 0.2},
+    {'r', 0.2},
+
+    {'\'', 0.5},
+    {'"', 0.5},
+    {0xbb, 0.5},
+    {0x201d, 0.5},
+    {0x2019, 0.3},
+
+    {0x2013, 0.55},
+    {0x2014, 0.50},
+    {'-', 0.6},
+};
+
+}
+
 TextStats::TextStats() {
     surface = cairo_pdf_surface_create(nullptr, 595, 842);
     cr = cairo_create(surface);
@@ -71,7 +99,7 @@ Length TextStats::text_width(const char *utf8_text, const FontParameters &font) 
     if(f != plaintext_widths.end()) {
         return f->second;
     }
-    set_pango_state(utf8_text, font);
+    set_pango_state(utf8_text, font, false);
     PangoRectangle ink_rect, logical_rect;
     pango_layout_get_extents(layout, &ink_rect, &logical_rect);
     // printf("Text width is %.2f mm\n", double(logical_rect.width) / PANGO_SCALE / 595 * 220);
@@ -95,4 +123,16 @@ Length TextStats::markup_width(const char *utf8_text, const FontParameters &font
     Length w = Length::from_pt(double(logical_rect.width) / PANGO_SCALE);
     markup_widths[k] = w;
     return w;
+}
+
+Length TextStats::codepoint_right_overhang(const uint32_t uchar, const FontParameters &font) const {
+    auto it = overhang_right.find(uchar);
+    if(it == overhang_right.end()) {
+        return Length{};
+    }
+    const double hang_fraction = it->second;
+    char buf[10];
+    g_unichar_to_utf8(uchar, buf);
+    const auto letter_width = text_width(buf, font);
+    return hang_fraction * letter_width;
 }

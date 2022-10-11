@@ -50,6 +50,25 @@ std::vector<std::string> hack_split(const std::string &in_text) {
     }
     return words;
 }
+
+uint32_t get_last_char(const std::string &markup) {
+    const gchar *txt = markup.c_str();
+    int angle_depth = 0;
+    uint32_t last_char = 0;
+    while(*txt) {
+        const uint32_t cur_char = g_utf8_get_char(txt);
+        if(cur_char == '<') {
+            ++angle_depth;
+        } else if(cur_char == '>') {
+            --angle_depth;
+        } else if(angle_depth == 0) {
+            last_char = cur_char; // FIXME, won't work with quoted angle brackets.
+        }
+        txt = g_utf8_next_char(txt);
+    }
+    return last_char;
+}
+
 } // namespace
 
 PdfRenderer::PdfRenderer(
@@ -214,6 +233,11 @@ void PdfRenderer::render_line_justified(const std::vector<std::string> &markup_w
                                         Length line_width,
                                         Length x,
                                         Length y) {
+    if(markup_words.empty()) {
+        return;
+    }
+    const uint32_t last_char = get_last_char(markup_words.back());
+    const Length overhang_right = hack.codepoint_right_overhang(last_char, par);
     setup_pango(par);
     std::string full_line;
     for(const auto &w : markup_words) {
@@ -231,7 +255,7 @@ void PdfRenderer::render_line_justified(const std::vector<std::string> &markup_w
     const Length text_width = hack.markup_width(full_line.c_str(), par);
     const double num_spaces = double(markup_words.size() - 1);
     const Length space_extra_width =
-        num_spaces > 0 ? (target_width - text_width) / num_spaces : Length::zero();
+        num_spaces > 0 ? (target_width - text_width + overhang_right) / num_spaces : Length::zero();
 
     std::string tmp;
     for(const auto &markup_word : markup_words) {
