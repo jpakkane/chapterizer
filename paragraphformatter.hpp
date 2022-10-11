@@ -21,6 +21,7 @@
 #include <formatting.hpp>
 #include <utils.hpp>
 #include <variant>
+#include <optional>
 
 class TextStats;
 
@@ -71,6 +72,24 @@ struct UpTo {
     std::vector<LineStats> splits;
 
     bool operator<(const UpTo &o) const { return penalty < o.penalty; }
+};
+
+struct WordStart {
+    size_t word;
+    size_t from_bytes;
+};
+
+struct WordEnd {
+    size_t word;
+    size_t to_bytes;
+    bool add_dash;
+};
+
+struct WordsOnLine {
+    std::optional<WordStart> first;
+    size_t full_word_begin;
+    size_t full_word_end;
+    std::optional<WordEnd> last;
 };
 
 struct SplitStates {
@@ -132,7 +151,9 @@ private:
     stats_to_markup_lines(const std::vector<LineStats> &linestats) const;
     Length current_line_width(size_t line_num) const;
 
+    WordsOnLine words_for_splits(size_t from_split_ind, size_t to_split_ind) const;
     std::string build_line_markup(size_t from_split_ind, size_t to_split_ind) const;
+    std::string build_line_text_debug(size_t from_split_ind, size_t to_split_ind) const;
     std::vector<std::string> build_line_words_markup(size_t from_split_ind,
                                                      size_t to_split_ind) const;
 

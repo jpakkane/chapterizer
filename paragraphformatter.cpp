@@ -274,6 +274,10 @@ ParagraphFormatter::global_split_markup(const TextStats &shaper) {
 
     global_split_recursive(shaper, line_stats, current_split);
     // printf("Total penalty: %.2f\n", best_penalty);
+    for(size_t i = 0; i < split_points.size(); ++i) {
+        const auto line = build_line_text_debug(i, split_points.size() - 1);
+        printf("%s\n", line.c_str());
+    }
     return stats_to_markup_lines(best_split);
 }
 
@@ -331,6 +335,62 @@ void ParagraphFormatter::precompute() {
     for(size_t i = 0; i < split_points.size(); ++i) {
         state_cache.best_to.emplace_back(std::vector<UpTo>{});
     }
+}
+
+WordsOnLine ParagraphFormatter::words_for_splits(size_t from_split_ind, size_t to_split_ind) const {
+    WordsOnLine w;
+    const auto &from_split = split_points[from_split_ind];
+    const auto &to_split = split_points[to_split_ind];
+    const auto &from_loc = split_locations[from_split_ind];
+    const auto &to_loc = split_locations[to_split_ind];
+
+    if(std::holds_alternative<WithinWordSplit>(from_split)) {
+        w.first = WordStart{from_loc.word_index, from_loc.offset + 1};
+        w.full_word_begin = from_loc.word_index + 1;
+    } else {
+        w.full_word_begin = from_loc.word_index;
+    }
+
+    w.full_word_end = to_loc.word_index;
+    if(std::holds_alternative<WithinWordSplit>(to_split)) {
+        const auto &fs = std::get<WithinWordSplit>(to_split);
+
+        w.last =
+            WordEnd{fs.word_index,
+                    to_loc.offset + 1,
+                    words[fs.word_index].hyphen_points[fs.hyphen_index].type == SplitType::Regular};
+    }
+    return w;
+}
+
+std::string ParagraphFormatter::build_line_text_debug(size_t from_split_ind,
+                                                      size_t to_split_ind) const {
+    const auto w = words_for_splits(from_split_ind, to_split_ind);
+    std::string result;
+    if(w.first) {
+        result = words[w.first->word].text.substr(w.first->from_bytes);
+        result += ' ';
+        assert(g_utf8_validate(result.c_str(), result.size(), nullptr));
+    }
+    for(size_t i = w.full_word_begin; i < w.full_word_end; ++i) {
+        result += words[i].text;
+        if(i + 1 != w.full_word_end) {
+            result += ' ';
+        }
+    }
+    assert(g_utf8_validate(result.c_str(), result.size(), nullptr));
+    if(w.last) {
+        if(!result.empty()) {
+            result += ' ';
+        }
+        result += words[w.last->word].text.substr(0, w.last->to_bytes);
+        assert(g_utf8_validate(result.c_str(), result.size(), nullptr));
+        if(w.last->add_dash) {
+            result += '-';
+        }
+    }
+
+    return result;
 }
 
 std::string ParagraphFormatter::build_line_markup(size_t from_split_ind,

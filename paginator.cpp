@@ -107,18 +107,23 @@ void Paginator::generate_pdf(const char *outfile) {
     rend.reset(
         new PdfRenderer(outfile, page.w, page.h, doc.data.title.c_str(), doc.data.author.c_str()));
 
-    if(doc.data.is_draft) {
-        create_draft_title_page();
-    } else {
-        create_title_page();
-        create_colophon();
-        if(!doc.data.dedication.empty()) {
-            create_dedication();
-            new_page(false);
+    const bool only_maintext = true;
+
+    if(!only_maintext) {
+        if(doc.data.is_draft) {
+            create_draft_title_page();
+        } else {
+            create_title_page();
+            create_colophon();
+            if(!doc.data.dedication.empty()) {
+                create_dedication();
+                new_page(false);
+            }
         }
     }
 
     create_maintext();
+
     while(!layout.empty()) {
         if(doc.data.is_draft) {
             render_page_num(styles.normal.font);
@@ -128,11 +133,13 @@ void Paginator::generate_pdf(const char *outfile) {
             new_page(true);
         }
     }
-    if(!doc.data.is_draft) {
-        create_credits();
-        new_page(false);
-        create_postcredits();
-        flush_draw_commands();
+    if(!only_maintext) {
+        if(!doc.data.is_draft) {
+            create_credits();
+            new_page(false);
+            create_postcredits();
+            flush_draw_commands();
+        }
     }
     rend.reset(nullptr);
 }
