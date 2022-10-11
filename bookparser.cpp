@@ -22,12 +22,15 @@
 
 namespace {
 
+static const std::array<const char *, 10> superscript_numbers{
+    "⁰", "¹", "²", "³", "⁴", "⁵", "⁶", "⁷", "⁸", "⁹"};
+
 const std::unordered_map<std::string, SpecialBlockType> specialmap{
     {"code", SpecialBlockType::Code},
     {"footnote", SpecialBlockType::Footnote},
     {"numberlist", SpecialBlockType::NumberList}};
 
-}
+} // namespace
 
 std::string get_normalized_string(std::string_view v) {
     gchar *norm = g_utf8_normalize(v.data(), v.length(), G_NORMALIZE_NFC);
@@ -199,6 +202,7 @@ void StructureParser::build_element() {
         break;
     case ParsingState::paragraph:
         unquote_lines();
+        number_super_fix();
         doc.elements.emplace_back(Paragraph{pop_lines_to_string()});
         break;
     default:
@@ -206,14 +210,26 @@ void StructureParser::build_element() {
     }
 }
 
-static gboolean eval_cb(const GMatchInfo *info, GString *res, gpointer data) {
-    (void)data;
+static gboolean eval_quote_cb(const GMatchInfo *info, GString *res, gpointer) {
     char tmp[2] = {0, 0};
     gchar *match = g_match_info_fetch(info, 1);
     gchar *cur = match;
     while(*cur) {
         tmp[0] = special2internal(*cur);
         g_string_append(res, tmp);
+        ++cur;
+    }
+    g_free(match);
+    return FALSE;
+}
+
+static gboolean eval_supernum_cb(const GMatchInfo *info, GString *res, gpointer) {
+    gchar *match = g_match_info_fetch(info, 1);
+    gchar *cur = match;
+    while(*cur) {
+        const int offset = *cur - '0';
+        assert(offset >= 0 || offset < 10);
+        g_string_append(res, superscript_numbers[offset]);
         ++cur;
     }
     g_free(match);
@@ -229,7 +245,34 @@ void StructureParser::unquote_lines() {
                                              line.length(),
                                              0,
                                              GRegexMatchFlags(0),
-                                             eval_cb,
+                                             eval_quote_cb,
+                                             nullptr,
+                                             &err);
+        if(err) {
+            printf("Replacement error: %s\n", err->message);
+            g_error_free(err);
+            std::abort();
+        }
+        line = replaced;
+        g_free(replaced);
+    }
+}
+
+void StructureParser::number_super_fix() {
+    // https://gitlab.gnome.org/GNOME/pango/-/issues/702
+
+    // This is not the correct place for this, especially when
+    // considering footnotes. They should be stored externally
+    // and formatted at the end. Do this to get started.
+    std::string buf;
+    for(auto &line : stored_lines) {
+        GError *err = nullptr;
+        auto replaced = g_regex_replace_eval(supernum_command,
+                                             line.c_str(),
+                                             line.length(),
+                                             0,
+                                             GRegexMatchFlags(0),
+                                             eval_supernum_cb,
                                              nullptr,
                                              &err);
         if(err) {

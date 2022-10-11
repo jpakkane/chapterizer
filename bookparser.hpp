@@ -157,6 +157,8 @@ public:
     explicit StructureParser(Document &in_doc) : doc(in_doc) {
         escaping_command =
             g_regex_new(R"(\\c{([^}]+)})", GRegexCompileFlags(0), GRegexMatchFlags(0), nullptr);
+        supernum_command = g_regex_new(
+            R"(\\footnote{(\d+)})", GRegexCompileFlags(0), GRegexMatchFlags(0), nullptr);
     }
 
     ~StructureParser();
@@ -172,6 +174,7 @@ private:
     };
 
     void unquote_lines();
+    void number_super_fix();
 
     void set_state(ParsingState new_state);
 
@@ -190,4 +193,5 @@ private:
     SpecialBlockType current_special = SpecialBlockType::Unset;
     std::vector<std::string> stored_lines;
     GRegex *escaping_command;
+    GRegex *supernum_command;
 };
