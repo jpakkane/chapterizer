@@ -133,7 +133,9 @@ Length TextStats::codepoint_right_overhang(const uint32_t uchar, const FontParam
     }
     const double hang_fraction = it->second;
     char buf[10];
+    memset(buf, 0, 10);
     g_unichar_to_utf8(uchar, buf);
+    assert(g_utf8_validate(buf, -1, nullptr));
     const auto letter_width = text_width(buf, font);
     return hang_fraction * letter_width;
 }

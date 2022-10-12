@@ -4,6 +4,7 @@
     "language": "fi",
     "dedication": "dedication.txt",
     "credits": "credits.txt",
+    "postcredits": "postcredits.txt",
     "sources": [
         "chapter1.bd",
         "chapter2.bd"
