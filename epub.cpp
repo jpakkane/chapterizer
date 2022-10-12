@@ -16,7 +16,7 @@
 
 #include <epub.hpp>
 #include <formatting.hpp>
-
+#include <utils.hpp>
 #include <cassert>
 
 #include <stack>
@@ -170,7 +170,7 @@ void append_block_of_text(tinyxml2::XMLDocument &epubdoc,
                               "small-caps");
             break;
         default:
-            buf += c;
+            buf += internal2special(c);
         }
     }
     assert(!tagstack.empty());
