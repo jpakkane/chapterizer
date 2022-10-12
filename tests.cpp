@@ -117,6 +117,17 @@ void test_utf8() {
     test_utf8_impl("silkkiäis", Language::Finnish);
 }
 
+void test_finhyphen() {
+    WordHyphenator h;
+    const std::string text("juna-UV");
+    const auto w = h.hyphenate(text, Language::Finnish);
+    HyphenPoint expected{1, SplitType::Regular};
+    HyphenPoint expected2{4, SplitType::NoHyphen};
+    CHECK(w.size() == 2);
+    CHECK(w.front() == expected);
+    CHECK(w.back() == expected2);
+}
+
 void test_hyphenation() {
     test_hyphenation_simple();
     test_hyphenation_dash();
@@ -127,6 +138,7 @@ void test_hyphenation() {
     test_strange_combo();
     test_dualhyphen();
     test_utf8();
+    test_finhyphen();
 }
 
 int main(int, char **) {

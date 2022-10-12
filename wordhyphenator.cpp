@@ -232,7 +232,7 @@ std::vector<HyphenPoint> WordHyphenator::hyphenate(const std::string &word,
                 hyphen_points.emplace_back(HyphenPoint{byte_offset - 1, SplitType::Regular});
                 break;
             case '=':
-                hyphen_points.emplace_back(HyphenPoint{byte_offset - 1, SplitType::NoHyphen});
+                hyphen_points.emplace_back(HyphenPoint{byte_offset, SplitType::NoHyphen});
                 break;
             case ' ':
                 break;
