@@ -107,7 +107,7 @@ void Paginator::generate_pdf(const char *outfile) {
     rend.reset(
         new PdfRenderer(outfile, page.w, page.h, doc.data.title.c_str(), doc.data.author.c_str()));
 
-    const bool only_maintext = true;
+    const bool only_maintext = false;
 
     if(!only_maintext) {
         if(doc.data.is_draft) {

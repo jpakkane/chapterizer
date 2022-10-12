@@ -20,10 +20,12 @@
 #include <filesystem>
 #include <tinyxml2.h>
 #include <unordered_map>
+#include <glib.h>
 
 class Epub {
 public:
     explicit Epub(const Document &d);
+    ~Epub();
 
     void generate(const char *ofilename);
 
@@ -36,10 +38,17 @@ private:
     void generate_epub_manifest(tinyxml2::XMLNode *manifest);
     void generate_spine(tinyxml2::XMLNode *spine);
 
+    void write_paragraph(tinyxml2::XMLDocument &epubdoc,
+                         tinyxml2::XMLElement *body,
+                         const Paragraph &par);
+
     std::string get_epub_image_path(const std::string &fs_name);
     const Document &doc;
 
     std::filesystem::path oebpsdir;
     std::unordered_map<std::string, std::string> imagenames;
     std::vector<std::string> embedded_images;
+    std::string current_chapter_filename;
+    std::vector<std::string> footnote_filenames; // Zero-indexed whereas footnotes are one-indexed.
+    GRegex *supernumbers;
 };

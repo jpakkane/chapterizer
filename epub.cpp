@@ -25,7 +25,18 @@ namespace fs = std::filesystem;
 
 namespace {
 
-std::array<const char *, 3> langnames{"unknown", "en", "fi"};
+const std::unordered_map<uint32_t, char> super2num{{0x2070, '0'},
+                                                   {0xb9, '1'},
+                                                   {0xb2, '2'},
+                                                   {0xb3, '3'},
+                                                   {0x2074, '4'},
+                                                   {0x2075, '5'},
+                                                   {0x2076, '6'},
+                                                   {0x2077, '7'},
+                                                   {0x2078, '8'},
+                                                   {0x2079, '9'}};
+
+const std::array<const char *, 3> langnames{"unknown", "en", "fi"};
 
 // The contents of these files is always the same.
 
@@ -127,10 +138,11 @@ tinyxml2::XMLElement *write_header(tinyxml2::XMLDocument &epubdoc) {
     return body;
 }
 
-tinyxml2::XMLElement *write_block_of_text(tinyxml2::XMLDocument &epubdoc, const std::string &text) {
+void append_block_of_text(tinyxml2::XMLDocument &epubdoc,
+                          tinyxml2::XMLElement *p,
+                          const std::string &text) {
     StyleStack current_style;
     std::stack<tinyxml2::XMLNode *> tagstack;
-    auto p = epubdoc.NewElement("p");
     tagstack.push(p);
     std::string buf;
     for(char c : text) {
@@ -168,13 +180,12 @@ tinyxml2::XMLElement *write_block_of_text(tinyxml2::XMLDocument &epubdoc, const 
     }
     tagstack.pop();
     assert(tagstack.empty());
-    return p;
 }
 
-void write_paragraph(tinyxml2::XMLDocument &epubdoc,
-                     tinyxml2::XMLElement *body,
-                     const Paragraph &par) {
-    body->InsertEndChild(write_block_of_text(epubdoc, par.text));
+tinyxml2::XMLElement *write_block_of_text(tinyxml2::XMLDocument &epubdoc, const std::string &text) {
+    auto p = epubdoc.NewElement("p");
+    append_block_of_text(epubdoc, p, text);
+    return p;
 }
 
 void write_codeblock(tinyxml2::XMLDocument &epubdoc,
@@ -194,7 +205,17 @@ void write_codeblock(tinyxml2::XMLDocument &epubdoc,
 
 } // namespace
 
-Epub::Epub(const Document &d) : doc(d) {}
+Epub::Epub(const Document &d) : doc(d) {
+    GError *err = nullptr;
+    supernumbers = g_regex_new("[⁰¹²³⁴⁵⁶⁷⁸⁹]+", GRegexCompileFlags(0), GRegexMatchFlags(0), &err);
+    if(err) {
+        printf("%s\n", err->message);
+        g_error_free(err);
+        std::abort();
+    }
+}
+
+Epub::~Epub() { g_regex_unref(supernumbers); }
 
 void Epub::generate(const char *ofilename) {
     fs::path outdir{"epubtmp"};
@@ -235,6 +256,48 @@ void Epub::generate(const char *ofilename) {
 
     unlink(ofilename);
     package(ofilename, outdir.c_str());
+}
+
+void Epub::write_paragraph(tinyxml2::XMLDocument &epubdoc,
+                           tinyxml2::XMLElement *body,
+                           const Paragraph &par) {
+    GMatchInfo *match = nullptr;
+    if(g_regex_match(supernumbers, par.text.c_str(), GRegexMatchFlags(0), &match)) {
+        gint start_pos, end_pos;
+        g_match_info_fetch_pos(match, 0, &start_pos, &end_pos);
+        auto p = epubdoc.NewElement("p");
+        body->InsertEndChild(p);
+        std::string buf = par.text.substr(0, start_pos);
+        append_block_of_text(epubdoc, p, buf.c_str());
+        const char *numberpoint = par.text.c_str() + start_pos;
+        std::string footnote_num;
+        while(numberpoint < par.text.c_str() + end_pos) {
+            gunichar cur_char = g_utf8_get_char(numberpoint);
+            auto it = super2num.find(cur_char);
+            if(it == super2num.end()) {
+                printf("Unicode porblems.\n");
+                std::abort();
+            }
+            footnote_num += it->second;
+            numberpoint = g_utf8_next_char(numberpoint);
+        }
+        auto footnotelink = epubdoc.NewElement("a");
+        std::string footnote_id{"footnotes.xhtml#footnote"};
+        footnote_id += footnote_num;
+        std::string rev_footnote_id{"rev-footnote"};
+        rev_footnote_id += footnote_num;
+        footnotelink->SetAttribute("href", footnote_id.c_str());
+        footnotelink->SetAttribute("id", rev_footnote_id.c_str());
+        p->InsertEndChild(footnotelink);
+        auto sup = epubdoc.NewElement("sup");
+        sup->SetText(footnote_num.c_str());
+        footnotelink->InsertEndChild(sup);
+        buf = par.text.substr(end_pos);
+        append_block_of_text(epubdoc, p, buf.c_str());
+    } else {
+        body->InsertEndChild(write_block_of_text(epubdoc, par.text));
+    }
+    g_match_info_free(match);
 }
 
 void Epub::write_opf(const fs::path &ofile) {
@@ -375,6 +438,7 @@ void Epub::write_chapters(const fs::path &outdir) {
             assert(std::holds_alternative<Section>(e));
             body = write_header(epubdoc);
             snprintf(tmpbuf, bufsize, "chapter%d.xhtml", chapter);
+            current_chapter_filename = tmpbuf;
             ofile = outdir / tmpbuf;
             snprintf(tmpbuf, bufsize, "%d. ", chapter);
             ++chapter;
@@ -391,8 +455,7 @@ void Epub::write_chapters(const fs::path &outdir) {
         } else if(std::holds_alternative<Footnote>(e)) {
             // These contain the footnote text and are not written here.
             // We just ignore them.
-
-            // FIXME: add links to the footnote file.
+            footnote_filenames.push_back(current_chapter_filename);
         } else if(std::holds_alternative<NumberList>(e)) {
             const auto &nl = std::get<NumberList>(e);
             auto p = epubdoc.NewElement("p");
@@ -439,12 +502,23 @@ void Epub::write_footnotes(const fs::path &outdir) {
             continue;
         }
         const Footnote &fn = std::get<Footnote>(e);
-        temphack = std::to_string(fn.number);
-        temphack += ". ";
+        std::string footnote_id{"footnote"};
+        footnote_id += std::to_string(fn.number);
+        std::string backlink_file = footnote_filenames.at(fn.number - 1);
+        std::string backlink_id = backlink_file + "#rev-footnote";
+        backlink_id += std::to_string(fn.number);
+
+        auto backlink = epubdoc.NewElement("a");
+        backlink->SetAttribute("href", backlink_id.c_str());
+
+        backlink->SetText(std::to_string(fn.number).c_str());
         temphack += fn.text;
         // FIXME, add link back.
-        auto p = write_block_of_text(epubdoc, temphack.c_str());
+        auto p = write_block_of_text(epubdoc, fn.text);
+        p->InsertFirstChild(epubdoc.NewText(". "));
+        p->InsertFirstChild(backlink);
         p->SetAttribute("class", "footnote");
+        p->SetAttribute("id", footnote_id.c_str());
         body->InsertEndChild(p);
     }
     epubdoc.SaveFile(ofile.c_str());
