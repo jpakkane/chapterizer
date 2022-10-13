@@ -98,10 +98,7 @@ struct SplitStates {
 
     void clear() { best_to.clear(); }
 
-    bool abandon_search(const std::vector<LineStats> &new_splits,
-                        const Length paragraph_width,
-                        const ChapterParameters &params,
-                        const ExtraPenaltyAmounts &extras);
+    bool abandon_search(const std::vector<LineStats> &new_splits, const double new_penalty);
 };
 
 struct LinePenaltyStatistics {
@@ -150,6 +147,7 @@ private:
     std::vector<std::vector<std::string>>
     stats_to_markup_lines(const std::vector<LineStats> &linestats) const;
     Length current_line_width(size_t line_num) const;
+    double total_penalty(const std::vector<LineStats> &lines) const;
 
     WordsOnLine words_for_splits(size_t from_split_ind, size_t to_split_ind) const;
     std::string build_line_markup(size_t from_split_ind, size_t to_split_ind) const;
