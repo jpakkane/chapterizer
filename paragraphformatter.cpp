@@ -310,7 +310,7 @@ void ParagraphFormatter::global_split_recursive(const TextStats &shaper,
     if(line_end_choices.front().end_split == split_points.size() - 1) {
         // Text exhausted.
         line_stats.emplace_back(line_end_choices.front());
-        const auto current_penalty = total_penalty(line_stats);
+        const auto current_penalty = total_penalty(line_stats, true);
         // printf("Total penalty: %.1f\n", current_penalty);
         // FIXME: change to include extra penalties here.
         if(current_penalty < best_penalty) {
@@ -330,7 +330,32 @@ void ParagraphFormatter::global_split_recursive(const TextStats &shaper,
     }
 }
 
-double ParagraphFormatter::total_penalty(const std::vector<LineStats> &lines) const {
+double ParagraphFormatter::paragraph_end_penalty(const std::vector<LineStats> &lines) const {
+    if(lines.size() < 2) {
+        return 0;
+    }
+    const auto &last_split_var = split_points[lines[lines.size() - 1].end_split];
+    const auto &penultimate_split_var = split_points[lines[lines.size() - 2].end_split];
+    assert(std::holds_alternative<BetweenWordSplit>(last_split_var));
+    const auto &last_split = std::get<BetweenWordSplit>(last_split_var);
+    assert(last_split.word_index ==
+           words.size()); // The last one is a sentinel that points one-past-the-end.
+    if(std::holds_alternative<BetweenWordSplit>(penultimate_split_var)) {
+        const auto &penultimate_split = std::get<BetweenWordSplit>(penultimate_split_var);
+        if(penultimate_split.word_index + 1 == last_split.word_index) {
+            return extras.single_word_line;
+        }
+    } else {
+        const auto &penultimate_split = std::get<WithinWordSplit>(penultimate_split_var);
+        if(penultimate_split.word_index + 1 == last_split.word_index) {
+            return extras.single_split_word_line;
+        }
+    }
+    return 0.0;
+}
+
+double ParagraphFormatter::total_penalty(const std::vector<LineStats> &lines,
+                                         bool is_complete) const {
     double total = 0;
     double last_line_penalty = 0;
     Length indent = params.indent;
@@ -341,12 +366,14 @@ double ParagraphFormatter::total_penalty(const std::vector<LineStats> &lines) co
     }
     const auto line_penalty = total - last_line_penalty;
     const auto extra_penalties = compute_multihyphen_penalties(lines, extras);
-    const auto extra_penalty = std::accumulate(
+    auto extra_penalty = std::accumulate(
         extra_penalties.begin(),
         extra_penalties.end(),
         0.0,
         [](double i, const ExtraPenaltyStatistics &stats) { return i + stats.penalty; });
-    // FIXME, add chapter end penalty.
+    if(is_complete) {
+        extra_penalty += paragraph_end_penalty(lines);
+    }
     return line_penalty + extra_penalty;
 }
 
