@@ -711,7 +711,7 @@ void Paginator::create_dedication() {
     auto y = m.upper + (page.h - m.upper - m.lower) / 8;
 
     for(const auto &text : doc.data.dedication) {
-        const auto processed_words = text_to_formatted_words(text);
+        const auto processed_words = text_to_formatted_words(text, false);
         ParagraphFormatter b(processed_words, dedication_width, styles.dedication, extras);
         auto lines = b.split_formatted_lines();
         auto built_lines =
