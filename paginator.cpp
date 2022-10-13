@@ -472,7 +472,7 @@ Paginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &l
 
 std::vector<EnrichedWord> Paginator::text_to_formatted_words(const std::string &text,
                                                              bool permit_hyphenation) {
-    StyleStack current_style;
+    StyleStack current_style(styles.code.font);
     auto plain_words = split_to_words(std::string_view(text));
     std::vector<EnrichedWord> processed_words;
     const Language lang = permit_hyphenation ? doc.data.language : Language::Unset;

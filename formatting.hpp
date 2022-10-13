@@ -53,7 +53,26 @@ template<typename T, int max_elements> class SmallStack final {
 public:
     typedef T value_type;
 
-    SmallStack() = default;
+    SmallStack() {
+        tt_start_tag = "<tt>";
+        tt_end_tag = "</tt>";
+    }
+
+    explicit SmallStack(const FontParameters &inline_typewriter_font) {
+        const int buf_size = 1024;
+        char buf[buf_size];
+
+        if(inline_typewriter_font.name.find('"') != std::string::npos) {
+            std::abort();
+        }
+        snprintf(buf,
+                 buf_size,
+                 R"(<span font="%s" size="%.2fpt">)",
+                 inline_typewriter_font.name.c_str(),
+                 inline_typewriter_font.size.pt());
+        tt_start_tag = buf;
+        tt_end_tag = "</span>";
+    }
 
     bool empty() const { return size == 0; }
 
@@ -113,7 +132,7 @@ public:
                 buf += "<b>";
                 break;
             case TT_S:
-                buf += "<tt>";
+                buf += tt_start_tag;
                 break;
             case SMALLCAPS_S:
                 buf += "<span variant=\"small-caps\" letter_spacing=\"100\">";
@@ -138,7 +157,7 @@ public:
                 buf += "</b>";
                 break;
             case TT_S:
-                buf += "</tt>";
+                buf += tt_end_tag;
                 break;
             case SMALLCAPS_S:
                 buf += "</span>";
@@ -157,8 +176,13 @@ public:
     const T *crbegin() const { return arr + size - 1; } // FIXME, need to use -- to progress.
     const T *crend() const { return arr - 1; }
 
+    const std::string &inline_code_start_tag() const { return tt_start_tag; }
+    const std::string &inline_code_end_tag() const { return tt_end_tag; }
+
 private:
     T arr[max_elements];
+    std::string tt_start_tag;
+    std::string tt_end_tag;
     int size = 0;
 };
 

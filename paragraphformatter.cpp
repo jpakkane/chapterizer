@@ -156,7 +156,7 @@ void toggle_format(StyleStack &current_style, std::string &line, const char form
             line.append("</b>");
             break;
         case TT_S:
-            line.append("</tt>");
+            line.append(current_style.inline_code_end_tag());
             break;
         case SMALLCAPS_S:
             line.append("</span>");
@@ -178,7 +178,7 @@ void toggle_format(StyleStack &current_style, std::string &line, const char form
             line.append("<b>");
             break;
         case TT_S:
-            line.append("<tt>");
+            line.append(current_style.inline_code_start_tag());
             break;
         case SMALLCAPS_S:
             line.append("<span variant=\"small-caps\" letter_spacing=\"100\">");
@@ -194,11 +194,11 @@ void toggle_format(StyleStack &current_style, std::string &line, const char form
 }
 
 std::string wordfragment2markup(StyleStack &current_style,
-                         const EnrichedWord &w,
-                         size_t start,
-                         size_t end,
-                         bool add_space,
-                         bool add_dash) {
+                                const EnrichedWord &w,
+                                size_t start,
+                                size_t end,
+                                bool add_space,
+                                bool add_dash) {
     std::string markup;
     current_style.write_buildup_markup(markup);
 
@@ -459,11 +459,11 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
 
     if(line_words.first) {
         markup_words.emplace_back(wordfragment2markup(current_style,
-                                               words[line_words.first->word],
-                                               line_words.first->from_bytes,
-                                               std::string::npos,
-                                               true,
-                                               false));
+                                                      words[line_words.first->word],
+                                                      line_words.first->from_bytes,
+                                                      std::string::npos,
+                                                      true,
+                                                      false));
     }
     for(size_t i = line_words.full_word_begin; i < line_words.full_word_end; ++i) {
         const bool add_space = i + 1 != line_words.full_word_end || line_words.last;
@@ -472,11 +472,11 @@ std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from
     }
     if(line_words.last) {
         markup_words.emplace_back(wordfragment2markup(current_style,
-                                               words[line_words.last->word],
-                                               0,
-                                               line_words.last->to_bytes,
-                                               false,
-                                               line_words.last->add_dash));
+                                                      words[line_words.last->word],
+                                                      0,
+                                                      line_words.last->to_bytes,
+                                                      false,
+                                                      line_words.last->add_dash));
     }
 
     return markup_words;
