@@ -103,6 +103,7 @@ void setup_draft_settings(Metadata &m) {
 
     m.pdf.styles.code = normal;
     m.pdf.styles.code.font.name = "Liberation Mono";
+    m.pdf.styles.code.font.size = Length::from_pt(10);
     m.pdf.styles.colophon = normal;
     m.pdf.styles.dedication = normal;
     m.pdf.styles.footnote = normal;

@@ -587,7 +587,14 @@ std::vector<LineStats> ParagraphFormatter::get_line_end_choices(size_t start_spl
     auto tightest_split = get_closest_line_end(start_split, shaper, line_num);
     potentials.push_back(tightest_split);
 
+    bool word_split_seen = false;
     // Lambdas, yo!
+    auto check_word_split = [&word_split_seen, this](size_t split_point) {
+        if(std::holds_alternative<BetweenWordSplit>(split_points[split_point])) {
+            word_split_seen = true;
+        }
+    };
+    check_word_split(tightest_split.end_split);
     auto add_point = [&](size_t split_point) {
         const auto trial_split = split_point;
         const auto trial_line = build_line_markup(start_split, trial_split);
@@ -601,16 +608,39 @@ std::vector<LineStats> ParagraphFormatter::get_line_end_choices(size_t start_spl
     };
 
     if(tightest_split.end_split > start_split + 2) {
+        check_word_split(tightest_split.end_split - 1);
         add_point(tightest_split.end_split - 1);
     }
     if(tightest_split.end_split + 2 < split_points.size()) {
+        // Do not look forward for word splits.
+        // This is based on nothing but a hunch.
         add_point(tightest_split.end_split + 1);
     }
 
     if(tightest_split.end_split > start_split + 3) {
+        check_word_split(tightest_split.end_split - 2);
         add_point(tightest_split.end_split - 2);
     }
 
+    if(!word_split_seen) {
+        // For languages with long words we need to go backwards
+        // until we find a break between words and add that. Do not
+        // add entries in between to keep computational complexity
+        // down.
+        //
+        // This is to prevent lines that look like this:
+        //
+        // Some text and so on and at the very end we have a verylongsingle-
+        // word.
+        size_t i = tightest_split.end_split - 3;
+        while(i > start_split) {
+            if(std::holds_alternative<BetweenWordSplit>(split_points[i])) {
+                add_point(i);
+                break;
+            }
+            --i;
+        }
+    }
     return potentials;
 }
 

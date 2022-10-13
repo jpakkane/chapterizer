@@ -39,7 +39,7 @@ struct ExtraPenaltyAmounts {
     double multiple_dashes = 10; // Total is num_consecutive_dashes * multiple_dashes.
     // double river;
     double single_word_line = 10;
-    double single_split_word_line = 50;
+    double single_split_word_line = 500;
 };
 
 // Some fonts have "medium" instead of "regular" as their weight.
