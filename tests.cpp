@@ -128,6 +128,32 @@ void test_finhyphen() {
     CHECK(w.back() == expected2);
 }
 
+void test_singleletter() {
+    WordHyphenator h;
+    const std::string text{"oliivi"};
+    HyphenPoint expected{3, SplitType::Regular};
+    const auto w = h.hyphenate(text, Language::Finnish);
+    CHECK(w.size() == 1);
+    CHECK(w.front() == expected);
+}
+
+void test_singleletter_dash() {
+    WordHyphenator h;
+    const std::string text{"junaolio-oliivi"};
+    HyphenPoint expected0{1, SplitType::Regular};
+    HyphenPoint expected1{3, SplitType::Regular};
+    HyphenPoint expected2{4, SplitType::Regular};
+    HyphenPoint expected3{8, SplitType::NoHyphen};
+    HyphenPoint expected4{12, SplitType::Regular};
+    const auto w = h.hyphenate(text, Language::Finnish);
+    CHECK(w.size() == 5);
+    CHECK(w[0] == expected0);
+    CHECK(w[1] == expected1);
+    CHECK(w[2] == expected2);
+    CHECK(w[3] == expected3);
+    CHECK(w[4] == expected4);
+}
+
 void test_hyphenation() {
     test_hyphenation_simple();
     test_hyphenation_dash();
@@ -139,6 +165,8 @@ void test_hyphenation() {
     test_dualhyphen();
     test_utf8();
     test_finhyphen();
+    test_singleletter();
+    test_singleletter_dash();
 }
 
 int main(int, char **) {
