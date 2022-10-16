@@ -136,6 +136,14 @@ void setup_draft_settings(Metadata &m) {
 
 void load_pdf_element(Metadata &m, const json &pdf) {
     m.pdf.ofname = get_string(pdf, "filename");
+    if(m.is_draft) {
+        std::filesystem::path ofname = m.pdf.ofname;
+        auto draftname = ofname.stem();
+        draftname += "-draft";
+        draftname.replace_extension(ofname.extension());
+        ofname.replace_filename(draftname);
+        m.pdf.ofname = ofname.c_str();
+    }
     auto page = pdf["page"];
     auto margins = pdf["margins"];
 
