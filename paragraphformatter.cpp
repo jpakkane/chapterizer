@@ -183,6 +183,9 @@ std::string wordfragment2markup(StyleStack &current_style,
     std::string_view view = std::string_view{w.text}.substr(start, end);
     assert(g_utf8_validate(view.data(), view.length(), nullptr));
     size_t style_point = 0;
+    while(style_point < w.f.size() && w.f[style_point].offset < start) {
+        ++style_point;
+    }
     for(size_t i = 0; i < view.size(); ++i) {
         while(style_point < w.f.size() && w.f[style_point].offset == start + i) {
             toggle_format(current_style, markup, w.f[style_point].format);
