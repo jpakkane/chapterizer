@@ -189,6 +189,7 @@ void load_epub_element(Metadata &m, const json &epub) {
     m.epub.ofname = get_string(epub, "filename");
     m.epub.cover = get_string(epub, "cover");
     m.epub.ISBN = get_string(epub, "ISBN");
+    m.epub.stylesheet = get_string(epub, "stylesheet");
     m.epub.file_as = get_string(epub, "file_as");
 }
 

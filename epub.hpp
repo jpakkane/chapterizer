@@ -40,7 +40,8 @@ private:
 
     void write_paragraph(tinyxml2::XMLDocument &epubdoc,
                          tinyxml2::XMLElement *body,
-                         const Paragraph &par);
+                         const Paragraph &par,
+                         const char *classname);
 
     std::string get_epub_image_path(const std::string &fs_name);
     const Document &doc;

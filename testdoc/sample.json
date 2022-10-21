@@ -114,6 +114,7 @@
         }
     },
     "epub": {
+        "stylesheet": "book.css",
         "cover": "epub_cover.png",
         "filename": "bookout.epub",
         "ISBN": "123456789X",

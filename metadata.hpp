@@ -81,6 +81,7 @@ struct EpubMetadata {
     std::string ofname;
     std::string ISBN;
     std::string cover;
+    std::string stylesheet;
     std::string file_as;
 };
 

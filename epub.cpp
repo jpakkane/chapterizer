@@ -50,21 +50,6 @@ const char containertext[] = R"(<?xml version='1.0' encoding='utf-8'?>
 </container>
 )";
 
-const char csstext[] = R"(h1, h2, h3, h4, h5 {
-  font-family: Sans-Serif;
-}
-
-p {
-  font-family: Serif;
-  text-align: justify;
-}
-
-p#preformatted {
-  font-family: Mono;
-}
-
-)";
-
 void package(const char *ofilename, const char *builddir) {
     std::string command{"cd "};
     command += builddir;
@@ -154,7 +139,8 @@ void append_block_of_text(tinyxml2::XMLDocument &epubdoc,
             handle_tag_switch(epubdoc, current_style, tagstack, buf, BOLD_S, "b");
             break;
         case tt_character:
-            handle_tag_switch(epubdoc, current_style, tagstack, buf, TT_S, "tt");
+            handle_tag_switch(
+                epubdoc, current_style, tagstack, buf, TT_S, "span", "class", "inlinecode");
             break;
         case superscript_character:
             handle_tag_switch(epubdoc, current_style, tagstack, buf, SUPERSCRIPT_S, "sup");
@@ -182,8 +168,13 @@ void append_block_of_text(tinyxml2::XMLDocument &epubdoc,
     assert(tagstack.empty());
 }
 
-tinyxml2::XMLElement *write_block_of_text(tinyxml2::XMLDocument &epubdoc, const std::string &text) {
+tinyxml2::XMLElement *write_block_of_text(tinyxml2::XMLDocument &epubdoc,
+                                          const std::string &text,
+                                          const char *classname) {
     auto p = epubdoc.NewElement("p");
+    if(classname) {
+        p->SetAttribute("class", classname);
+    }
     append_block_of_text(epubdoc, p, text);
     return p;
 }
@@ -192,7 +183,7 @@ void write_codeblock(tinyxml2::XMLDocument &epubdoc,
                      tinyxml2::XMLElement *body,
                      const CodeBlock &code) {
     auto p = epubdoc.NewElement("p");
-    p->SetAttribute("id", "preformatted");
+    p->SetAttribute("class", "preformatted");
     for(size_t i = 0; i < code.raw_lines.size(); ++i) {
         auto *textline = epubdoc.NewText(code.raw_lines[i].c_str());
         p->InsertEndChild(textline);
@@ -245,9 +236,8 @@ void Epub::generate(const char *ofilename) {
     fwrite(containertext, 1, strlen(containertext), f);
     fclose(f);
 
-    f = fopen(cssfile.c_str(), "w");
-    fwrite(csstext, 1, strlen(csstext), f);
-    fclose(f);
+    fs::path css_in = doc.data.top_dir / doc.data.epub.stylesheet;
+    fs::copy(css_in, cssfile);
 
     write_chapters(oebpsdir);
     write_footnotes(oebpsdir);
@@ -260,12 +250,17 @@ void Epub::generate(const char *ofilename) {
 
 void Epub::write_paragraph(tinyxml2::XMLDocument &epubdoc,
                            tinyxml2::XMLElement *body,
-                           const Paragraph &par) {
+                           const Paragraph &par,
+                           const char *classname) {
     GMatchInfo *match = nullptr;
     if(g_regex_match(supernumbers, par.text.c_str(), GRegexMatchFlags(0), &match)) {
         gint start_pos, end_pos;
         g_match_info_fetch_pos(match, 0, &start_pos, &end_pos);
         auto p = epubdoc.NewElement("p");
+        if(classname) {
+            p->SetAttribute("class", classname);
+            std::abort();
+        }
         body->InsertEndChild(p);
         std::string buf = par.text.substr(0, start_pos);
         append_block_of_text(epubdoc, p, buf.c_str());
@@ -295,7 +290,7 @@ void Epub::write_paragraph(tinyxml2::XMLDocument &epubdoc,
         buf = par.text.substr(end_pos);
         append_block_of_text(epubdoc, p, buf.c_str());
     } else {
-        body->InsertEndChild(write_block_of_text(epubdoc, par.text));
+        body->InsertEndChild(write_block_of_text(epubdoc, par.text, classname));
     }
     g_match_info_free(match);
 }
@@ -424,9 +419,23 @@ void Epub::write_chapters(const fs::path &outdir) {
     bool first_chapter = true;
     tinyxml2::XMLElement *body = nullptr;
 
+    bool is_new_chapter = false;
+    bool is_new_scene = false;
+    bool is_new_after_special = false;
     for(const auto &e : doc.elements) {
         if(std::holds_alternative<Paragraph>(e)) {
-            write_paragraph(epubdoc, body, std::get<Paragraph>(e));
+            const char *classname = nullptr;
+            if(is_new_chapter) {
+                classname = "newsection";
+                is_new_chapter = false;
+            } else if(is_new_scene) {
+                classname = "newscene";
+                is_new_scene = false;
+            } else if(is_new_after_special) {
+                classname = "afterspecial";
+                is_new_after_special = false;
+            }
+            write_paragraph(epubdoc, body, std::get<Paragraph>(e), classname);
         } else if(std::holds_alternative<Section>(e)) {
             const auto &sec = std::get<Section>(e);
             if(first_chapter) {
@@ -435,6 +444,8 @@ void Epub::write_chapters(const fs::path &outdir) {
                 epubdoc.SaveFile(ofile.c_str());
                 epubdoc.Clear();
             }
+            is_new_chapter = true;
+            assert(!is_new_scene);
             assert(std::holds_alternative<Section>(e));
             body = write_header(epubdoc);
             snprintf(tmpbuf, bufsize, "chapter%d.xhtml", chapter);
@@ -442,16 +453,16 @@ void Epub::write_chapters(const fs::path &outdir) {
             ofile = outdir / tmpbuf;
             snprintf(tmpbuf, bufsize, "%d. ", chapter);
             ++chapter;
-            auto heading = epubdoc.NewElement("h2");
+            auto heading = epubdoc.NewElement("h1");
             body->InsertEndChild(heading);
             heading->SetText((tmpbuf + sec.text).c_str());
         } else if(std::holds_alternative<CodeBlock>(e)) {
             write_codeblock(epubdoc, body, std::get<CodeBlock>(e));
+            is_new_after_special = true;
         } else if(std::holds_alternative<SceneChange>(e)) {
             assert(body);
-            auto p = epubdoc.NewElement("p");
-            p->SetText(" "); // There may be a smarter way of doing this.
-            body->InsertEndChild(p);
+            is_new_scene = true;
+            assert(!is_new_chapter);
         } else if(std::holds_alternative<Footnote>(e)) {
             // These contain the footnote text and are not written here.
             // We just ignore them.
@@ -514,7 +525,7 @@ void Epub::write_footnotes(const fs::path &outdir) {
         backlink->SetText(std::to_string(fn.number).c_str());
         temphack += fn.text;
         // FIXME, add link back.
-        auto p = write_block_of_text(epubdoc, fn.text);
+        auto p = write_block_of_text(epubdoc, fn.text, "footnote");
         p->InsertFirstChild(epubdoc.NewText(". "));
         p->InsertFirstChild(backlink);
         p->SetAttribute("class", "footnote");
