@@ -50,3 +50,5 @@ executable('mdtool', 'mdtool.cpp',
 
 executable('voikkotest', 'voikkotest.cpp',
     dependencies: voikko_dep)
+
+executable('blocktest', 'blocktest.cpp')
