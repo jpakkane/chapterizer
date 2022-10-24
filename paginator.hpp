@@ -123,6 +123,8 @@ private:
     void create_postcredits();
     void create_maintext();
 
+    int count_words();
+
     const Document &doc;
     // These are just helpers to cut down on typing.
     const PageSize &page;

@@ -48,3 +48,5 @@ char special2internal(char c);
 char internal2special(char c);
 
 void restore_special_chars(std::string &s);
+
+int words_in_file(const char *fname);

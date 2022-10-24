@@ -25,6 +25,8 @@
 
 namespace {
 
+const char *wordcount_str[3] = {"<undef>", "%d words", "%d sanaa"};
+
 const int image_dpi = 600;
 
 const Length image_separator = Length::from_mm(4);
@@ -639,21 +641,38 @@ void Paginator::flush_draw_commands() {
 
 void Paginator::add_pending_figure(const ImageInfo &f) { pending_figures.push_back(f); }
 
+int Paginator::count_words() {
+    int num_words = 0;
+    for(const auto &f : doc.data.sources) {
+        const auto full_path = doc.data.top_dir / f;
+        num_words += words_in_file(full_path.c_str());
+    }
+    if(num_words < 1000)
+        return num_words;
+    return ((num_words + 500) / 1000) * 1000;
+}
+
 void Paginator::create_draft_title_page() {
+    const int num_words = count_words();
     const auto middle = current_left_margin() + textblock_width() / 2;
     auto textblock_center = m.upper + textblock_height() / 2;
     auto y = m.upper;
     const auto single_line_height = styles.normal.font.size * 1.5;
-    const auto left = current_left_margin();
+    const auto left_edge = current_left_margin();
+    const auto right_edge = left_edge + textblock_width();
+    const int bufsize = 128;
+    char buf[bufsize];
+    snprintf(buf, bufsize, wordcount_str[(int)doc.data.language], num_words);
     rend->render_markup_as_is(
-        doc.data.author.c_str(), styles.normal.font, left, y, TextAlignment::Left);
+        doc.data.author.c_str(), styles.normal.font, left_edge, y, TextAlignment::Left);
+    rend->render_markup_as_is(buf, styles.normal.font, right_edge, y, TextAlignment::Right);
     y += single_line_height;
 
     rend->render_markup_as_is(
-        doc.data.draftdata.phone.c_str(), styles.normal.font, left, y, TextAlignment::Left);
+        doc.data.draftdata.phone.c_str(), styles.normal.font, left_edge, y, TextAlignment::Left);
     y += single_line_height;
     rend->render_markup_as_is(
-        doc.data.draftdata.email.c_str(), styles.code.font, left, y, TextAlignment::Left);
+        doc.data.draftdata.email.c_str(), styles.code.font, left_edge, y, TextAlignment::Left);
 
     y = textblock_center - 3 * styles.title.line_height;
     rend->render_markup_as_is(

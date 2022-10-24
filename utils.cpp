@@ -174,3 +174,18 @@ void restore_special_chars(std::string &s) {
         s[i] = internal2special(s[i]);
     }
 }
+
+int words_in_file(const char *fname) {
+    int num_words = 0;
+    std::ifstream ifile(fname);
+    assert(!ifile.fail());
+    std::string line;
+    std::string word;
+    while(std::getline(ifile, line)) {
+        std::stringstream wordstream(line);
+        while(std::getline(wordstream, word, ' ')) {
+            ++num_words;
+        }
+    }
+    return num_words;
+}
