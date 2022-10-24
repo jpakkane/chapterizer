@@ -25,6 +25,8 @@
 
 namespace {
 
+const int image_dpi = 600;
+
 const Length image_separator = Length::from_mm(4);
 
 template<typename T> void style_change(T &stack, typename T::value_type val) {
@@ -319,8 +321,8 @@ void Paginator::create_maintext() {
             const Figure &cb = std::get<Figure>(e);
             const auto fullpath = doc.data.top_dir / cb.file;
             auto image = rend->get_image(fullpath.c_str());
-            Length display_width = textblock_width();
-            Length display_height = display_width * image.h / image.w;
+            Length display_width = Length::from_mm(image.w / image_dpi * 25.4);
+            Length display_height = Length::from_mm(image.h / image_dpi * 25.4);
             if(doc.data.is_draft) {
                 display_height = display_height / 2;
                 display_width = display_width / 2;
@@ -375,8 +377,8 @@ void Paginator::create_maintext() {
 void Paginator::add_top_image(const ImageInfo &image) {
     ImageCommand cmd;
     cmd.i = image;
-    cmd.display_width = textblock_width();
-    cmd.display_height = cmd.display_width * image.h / image.w;
+    cmd.display_width = Length::from_mm(image.w / image_dpi * 25.4);
+    cmd.display_height = Length::from_mm(image.h / image_dpi * 25.4);
     if(doc.data.is_draft) {
         cmd.display_height = cmd.display_height / 2;
         cmd.display_width = cmd.display_width / 2;
