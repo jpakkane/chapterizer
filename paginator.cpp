@@ -377,8 +377,8 @@ void Paginator::create_maintext() {
 void Paginator::add_top_image(const ImageInfo &image) {
     ImageCommand cmd;
     cmd.i = image;
-    cmd.display_width = Length::from_mm(image.w / image_dpi * 25.4);
-    cmd.display_height = Length::from_mm(image.h / image_dpi * 25.4);
+    cmd.display_width = Length::from_mm(double(image.w) / image_dpi * 25.4);
+    cmd.display_height = Length::from_mm(double(image.h) / image_dpi * 25.4);
     if(doc.data.is_draft) {
         cmd.display_height = cmd.display_height / 2;
         cmd.display_width = cmd.display_width / 2;
@@ -573,6 +573,7 @@ void Paginator::flush_draw_commands() {
     if(doc.data.debug_draw && !doc.data.is_draft && current_page == chapter_start_page) {
         draw_debug_bars(4);
     }
+    /*
     if(doc.data.debug_draw) {
         rend->draw_box(current_left_margin(),
                        m.upper,
@@ -580,6 +581,7 @@ void Paginator::flush_draw_commands() {
                        textblock_height(),
                        Length::from_pt(0.1));
     }
+    */
     for(const auto &c : layout.images) {
         rend->draw_image(c.i, c.x + current_left_margin(), c.y, c.display_width, c.display_height);
     }
