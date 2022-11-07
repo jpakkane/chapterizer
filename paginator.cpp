@@ -153,7 +153,7 @@ void Paginator::create_maintext() {
     const auto section_width = 0.8 * paragraph_width;
 
     ExtraPenaltyAmounts extras;
-    const Length bottom_watermark = page.h - m.lower - m.upper - Length::from_mm(2);
+    const Length bottom_watermark = page.h - m.lower - m.upper;
     Length rel_y;
     bool first_paragraph = true;
     bool first_section = true;
@@ -576,13 +576,13 @@ void Paginator::flush_draw_commands() {
         draw_debug_bars(4);
     }
     /*
-    if(doc.data.debug_draw) {
-        rend->draw_box(current_left_margin(),
-                       m.upper,
-                       textblock_width(),
-                       textblock_height(),
-                       Length::from_pt(0.1));
-    }
+        if(doc.data.debug_draw) {
+            rend->draw_box(current_left_margin(),
+                           m.upper,
+                           textblock_width(),
+                           textblock_height(),
+                           Length::from_pt(0.1));
+        }
     */
     for(const auto &c : layout.images) {
         rend->draw_image(c.i, c.x + current_left_margin(), c.y, c.display_width, c.display_height);

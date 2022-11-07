@@ -123,8 +123,11 @@ void setup_draft_settings(Metadata &m) {
     m.pdf.page.h = Length::from_mm(297);
     m.pdf.margins.inner = Length::from_mm(25.4);
     m.pdf.margins.outer = Length::from_mm(25.4);
-    m.pdf.margins.upper = Length::from_mm(25.4) + m.pdf.styles.normal.line_height;
-    m.pdf.margins.lower = Length::from_mm(25.4);
+    // Should be exactly an inch, but the font does not divide it
+    // cleanly so there is more empty space at the bottom than
+    // there should be.
+    m.pdf.margins.upper = Length::from_mm(20.4) + m.pdf.styles.normal.line_height;
+    m.pdf.margins.lower = Length::from_mm(20.4);
 
     // Spaces
     m.pdf.spaces.below_section = Length::from_mm(0);
