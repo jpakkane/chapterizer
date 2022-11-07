@@ -571,19 +571,24 @@ void Paginator::draw_debug_bars(int num_bars) {
 }
 
 void Paginator::flush_draw_commands() {
+    const bool draw_cut_guide = false;
+    const bool draw_textarea_box = false;
     Length footnote_block_start = page.h - m.lower - heights.footnote_height;
     if(doc.data.debug_draw && !doc.data.is_draft && current_page == chapter_start_page) {
         draw_debug_bars(4);
     }
-    /*
-        if(doc.data.debug_draw) {
-            rend->draw_box(current_left_margin(),
-                           m.upper,
-                           textblock_width(),
-                           textblock_height(),
-                           Length::from_pt(0.1));
-        }
-    */
+    if(draw_textarea_box) {
+        rend->draw_box(current_left_margin(),
+                       m.upper,
+                       textblock_width(),
+                       textblock_height(),
+                       Length::from_pt(0.1));
+    }
+    if(draw_cut_guide) {
+        const Length cut_x =
+            current_page % 2 ? Length::from_mm(0.2) : page.w - Length::from_mm(0.2);
+        rend->draw_line(cut_x, Length::zero(), cut_x, page.h, Length::from_mm(0.1));
+    }
     for(const auto &c : layout.images) {
         rend->draw_image(c.i, c.x + current_left_margin(), c.y, c.display_width, c.display_height);
     }
