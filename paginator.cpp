@@ -410,7 +410,7 @@ void Paginator::render_page_num(const FontParameters &par) {
     } else {
         char buf[128];
         snprintf(buf, 128, "%d", current_page);
-        const Length yloc = page.h - 3.0 * m.lower / 4.0;
+        const Length yloc = page.h - m.lower + styles.normal.line_height;
         const Length xloc = current_left_margin() + (page.w - m.inner - m.outer) / 2;
         rend->render_line_centered(buf, par, xloc, yloc);
     }
