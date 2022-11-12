@@ -27,16 +27,18 @@ const char BOLD_S = (1 << 1);
 const char TT_S = (1 << 2);
 const char SMALLCAPS_S = (1 << 3);
 const char SUPERSCRIPT_S = (1 << 4);
+const char SUBSCRIPT_S = (1 << 5);
 
-const uint32_t italic_character = '/';
-const uint32_t bold_character = '*';
-const uint32_t tt_character = '`';
-const uint32_t smallcaps_character = '|';
-const uint32_t superscript_character = '^';
+const char italic_character = '/';
+const char bold_character = '*';
+const char tt_character = '`';
+const char smallcaps_character = '|';
+const char superscript_character = '^';
+const char subscript_character = '_';
 
 inline bool is_stylechar(char c) {
     return c == italic_character || c == bold_character || c == tt_character ||
-           c == smallcaps_character || c == superscript_character;
+           c == smallcaps_character || c == superscript_character || c == subscript_character;
 }
 
 const uint32_t italic_codepoint = '/';
@@ -44,9 +46,7 @@ const uint32_t bold_codepoint = '*';
 const uint32_t tt_codepoint = '`';
 const uint32_t smallcaps_codepoint = '|';
 const uint32_t superscript_codepoint = '^';
-#if 0
-const uint32_t subscript_char = '_';
-#endif
+const uint32_t subscript_codepoint = '_';
 
 template<typename T, int max_elements> class SmallStack final {
 
@@ -140,6 +140,9 @@ public:
             case SUPERSCRIPT_S:
                 buf += "<sup>";
                 break;
+            case SUBSCRIPT_S:
+                buf += "<sub>";
+                break;
             default:
                 std::abort();
             }
@@ -164,6 +167,10 @@ public:
                 break;
             case SUPERSCRIPT_S:
                 buf += "</sup>";
+                break;
+            case SUBSCRIPT_S:
+                buf += "</sub>";
+                break;
             default:
                 std::abort();
             }
@@ -186,7 +193,7 @@ private:
     int size = 0;
 };
 
-typedef SmallStack<char, 5> StyleStack;
+typedef SmallStack<char, 6> StyleStack;
 
 struct FormattingChange {
     size_t offset;

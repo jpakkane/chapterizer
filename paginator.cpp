@@ -89,6 +89,11 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
                 FormattingChange{size_t(in - word_start - num_changes), SUPERSCRIPT_S});
             ++num_changes;
             break;
+        case subscript_codepoint:
+            style_change(current_style, SUBSCRIPT_S);
+            changes.push_back(FormattingChange{size_t(in - word_start - num_changes), SUBSCRIPT_S});
+            ++num_changes;
+            break;
         default:
             char tmp[10];
             const int bytes_written = g_unichar_to_utf8(c, tmp);

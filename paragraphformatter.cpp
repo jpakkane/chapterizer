@@ -142,6 +142,9 @@ void toggle_format(StyleStack &current_style, std::string &line, const char form
         case SUPERSCRIPT_S:
             line.append("</sup>");
             break;
+        case SUBSCRIPT_S:
+            line.append("</sub>");
+            break;
         default:
             printf("Bad style end bit.\n");
             std::abort();
@@ -163,6 +166,9 @@ void toggle_format(StyleStack &current_style, std::string &line, const char form
             break;
         case SUPERSCRIPT_S:
             line.append("<sup>");
+            break;
+        case SUBSCRIPT_S:
+            line.append("<sub>");
             break;
         default:
             printf("Bad style start bit.\n");

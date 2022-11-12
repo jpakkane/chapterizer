@@ -145,6 +145,9 @@ void append_block_of_text(tinyxml2::XMLDocument &epubdoc,
         case superscript_character:
             handle_tag_switch(epubdoc, current_style, tagstack, buf, SUPERSCRIPT_S, "sup");
             break;
+        case subscript_character:
+            handle_tag_switch(epubdoc, current_style, tagstack, buf, SUBSCRIPT_S, "sub");
+            break;
         case smallcaps_character:
             handle_tag_switch(epubdoc,
                               current_style,
