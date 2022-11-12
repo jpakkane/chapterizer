@@ -345,10 +345,11 @@ void Paginator::create_maintext() {
                 add_top_image(image);
             }
         } else if(std::holds_alternative<NumberList>(e)) {
+            // FIXME: expand commands like \footnote{1} to values.
             const NumberList &nl = std::get<NumberList>(e);
             const Length number_area = Length::from_mm(5);
             const Length indent = spaces.codeblock_indent; // FIXME
-            const Length text_width = paragraph_width - number_area - indent;
+            const Length text_width = paragraph_width - number_area - 2 * indent;
             const Length item_separator = spaces.different_paragraphs / 2;
             rel_y += spaces.different_paragraphs;
             heights.whitespace_height += spaces.different_paragraphs;
