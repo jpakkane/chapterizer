@@ -551,7 +551,7 @@ void Paginator::draw_debug_bars(int num_bars) {
     const Length chaffwidth = Length::from_mm(6);
     for(int i = 0; i < num_bars; ++i) {
         rend->fill_box(
-            current_left_margin(), m.upper + 2 * i * boxheight, textblock_width(), boxheight, 0.9);
+            current_left_margin(), m.upper + 2 * i * boxheight, textblock_width(), boxheight, 0.85);
     }
     rend->draw_box(current_left_margin() - chaffwidth,
                    m.upper,
