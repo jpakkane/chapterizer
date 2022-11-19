@@ -638,12 +638,12 @@ void Paginator::flush_draw_commands() {
         }
     }
     if(!layout.footnote.empty()) {
-        const Length line_thickness = Length::from_pt(1);
+        const Length line_thickness = Length::from_pt(0.8);
         const Length line_distance = doc.data.pdf.spaces.footnote_separation;
         const Length line_indent = Length::from_mm(-5);
         const Length line_width = Length::from_mm(20);
         const Length x0 = current_left_margin() + line_indent;
-        const Length y0 = footnote_block_start - line_distance;
+        const Length y0 = footnote_block_start - 0.3 * line_distance;
         rend->draw_line(x0, y0, x0 + line_width, y0, line_thickness);
     }
     layout.clear();
