@@ -328,8 +328,8 @@ void Paginator::create_maintext() {
             const Figure &cb = std::get<Figure>(e);
             const auto fullpath = doc.data.top_dir / cb.file;
             auto image = rend->get_image(fullpath.c_str());
-            Length display_width = Length::from_mm(image.w / image_dpi * 25.4);
-            Length display_height = Length::from_mm(image.h / image_dpi * 25.4);
+            Length display_width = Length::from_mm(double(image.w) / image_dpi * 25.4);
+            Length display_height = Length::from_mm(double(image.h) / image_dpi * 25.4);
             if(doc.data.is_draft) {
                 display_height = display_height / 2;
                 display_width = display_width / 2;
