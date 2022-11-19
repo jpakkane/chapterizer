@@ -154,9 +154,6 @@ void Paginator::generate_pdf(const char *outfile) {
 }
 
 void Paginator::create_maintext() {
-    const auto paragraph_width = page.w - m.inner - m.outer;
-    const auto section_width = 0.8 * paragraph_width;
-
     ExtraPenaltyAmounts extras;
     const Length bottom_watermark = page.h - m.lower - m.upper;
     Length rel_y;
@@ -165,130 +162,16 @@ void Paginator::create_maintext() {
 
     for(const auto &e : doc.elements) {
         if(std::holds_alternative<Section>(e)) {
-            const Section &s = std::get<Section>(e);
-            printf("Processing section: %s\n", s.text.c_str());
-            if(!first_section) {
-                new_page(true);
-                if(!doc.data.is_draft && current_page % 2 == 0) {
-                    new_page(false);
-                }
-            }
-            chapter_start_page = rend->page_num();
-            rend->add_section_outline(s.number, s.text);
-            first_section = false;
-            rel_y = Length::zero();
-            rel_y += spaces.above_section;
-            heights.whitespace_height += spaces.above_section;
-            assert(s.level == 1);
-            // Fancy stuff above the text.
-            std::string title_string;
-            TextAlignment section_alignment = TextAlignment::Centered;
-            if(doc.data.is_draft) {
-                title_string = std::to_string(s.number);
-                title_string += ". ";
-                title_string += s.text;
-                section_alignment = TextAlignment::Left;
-            } else {
-                title_string = "§ ";
-                title_string += std::to_string(s.number);
-                layout.text.emplace_back(MarkupDrawCommand{title_string,
-                                                           &styles.section.font,
-                                                           textblock_width() / 2,
-                                                           rel_y,
-                                                           TextAlignment::Centered});
-                rel_y += 2 * styles.section.line_height;
-                heights.text_height += 2 * styles.section.line_height;
-                title_string = s.text;
-            }
-            // The title. Hyphenation is prohibited.
-            std::vector<EnrichedWord> processed_words =
-                text_to_formatted_words(title_string, false);
-            ParagraphFormatter b(processed_words, section_width, styles.section, extras);
-            auto lines = b.split_formatted_lines();
-            auto built_lines =
-                build_ragged_paragraph(lines, styles.section, section_alignment, rel_y);
-            for(auto &line : built_lines) {
-                layout.text.emplace_back(std::move(line));
-                rel_y += styles.section.line_height;
-                heights.text_height += styles.section.line_height;
-            }
-            rel_y += spaces.below_section;
-            heights.text_height += spaces.below_section;
-            first_paragraph = true;
+            create_section(std::get<Section>(e), extras, rel_y, first_section, first_paragraph);
         } else if(std::holds_alternative<Paragraph>(e)) {
-            const Paragraph &p = std::get<Paragraph>(e);
-            const ChapterParameters &cur_par =
-                first_paragraph ? styles.normal_noindent : styles.normal;
-            std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
-            ParagraphFormatter b(processed_words, paragraph_width, cur_par, extras);
-            auto lines = b.split_formatted_lines();
-            std::vector<TextCommands> built_lines;
-            if(doc.data.is_draft) {
-                built_lines =
-                    build_ragged_paragraph(lines, cur_par, TextAlignment::Left, Length::zero());
-                if(!built_lines.empty()) {
-                    auto &first_line = built_lines[0];
-                    if(std::holds_alternative<MarkupDrawCommand>(first_line)) {
-                        std::get<MarkupDrawCommand>(first_line).x += cur_par.indent;
-                    } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(first_line)) {
-                        std::get<JustifiedMarkupDrawCommand>(first_line).x += cur_par.indent;
-                    } else {
-                        std::abort();
-                    }
-                }
-            } else {
-                built_lines = build_justified_paragraph(lines, cur_par, textblock_width());
-            }
-            Length current_y_origin = rel_y;
-            int lines_in_paragraph = 0;
-            for(auto &line : built_lines) {
-                if(heights.total_height() + cur_par.line_height > bottom_watermark) {
-                    new_page(true);
-                    current_y_origin = -lines_in_paragraph * cur_par.line_height;
-                    rel_y = Length::zero();
-                }
-                ++lines_in_paragraph;
-                layout.text.emplace_back(std::move(line));
-                adjust_y(layout.text.back(), current_y_origin);
-                rel_y += cur_par.line_height;
-                heights.text_height += cur_par.line_height;
-            }
-            first_paragraph = false;
+            create_paragraph(
+                std::get<Paragraph>(e), extras, rel_y, bottom_watermark, first_paragraph);
         } else if(std::holds_alternative<Footnote>(e)) {
             if(!layout.footnote.empty() || !pending_footnotes.empty()) {
                 printf("More than one footnote per page is not yet supported.");
                 std::abort();
             }
-            const Footnote &f = std::get<Footnote>(e);
-            heights.whitespace_height += spaces.footnote_separation;
-            std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text);
-            ParagraphFormatter b(processed_words, paragraph_width, styles.footnote, extras);
-            auto lines = b.split_formatted_lines();
-            std::string fnum = std::to_string(f.number);
-            fnum += '.';
-            auto tmpy = heights.footnote_height;
-            auto built_lines = build_justified_paragraph(lines, styles.footnote, textblock_width());
-            const auto footnote_total_height = built_lines.size() * styles.footnote.line_height;
-            // FIXME, split the footnote over two pages.
-            if(heights.total_height() + footnote_total_height >= bottom_watermark) {
-                pending_footnotes.emplace_back(MarkupDrawCommand{std::move(fnum),
-                                                                 &styles.footnote.font,
-                                                                 Length::zero(),
-                                                                 tmpy,
-                                                                 TextAlignment::Left});
-                pending_footnotes.insert(
-                    pending_footnotes.end(), built_lines.begin(), built_lines.end());
-            } else {
-                // FIXME: draw in flush_commands instead?
-                layout.footnote.emplace_back(MarkupDrawCommand{std::move(fnum),
-                                                               &styles.footnote.font,
-                                                               Length::zero(),
-                                                               tmpy,
-                                                               TextAlignment::Left});
-                heights.footnote_height += footnote_total_height;
-                layout.footnote.insert(
-                    layout.footnote.end(), built_lines.begin(), built_lines.end());
-            }
+            create_footnote(std::get<Footnote>(e), extras, bottom_watermark);
         } else if(std::holds_alternative<SceneChange>(e)) {
             if(doc.data.is_draft) {
                 layout.text.emplace_back(MarkupDrawCommand{"#",
@@ -347,39 +230,173 @@ void Paginator::create_maintext() {
         } else if(std::holds_alternative<NumberList>(e)) {
             // FIXME: expand commands like \footnote{1} to values.
             const NumberList &nl = std::get<NumberList>(e);
-            const Length number_area = Length::from_mm(5);
-            const Length indent = spaces.codeblock_indent; // FIXME
-            const Length text_width = paragraph_width - number_area - 2 * indent;
-            const Length item_separator = spaces.different_paragraphs / 2;
-            rel_y += spaces.different_paragraphs;
-            heights.whitespace_height += spaces.different_paragraphs;
-            for(size_t i = 0; i < nl.items.size(); ++i) {
-                if(i != 0) {
-                    rel_y += item_separator;
-                    heights.whitespace_height += item_separator;
-                }
-                std::vector<EnrichedWord> processed_words = text_to_formatted_words(nl.items[i]);
-                ParagraphFormatter b(processed_words, text_width, styles.lists, extras);
-                auto lines = b.split_formatted_lines();
-                std::string fnum = std::to_string(i + 1);
-                fnum += '.';
-                layout.text.emplace_back(MarkupDrawCommand{
-                    std::move(fnum), &styles.lists.font, indent, rel_y, TextAlignment::Left});
-                for(auto &line : build_justified_paragraph(
-                        lines, styles.lists, text_width, indent + number_area, rel_y)) {
-                    // FIXME, handle page changes.
-                    layout.text.emplace_back(std::move(line));
-                    heights.text_height += styles.lists.line_height;
-                    rel_y += styles.lists.line_height;
-                }
-            }
-            rel_y += spaces.different_paragraphs;
-            heights.whitespace_height += spaces.different_paragraphs;
+            create_numberlist(nl, rel_y, extras);
         } else {
             printf("Unknown element in document array.\n");
             std::abort();
         }
     }
+}
+
+void Paginator::create_section(const Section &s,
+                               const ExtraPenaltyAmounts &extras,
+                               Length &rel_y,
+                               bool &first_section,
+                               bool &first_paragraph) {
+    const auto paragraph_width = page.w - m.inner - m.outer;
+    const auto section_width = 0.8 * paragraph_width;
+    printf("Processing section: %s\n", s.text.c_str());
+    if(!first_section) {
+        new_page(true);
+        if(!doc.data.is_draft && current_page % 2 == 0) {
+            new_page(false);
+        }
+    }
+    chapter_start_page = rend->page_num();
+    rend->add_section_outline(s.number, s.text);
+    first_section = false;
+    rel_y = Length::zero();
+    rel_y += spaces.above_section;
+    heights.whitespace_height += spaces.above_section;
+    assert(s.level == 1);
+    // Fancy stuff above the text.
+    std::string title_string;
+    TextAlignment section_alignment = TextAlignment::Centered;
+    if(doc.data.is_draft) {
+        title_string = std::to_string(s.number);
+        title_string += ". ";
+        title_string += s.text;
+        section_alignment = TextAlignment::Left;
+    } else {
+        title_string = "§ ";
+        title_string += std::to_string(s.number);
+        layout.text.emplace_back(MarkupDrawCommand{title_string,
+                                                   &styles.section.font,
+                                                   textblock_width() / 2,
+                                                   rel_y,
+                                                   TextAlignment::Centered});
+        rel_y += 2 * styles.section.line_height;
+        heights.text_height += 2 * styles.section.line_height;
+        title_string = s.text;
+    }
+    // The title. Hyphenation is prohibited.
+    std::vector<EnrichedWord> processed_words = text_to_formatted_words(title_string, false);
+    ParagraphFormatter b(processed_words, section_width, styles.section, extras);
+    auto lines = b.split_formatted_lines();
+    auto built_lines = build_ragged_paragraph(lines, styles.section, section_alignment, rel_y);
+    for(auto &line : built_lines) {
+        layout.text.emplace_back(std::move(line));
+        rel_y += styles.section.line_height;
+        heights.text_height += styles.section.line_height;
+    }
+    rel_y += spaces.below_section;
+    heights.text_height += spaces.below_section;
+    first_paragraph = true;
+}
+
+void Paginator::create_paragraph(const Paragraph &p,
+                                 const ExtraPenaltyAmounts &extras,
+                                 Length &rel_y,
+                                 const Length &bottom_watermark,
+                                 bool &first_paragraph) {
+    const auto paragraph_width = page.w - m.inner - m.outer;
+    const ChapterParameters &cur_par = first_paragraph ? styles.normal_noindent : styles.normal;
+    std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
+    ParagraphFormatter b(processed_words, paragraph_width, cur_par, extras);
+    auto lines = b.split_formatted_lines();
+    std::vector<TextCommands> built_lines;
+    if(doc.data.is_draft) {
+        built_lines = build_ragged_paragraph(lines, cur_par, TextAlignment::Left, Length::zero());
+        if(!built_lines.empty()) {
+            auto &first_line = built_lines[0];
+            if(std::holds_alternative<MarkupDrawCommand>(first_line)) {
+                std::get<MarkupDrawCommand>(first_line).x += cur_par.indent;
+            } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(first_line)) {
+                std::get<JustifiedMarkupDrawCommand>(first_line).x += cur_par.indent;
+            } else {
+                std::abort();
+            }
+        }
+    } else {
+        built_lines = build_justified_paragraph(lines, cur_par, textblock_width());
+    }
+    Length current_y_origin = rel_y;
+    int lines_in_paragraph = 0;
+    for(auto &line : built_lines) {
+        if(heights.total_height() + cur_par.line_height > bottom_watermark) {
+            new_page(true);
+            current_y_origin = -lines_in_paragraph * cur_par.line_height;
+            rel_y = Length::zero();
+        }
+        ++lines_in_paragraph;
+        layout.text.emplace_back(std::move(line));
+        adjust_y(layout.text.back(), current_y_origin);
+        rel_y += cur_par.line_height;
+        heights.text_height += cur_par.line_height;
+    }
+    first_paragraph = false;
+}
+
+void Paginator::create_footnote(const Footnote &f,
+                                const ExtraPenaltyAmounts &extras,
+                                const Length &bottom_watermark) {
+    const auto paragraph_width = page.w - m.inner - m.outer;
+    heights.whitespace_height += spaces.footnote_separation;
+    std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text);
+    ParagraphFormatter b(processed_words, paragraph_width, styles.footnote, extras);
+    auto lines = b.split_formatted_lines();
+    std::string fnum = std::to_string(f.number);
+    fnum += '.';
+    auto tmpy = heights.footnote_height;
+    auto built_lines = build_justified_paragraph(lines, styles.footnote, textblock_width());
+    const auto footnote_total_height = built_lines.size() * styles.footnote.line_height;
+    // FIXME, split the footnote over two pages.
+    if(heights.total_height() + footnote_total_height >= bottom_watermark) {
+        pending_footnotes.emplace_back(MarkupDrawCommand{
+            std::move(fnum), &styles.footnote.font, Length::zero(), tmpy, TextAlignment::Left});
+        pending_footnotes.insert(pending_footnotes.end(), built_lines.begin(), built_lines.end());
+    } else {
+        // FIXME: draw in flush_commands instead?
+        layout.footnote.emplace_back(MarkupDrawCommand{
+            std::move(fnum), &styles.footnote.font, Length::zero(), tmpy, TextAlignment::Left});
+        heights.footnote_height += footnote_total_height;
+        layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
+    }
+}
+
+void Paginator::create_numberlist(const NumberList &nl,
+                                  Length &rel_y,
+                                  const ExtraPenaltyAmounts &extras) {
+    const auto paragraph_width = page.w - m.inner - m.outer;
+
+    const Length number_area = Length::from_mm(5);
+    const Length indent = spaces.codeblock_indent; // FIXME
+    const Length text_width = paragraph_width - number_area - 2 * indent;
+    const Length item_separator = spaces.different_paragraphs / 2;
+    rel_y += spaces.different_paragraphs;
+    heights.whitespace_height += spaces.different_paragraphs;
+    for(size_t i = 0; i < nl.items.size(); ++i) {
+        if(i != 0) {
+            rel_y += item_separator;
+            heights.whitespace_height += item_separator;
+        }
+        std::vector<EnrichedWord> processed_words = text_to_formatted_words(nl.items[i]);
+        ParagraphFormatter b(processed_words, text_width, styles.lists, extras);
+        auto lines = b.split_formatted_lines();
+        std::string fnum = std::to_string(i + 1);
+        fnum += '.';
+        layout.text.emplace_back(MarkupDrawCommand{
+            std::move(fnum), &styles.lists.font, indent, rel_y, TextAlignment::Left});
+        for(auto &line : build_justified_paragraph(
+                lines, styles.lists, text_width, indent + number_area, rel_y)) {
+            // FIXME, handle page changes.
+            layout.text.emplace_back(std::move(line));
+            heights.text_height += styles.lists.line_height;
+            rel_y += styles.lists.line_height;
+        }
+    }
+    rel_y += spaces.different_paragraphs;
+    heights.whitespace_height += spaces.different_paragraphs;
 }
 
 void Paginator::add_top_image(const ImageInfo &image) {
