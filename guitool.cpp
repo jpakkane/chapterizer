@@ -90,6 +90,7 @@ struct App {
     GtkToggleButton *justify;
     GtkEntry *hyp_entry;
     GtkLabel *hyp_output;
+    GtkComboBoxText *language;
     std::string default_text{preformatted_text};
 
     // Penalty amounts
@@ -367,11 +368,13 @@ void run_optimization_cb(GtkButton *, gpointer data) {
     // FIXME: run as an async task.
     WordHyphenator hyp;
     ChapterParameters params = get_params(app);
+    Language lang =
+        static_cast<Language>(gtk_combo_box_get_active(GTK_COMBO_BOX(app->language)) + 1);
     auto paragraph_width = Length::from_mm(gtk_spin_button_get_value(app->chapter_width));
 
     ExtraPenaltyAmounts extras = get_penalties(app);
     auto words = get_entry_widget_text_words(app);
-    auto hyphenated_words = hyp.hyphenate(words, Language::English);
+    auto hyphenated_words = hyp.hyphenate(words, lang);
     std::vector<EnrichedWord> rich_words;
     rich_words.reserve(hyphenated_words.size());
     StyleStack empty_style;
@@ -380,10 +383,13 @@ void run_optimization_cb(GtkButton *, gpointer data) {
             EnrichedWord{std::move(words[i]), std::move(hyphenated_words[i]), {}, empty_style});
     }
     ParagraphFormatter builder{rich_words, paragraph_width, params, extras};
-    auto new_lines = builder.split_lines();
+    auto new_lines = builder.split_formatted_lines();
     std::string collator;
     for(const auto &l : new_lines) {
-        collator += l;
+        for(const auto &w : l) {
+            collator += w;
+            collator += ' ';
+        }
         collator += '\n';
     }
     gtk_text_buffer_set_text(app->buf(), collator.c_str(), collator.size());
@@ -629,6 +635,7 @@ void build_treeviews(App *app) {
 
 void populate_parameter_grid(App *app, GtkGrid *parameter_grid) {
     int i = 0;
+    add_property(parameter_grid, "Language", GTK_WIDGET(app->language), i++);
     add_property(parameter_grid, "Zoom", GTK_WIDGET(app->zoom), i++);
     add_property(parameter_grid, "Font size", GTK_WIDGET(app->ptsize), i++);
     add_property(parameter_grid, "Row height", GTK_WIDGET(app->row_height), i++);
@@ -692,6 +699,12 @@ void activate(GtkApplication *, gpointer user_data) {
     gtk_spin_button_set_value(app->single_split_word_penalty, 50);
 
     populate_fontlist(app);
+
+    app->language = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
+    gtk_combo_box_text_append_text(app->language, "English");
+    gtk_combo_box_text_append_text(app->language, "Finnish");
+    gtk_combo_box_set_active(GTK_COMBO_BOX(app->language), 0);
+
     app->font_style = GTK_COMBO_BOX_TEXT(gtk_combo_box_text_new());
     gtk_combo_box_text_append_text(app->font_style, "Regular");
     gtk_combo_box_text_append_text(app->font_style, "Italic");
