@@ -154,14 +154,14 @@ void PdfRenderer::fill_box(Length x, Length y, Length w, Length h, double color)
     cairo_restore(cr);
 }
 
-void PdfRenderer::draw_dash_line(const std::vector<Coord> &points) {
+void PdfRenderer::draw_dash_line(const std::vector<Coord> &points, double line_width) {
     if(points.size() < 2) {
         return;
     }
     cairo_save(cr);
     cairo_set_source_rgb(cr, 0, 0, 0);
-    cairo_set_line_width(cr, 0.6);
-    const double dashes[2] = {4.0, 1.5};
+    cairo_set_line_width(cr, line_width);
+    const double dashes[2] = {4.0, 2.0};
     cairo_set_dash(cr, dashes, 2, 0.0);
     cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
     cairo_move_to(cr, points[0].x.pt(), points[0].y.pt());

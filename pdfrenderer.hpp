@@ -83,7 +83,7 @@ public:
 
     void draw_image(const ImageInfo &image, Length x, Length y, Length w, Length h);
 
-    void draw_dash_line(const std::vector<Coord> &points);
+    void draw_dash_line(const std::vector<Coord> &points, double line_width);
 
     void draw_arc(Length x, Length y, Length r, double angle1, double angle2, Length thickness);
 

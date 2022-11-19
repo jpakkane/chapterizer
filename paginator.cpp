@@ -289,6 +289,13 @@ void Paginator::create_section(const Section &s,
         rel_y += styles.section.line_height;
         heights.text_height += styles.section.line_height;
     }
+    // FIXME: assume all headings have one line of text,
+    // so that the following paragraph always starts at the
+    // same height.
+    if(!doc.data.is_draft) {
+        assert(!lines.empty());
+        rel_y -= styles.section.line_height * (lines.size() - 1);
+    }
     rel_y += spaces.below_section;
     heights.text_height += spaces.below_section;
     first_paragraph = true;
@@ -546,32 +553,36 @@ void Paginator::new_page(bool draw_page_num) {
     }
 }
 
-void Paginator::draw_debug_bars(int num_bars) {
+void Paginator::draw_debug_bars(int num_bars, const Length bar_start_y) {
     const Length boxheight = styles.section.line_height;
     const Length chaffwidth = Length::from_mm(6);
     for(int i = 0; i < num_bars; ++i) {
-        rend->fill_box(
-            current_left_margin(), m.upper + 2 * i * boxheight, textblock_width(), boxheight, 0.85);
+        rend->fill_box(current_left_margin(),
+                       bar_start_y + 2 * i * boxheight,
+                       textblock_width(),
+                       boxheight,
+                       0.85);
     }
     rend->draw_box(current_left_margin() - chaffwidth,
-                   m.upper,
+                   bar_start_y,
                    textblock_width() + 2 * chaffwidth,
                    2 * num_bars * boxheight,
                    Length::from_pt(0.1));
     // Text area box
+    const double line_width = 0.4;
     std::vector<Coord> dashcoords;
-    dashcoords.emplace_back(Coord{current_left_margin(), m.upper});
-    dashcoords.emplace_back(Coord{current_left_margin(), m.upper + 2 * num_bars * boxheight});
-    rend->draw_dash_line(dashcoords);
+    dashcoords.emplace_back(Coord{current_left_margin(), bar_start_y});
+    dashcoords.emplace_back(Coord{current_left_margin(), bar_start_y + 2 * num_bars * boxheight});
+    rend->draw_dash_line(dashcoords, line_width);
     dashcoords.clear();
-    dashcoords.emplace_back(Coord{current_left_margin() + textblock_width(), m.upper});
+    dashcoords.emplace_back(Coord{current_left_margin() + textblock_width(), bar_start_y});
     dashcoords.emplace_back(
-        Coord{current_left_margin() + textblock_width(), m.upper + 2 * num_bars * boxheight});
-    rend->draw_dash_line(dashcoords);
+        Coord{current_left_margin() + textblock_width(), bar_start_y + 2 * num_bars * boxheight});
+    rend->draw_dash_line(dashcoords, line_width);
     dashcoords.clear();
 
     const auto hole_center_x = current_left_margin() - chaffwidth / 2;
-    const auto hole_center_y = m.upper + boxheight / 2.0;
+    const auto hole_center_y = bar_start_y + boxheight / 2.0;
     const auto hole_center_deltax = textblock_width() + chaffwidth;
     const auto hole_center_deltay = 2 * boxheight;
     const Length minor_radius = Length::from_mm(1.5);
@@ -598,7 +609,8 @@ void Paginator::flush_draw_commands() {
     const bool draw_textarea_box = false;
     Length footnote_block_start = page.h - m.lower - heights.footnote_height;
     if(doc.data.debug_draw && !doc.data.is_draft && current_page == chapter_start_page) {
-        draw_debug_bars(4);
+        const Length bar_start_y = m.upper + spaces.above_section - 2 * styles.section.line_height;
+        draw_debug_bars(4, bar_start_y);
     }
     if(draw_textarea_box) {
         rend->draw_box(current_left_margin(),
@@ -804,7 +816,9 @@ void Paginator::create_credits() {
 }
 
 void Paginator::create_postcredits() {
-    draw_debug_bars(17);
+    const Length bar_start_y = m.upper;
+
+    draw_debug_bars(17, bar_start_y);
     const auto x = current_left_margin() + Length::from_mm(2);
     Length y = m.upper + styles.section.line_height + Length::from_mm(0.5);
     for(const auto &l : doc.data.postcredits) {

@@ -85,7 +85,7 @@ public:
 
     void generate_pdf(const char *outfile);
 
-    void draw_debug_bars(int num_bars);
+    void draw_debug_bars(int num_bars, const Length bar_start_y);
 
 private:
     void render_page_num(const FontParameters &par);
