@@ -701,9 +701,9 @@ void Paginator::create_draft_title_page() {
 
 void Paginator::create_title_page() {
     const auto middle = current_left_margin() + textblock_width() / 2;
-    const auto text_top = m.upper + textblock_height() / 2 - 4 * styles.title.line_height;
+    const auto text_top = m.upper + textblock_height() / 2 - 3 * styles.title.line_height;
     auto y = text_top;
-    const Length gap = Length::from_mm(10);
+    const Length gap = Length::from_mm(5);
     rend->render_markup_as_is(
         doc.data.title.c_str(), styles.title.font, middle, y, TextAlignment::Centered);
     y += styles.title.line_height;
