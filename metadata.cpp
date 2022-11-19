@@ -87,6 +87,10 @@ ChapterParameters parse_chapterstyle(const json &data) {
     }
     chapter_style.font.type = it->second;
     chapter_style.font.size = Length::from_pt(get_double(font, "pointsize"));
+    auto fit = data.find("justify_last");
+    if(fit != data.end()) {
+        chapter_style.indent_last_line = fit->get<bool>();
+    }
     return chapter_style;
 }
 

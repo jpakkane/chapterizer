@@ -75,6 +75,7 @@ struct ChapterParameters {
     Length line_height;
     Length indent; // Of first line.
     FontParameters font;
+    bool indent_last_line = false;
 };
 
 struct FontStyles {

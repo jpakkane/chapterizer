@@ -373,7 +373,7 @@ double ParagraphFormatter::total_penalty(const std::vector<LineStats> &lines,
         indent = Length::zero();
         total += last_line_penalty;
     }
-    const auto line_penalty = total - last_line_penalty;
+    const auto line_penalty = params.indent_last_line ? total : total - last_line_penalty;
     const auto extra_penalties = compute_multihyphen_penalties(lines, extras);
     auto extra_penalty = std::accumulate(
         extra_penalties.begin(),
