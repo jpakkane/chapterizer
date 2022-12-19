@@ -749,6 +749,16 @@ void Paginator::create_title_page() {
     rend->draw_arc(middle, text_top - gap, donut_inner, 0, M_PI, Length::from_pt(2));
     rend->draw_arc(middle, text_bottom + gap, donut_outer, M_PI, 0, Length::from_pt(2));
     rend->draw_arc(middle, text_bottom + gap, donut_inner, M_PI, 0, Length::from_pt(2));
+
+    auto pub_logo = rend->get_image("print_img/kustantaja.png");
+    Length display_width = Length::from_mm(40);
+    Length display_height = display_width / pub_logo.w * pub_logo.h;
+
+    rend->draw_image(pub_logo,
+                     middle - display_width / 2,
+                     doc.data.pdf.page.h - Length::from_mm(30),
+                     display_width,
+                     display_height);
     new_page(false);
 }
 
