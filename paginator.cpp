@@ -765,9 +765,14 @@ void Paginator::create_title_page() {
 void Paginator::create_colophon() {
     const auto x = current_left_margin();
     auto y = page.h - m.lower - (doc.data.pdf.colophon.size() + 1) * styles.colophon.line_height;
-    for(size_t i = 0; i < doc.data.pdf.colophon.size(); ++i) {
-        if(!doc.data.pdf.colophon[i].empty()) {
-            rend->render_text_as_is(doc.data.pdf.colophon[i].c_str(), styles.colophon.font, x, y);
+    for(const auto &line : doc.data.pdf.colophon) {
+        if(!line.empty()) {
+            // I was feeling super lazy when writing this. I admit it.
+            if(line.starts_with("https://")) {
+                rend->render_text_as_is(line.c_str(), styles.code.font, x, y);
+            } else {
+                rend->render_text_as_is(line.c_str(), styles.colophon.font, x, y);
+            }
         }
         y += styles.colophon.line_height;
     }
