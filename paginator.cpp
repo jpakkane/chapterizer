@@ -438,6 +438,9 @@ void Paginator::render_page_num(const FontParameters &par) {
                                   m.upper - 2 * styles.normal.line_height,
                                   TextAlignment::Right);
     } else {
+        if(current_page == 204) { // MAGIC!
+            return;
+        }
         char buf[128];
         snprintf(buf, 128, "%d", current_page);
         const Length yloc = page.h - m.lower + styles.normal.line_height;
@@ -750,9 +753,18 @@ void Paginator::create_title_page() {
     rend->draw_arc(middle, text_bottom + gap, donut_outer, M_PI, 0, Length::from_pt(2));
     rend->draw_arc(middle, text_bottom + gap, donut_inner, M_PI, 0, Length::from_pt(2));
 
+    auto series_logo = rend->get_image("print_img/sahkolammas.png");
+    Length display_width = Length::from_mm(15);
+    Length display_height = display_width / series_logo.w * series_logo.h;
+
+    rend->draw_image(series_logo,
+                     middle - display_width / 2 - Length::from_mm(1),
+                     doc.data.pdf.page.h - Length::from_mm(48),
+                     display_width,
+                     display_height);
     auto pub_logo = rend->get_image("print_img/kustantaja.png");
-    Length display_width = Length::from_mm(40);
-    Length display_height = display_width / pub_logo.w * pub_logo.h;
+    display_width = Length::from_mm(40);
+    display_height = display_width / pub_logo.w * pub_logo.h;
 
     rend->draw_image(pub_logo,
                      middle - display_width / 2,
