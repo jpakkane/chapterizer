@@ -163,6 +163,7 @@ void hyphenate_and_append(std::string &reconstructed_word,
 
 char *discard_one_letter_syllables(char *hyphen_str) {
     const auto word_len = strlen(hyphen_str);
+
     if(word_len < 3) {
         return hyphen_str;
     }
@@ -245,6 +246,16 @@ std::vector<HyphenPoint> WordHyphenator::hyphenate(const std::string &word,
     } else if(lang == Language::Finnish) {
         // The return value is an ASCII string. It lists the hyphenation points
         // in characters, but we need them in bytes.
+        std::string tmp{word};
+        size_t popped_chars = 0;
+        while(!tmp.empty() &&
+              (tmp.back() == ',' || tmp.back() == '.' || tmp.back() == ':' || tmp.back() == ';')) {
+            tmp.pop_back();
+            ++popped_chars;
+        }
+        if(popped_chars > 0) {
+            return hyphenate(tmp, lang);
+        }
         char *hyphenation = discard_one_letter_syllables(voikkoHyphenateCstr(voikko, word.c_str()));
 
         const char *character_location = word.c_str();

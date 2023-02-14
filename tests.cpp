@@ -137,6 +137,15 @@ void test_singleletter() {
     CHECK(w.front() == expected);
 }
 
+void test_singleletter_end() {
+    WordHyphenator h;
+    const std::string text{"tarttua,"};
+    HyphenPoint expected{3, SplitType::Regular};
+    const auto w = h.hyphenate(text, Language::Finnish);
+    CHECK(w.size() == 1);
+    CHECK(w.front() == expected);
+}
+
 void test_singleletter_dash() {
     WordHyphenator h;
     const std::string text{"junaolio-oliivi"};
@@ -166,6 +175,7 @@ void test_hyphenation() {
     test_utf8();
     test_finhyphen();
     test_singleletter();
+    test_singleletter_end();
     test_singleletter_dash();
 }
 
