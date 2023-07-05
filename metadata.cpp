@@ -154,9 +154,10 @@ void load_pdf_element(Metadata &m, const json &pdf) {
     auto page = pdf["page"];
     auto margins = pdf["margins"];
 
-    auto colophon_file = m.top_dir / get_string(pdf, "colophon");
-    m.pdf.colophon = read_lines(colophon_file.c_str());
-
+    if(pdf.contains("colophon")) {
+        auto colophon_file = m.top_dir / get_string(pdf, "colophon");
+        m.pdf.colophon = read_lines(colophon_file.c_str());
+    }
     if(m.is_draft) {
         setup_draft_settings(m);
     } else {
@@ -277,9 +278,11 @@ Metadata load_book_json(const char *path) {
         m.sources.push_back(e.get<std::string>());
     }
 
-    auto dedication_path = m.top_dir / data["dedication"];
+    if(data.contains("dedication")) {
+        auto dedication_path = m.top_dir / data["dedication"];
+        m.dedication = read_paragraphs(dedication_path.c_str());
+    }
 
-    m.dedication = read_paragraphs(dedication_path.c_str());
     if(data.contains("pdf")) {
         m.generate_pdf = true;
         load_pdf_element(m, data["pdf"]);
@@ -287,8 +290,10 @@ Metadata load_book_json(const char *path) {
         m.generate_pdf = false;
     }
 
-    auto credits_path = m.top_dir / data["credits"];
-    m.credits = load_credits(credits_path.c_str());
+    if(data.contains("credits")) {
+        auto credits_path = m.top_dir / data["credits"];
+        m.credits = load_credits(credits_path.c_str());
+    }
     if(data.contains("epub")) {
         m.generate_epub = true;
         load_epub_element(m, data["epub"]);
@@ -296,8 +301,10 @@ Metadata load_book_json(const char *path) {
         m.generate_epub = false;
     }
 
-    auto post_path = m.top_dir / data["postcredits"];
-    m.postcredits = read_lines(post_path.c_str());
+    if(data.contains("postcredits")) {
+        auto post_path = m.top_dir / data["postcredits"];
+        m.postcredits = read_lines(post_path.c_str());
+    }
     return m;
 }
 
