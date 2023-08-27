@@ -1,8 +1,11 @@
-# Visual chapter linebreaking tool
+# Book PDF creator
 
-This repository contains a global line splitter algorithm (like
-Knuth-Plass but not really) and a GUI tool for testing its behaviour
-with different fonts, chapter widths et al.
+This repository contains code to create a print-ready PDF and epub versions
+of a book written in a custom "markdown-esque" syntax.
+
+The core algorithm is a global line splitter algorithm (like
+Knuth-Plass but not really). There is also a GUI tool for testing its
+behaviour with different fonts, chapter widths et al.
 
 The code only works with latin text. This is because the point of the
 code is to create aesthetically pleasing results rather than
@@ -19,7 +22,7 @@ Other limitations include:
 - the GUI is very utilitarian "engineering UI", it might
 cause eye bleeding in people sensitive to UI purism
 
-- hyphenation only supports English (and in fact requires it)
+- hyphenation only supports English and Finnish
 
 - there are some weird bugs, patches welcome
 
