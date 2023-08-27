@@ -641,13 +641,15 @@ std::vector<LineStats> ParagraphFormatter::get_line_end_choices(size_t start_spl
         //
         // Some text and so on and at the very end we have a verylongsingle-
         // word.
-        size_t i = tightest_split.end_split - 3;
-        while(i > start_split) {
-            if(std::holds_alternative<BetweenWordSplit>(split_points[i])) {
-                add_point(i);
-                break;
+        if(tightest_split.end_split > 3) {
+            size_t i = tightest_split.end_split - 3;
+            while(i > start_split) {
+                if(std::holds_alternative<BetweenWordSplit>(split_points[i])) {
+                    add_point(i);
+                    break;
+                }
+                --i;
             }
-            --i;
         }
     }
     return potentials;

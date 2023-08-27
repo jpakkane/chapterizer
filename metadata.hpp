@@ -52,6 +52,7 @@ struct ChapterStyles {
     ChapterParameters normal_noindent;
     ChapterParameters code;
     ChapterParameters section;
+    ChapterParameters letter;
     ChapterParameters footnote;
     ChapterParameters lists;
     ChapterParameters title;
@@ -64,6 +65,7 @@ struct Spaces {
     Length above_section;
     Length below_section;
     Length different_paragraphs;
+    Length letter_indent;
     Length codeblock_indent;
     Length footnote_separation;
 };
@@ -121,6 +123,10 @@ struct Section {
     std::string text;
 };
 
+struct Letter {
+    std::vector<std::string> paragraphs;
+};
+
 struct CodeBlock {
     std::vector<std::string> raw_lines;
 };
@@ -141,8 +147,9 @@ struct Figure {
 struct SceneChange {};
 
 // Also needs images, footnotes, unformatted text etc.
-typedef std::variant<Paragraph, Section, SceneChange, CodeBlock, Footnote, NumberList, Figure>
-    DocElement;
+typedef std::
+    variant<Paragraph, Section, SceneChange, CodeBlock, Footnote, NumberList, Figure, Letter>
+        DocElement;
 
 struct Document {
     Metadata data;

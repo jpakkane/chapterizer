@@ -28,7 +28,9 @@ static const std::array<const char *, 10> superscript_numbers{
 const std::unordered_map<std::string, SpecialBlockType> specialmap{
     {"code", SpecialBlockType::Code},
     {"footnote", SpecialBlockType::Footnote},
-    {"numberlist", SpecialBlockType::NumberList}};
+    {"numberlist", SpecialBlockType::NumberList},
+    {"letter", SpecialBlockType::Letter},
+};
 
 } // namespace
 
@@ -193,6 +195,8 @@ void StructureParser::build_element() {
             doc.elements.emplace_back(Footnote{footnote_number, pop_lines_to_string()});
         } else if(current_special == SpecialBlockType::NumberList) {
             doc.elements.emplace_back(NumberList{pop_lines_to_paragraphs()});
+        } else if(current_special == SpecialBlockType::Letter) {
+            doc.elements.emplace_back(Letter{pop_lines_to_paragraphs()});
         } else {
             std::abort();
         }

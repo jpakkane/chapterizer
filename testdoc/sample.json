@@ -2,13 +2,18 @@
     "title": "The Super Book of Stuff",
     "author": "Bob McBob",
     "language": "fi",
-    "dedication": "dedication.txt",
+    "dedication_": "dedication.txt",
     "credits": "credits.txt",
     "postcredits": "postcredits.txt",
     "sources": [
         "chapter1.bd",
         "chapter2.bd"
     ],
+    "draft": {
+        "surname": "Pakkanen",
+        "email": "jpakkane@gmail.com",
+        "phone": "040 222 2222"
+    },
     "pdf": {
         "colophon": "colophon.txt",
         "filename": "bookout.pdf",
@@ -77,6 +82,15 @@
                     "pointsize": 9
                 }
             },
+            "letter": {
+                "line_height": 14,
+                "indent": 5,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "italic",
+                    "pointsize": 10
+                }
+            },
             "lists": {
                 "line_height": 12,
                 "indent": 0,
@@ -110,6 +124,7 @@
             "below_section": 10,
             "different_paragraphs": 3,
             "codeblock_indent": 5,
+            "letter_indent": 10,
             "footnote_separation": 2
         }
     },

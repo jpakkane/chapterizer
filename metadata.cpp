@@ -112,6 +112,8 @@ void setup_draft_settings(Metadata &m) {
     m.pdf.styles.dedication = normal;
     m.pdf.styles.footnote = normal;
     m.pdf.styles.lists = normal;
+    m.pdf.styles.letter = normal;
+    m.pdf.styles.letter.font.type = FontStyle::Italic;
 
     m.pdf.styles.section.font.name = "Liberation Sans";
     m.pdf.styles.section.font.size = Length::from_pt(14);
@@ -136,7 +138,8 @@ void setup_draft_settings(Metadata &m) {
     // Spaces
     m.pdf.spaces.below_section = Length::from_mm(0);
     m.pdf.spaces.above_section = Length::from_mm(60);
-    m.pdf.spaces.codeblock_indent = Length::zero();
+    m.pdf.spaces.codeblock_indent = Length::from_mm(20);
+    m.pdf.spaces.letter_indent = Length::from_mm(20);
     m.pdf.spaces.different_paragraphs = Length::from_mm(5);
     m.pdf.spaces.footnote_separation = Length::from_mm(5);
 }
@@ -175,6 +178,7 @@ void load_pdf_element(Metadata &m, const json &pdf) {
         m.pdf.styles.normal_noindent.indent = Length::zero();
         m.pdf.styles.section = parse_chapterstyle(styles["section"]);
         m.pdf.styles.code = parse_chapterstyle(styles["code"]);
+        m.pdf.styles.letter = parse_chapterstyle(styles["letter"]);
         m.pdf.styles.footnote = parse_chapterstyle(styles["footnote"]);
         m.pdf.styles.lists = parse_chapterstyle(styles["lists"]);
         m.pdf.styles.title = parse_chapterstyle(styles["title"]);
@@ -188,6 +192,7 @@ void load_pdf_element(Metadata &m, const json &pdf) {
         m.pdf.spaces.different_paragraphs =
             Length::from_mm(get_double(spaces, "different_paragraphs"));
         m.pdf.spaces.codeblock_indent = Length::from_mm(get_double(spaces, "codeblock_indent"));
+        m.pdf.spaces.letter_indent = Length::from_mm(get_double(spaces, "letter_indent"));
         m.pdf.spaces.footnote_separation =
             Length::from_mm(get_double(spaces, "footnote_separation"));
     }
