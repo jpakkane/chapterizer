@@ -132,7 +132,8 @@ private:
                           const ExtraPenaltyAmounts &extras,
                           Length &rel_y,
                           const Length &bottom_watermark,
-                          bool &first_paragraph);
+                          const ChapterParameters &chpar,
+                          Length extra_indent);
     void create_footnote(const Footnote &f,
                          const ExtraPenaltyAmounts &extras,
                          const Length &bottom_watermark);

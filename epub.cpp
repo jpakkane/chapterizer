@@ -197,6 +197,17 @@ void write_codeblock(tinyxml2::XMLDocument &epubdoc,
     body->InsertEndChild(p);
 }
 
+void write_letter(tinyxml2::XMLDocument &epubdoc,
+                  tinyxml2::XMLElement *body,
+                  const Letter &letter) {
+    for(const auto &par : letter.paragraphs) {
+        auto p = epubdoc.NewElement("p");
+        p->SetAttribute("class", "letter");
+        p->SetText(par.c_str());
+        body->InsertEndChild(p);
+    }
+}
+
 } // namespace
 
 Epub::Epub(const Document &d) : doc(d) {
@@ -461,6 +472,9 @@ void Epub::write_chapters(const fs::path &outdir) {
             heading->SetText((tmpbuf + sec.text).c_str());
         } else if(std::holds_alternative<CodeBlock>(e)) {
             write_codeblock(epubdoc, body, std::get<CodeBlock>(e));
+            is_new_after_special = true;
+        } else if(std::holds_alternative<Letter>(e)) {
+            write_letter(epubdoc, body, std::get<Letter>(e));
             is_new_after_special = true;
         } else if(std::holds_alternative<SceneChange>(e)) {
             assert(body);

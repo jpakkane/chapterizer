@@ -122,9 +122,9 @@ void Paginator::generate_pdf(const char *outfile) {
         if(doc.data.is_draft) {
             create_draft_title_page();
         } else {
-            create_title_page();
-            create_colophon();
             if(!doc.data.dedication.empty()) {
+                create_title_page();
+                create_colophon();
                 create_dedication();
                 new_page(false);
             }
@@ -164,8 +164,13 @@ void Paginator::create_maintext() {
         if(std::holds_alternative<Section>(e)) {
             create_section(std::get<Section>(e), extras, rel_y, first_section, first_paragraph);
         } else if(std::holds_alternative<Paragraph>(e)) {
-            create_paragraph(
-                std::get<Paragraph>(e), extras, rel_y, bottom_watermark, first_paragraph);
+            create_paragraph(std::get<Paragraph>(e),
+                             extras,
+                             rel_y,
+                             bottom_watermark,
+                             first_paragraph ? styles.normal_noindent : styles.normal,
+                             Length::zero());
+            first_paragraph = false;
         } else if(std::holds_alternative<Footnote>(e)) {
             if(!layout.footnote.empty() || !pending_footnotes.empty()) {
                 printf("More than one footnote per page is not yet supported.");
@@ -207,6 +212,24 @@ void Paginator::create_maintext() {
             first_paragraph = true;
             rel_y += spaces.different_paragraphs;
             heights.whitespace_height += spaces.different_paragraphs;
+        } else if(std::holds_alternative<Letter>(e)) {
+            const Letter &l = std::get<Letter>(e);
+            rel_y += spaces.different_paragraphs;
+            heights.whitespace_height += spaces.different_paragraphs;
+            first_paragraph = true;
+            for(const auto &partext : l.paragraphs) {
+                Paragraph p{partext};
+                create_paragraph(p,
+                                 extras,
+                                 rel_y,
+                                 bottom_watermark,
+                                 styles.letter,
+                                 doc.data.pdf.spaces.letter_indent);
+                first_paragraph = false;
+            }
+            rel_y += spaces.different_paragraphs;
+            heights.whitespace_height += spaces.different_paragraphs;
+            first_paragraph = true;
         } else if(std::holds_alternative<Figure>(e)) {
             const Figure &cb = std::get<Figure>(e);
             const auto fullpath = doc.data.top_dir / cb.file;
@@ -305,43 +328,52 @@ void Paginator::create_paragraph(const Paragraph &p,
                                  const ExtraPenaltyAmounts &extras,
                                  Length &rel_y,
                                  const Length &bottom_watermark,
-                                 bool &first_paragraph) {
-    const auto paragraph_width = page.w - m.inner - m.outer;
-    const ChapterParameters &cur_par = first_paragraph ? styles.normal_noindent : styles.normal;
+                                 const ChapterParameters &chpar,
+                                 Length extra_indent) {
+    const auto paragraph_width = textblock_width() - 2 * extra_indent;
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
-    ParagraphFormatter b(processed_words, paragraph_width, cur_par, extras);
+    ParagraphFormatter b(processed_words, paragraph_width, chpar, extras);
     auto lines = b.split_formatted_lines();
     std::vector<TextCommands> built_lines;
     if(doc.data.is_draft) {
-        built_lines = build_ragged_paragraph(lines, cur_par, TextAlignment::Left, Length::zero());
+        built_lines = build_ragged_paragraph(lines, chpar, TextAlignment::Left, Length::zero());
         if(!built_lines.empty()) {
             auto &first_line = built_lines[0];
             if(std::holds_alternative<MarkupDrawCommand>(first_line)) {
-                std::get<MarkupDrawCommand>(first_line).x += cur_par.indent;
+                std::get<MarkupDrawCommand>(first_line).x += chpar.indent;
             } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(first_line)) {
-                std::get<JustifiedMarkupDrawCommand>(first_line).x += cur_par.indent;
+                std::get<JustifiedMarkupDrawCommand>(first_line).x += chpar.indent;
             } else {
                 std::abort();
             }
         }
     } else {
-        built_lines = build_justified_paragraph(lines, cur_par, textblock_width());
+        built_lines = build_justified_paragraph(lines, chpar, paragraph_width);
+    }
+    // Shift sideways
+    for(auto &line : built_lines) {
+        if(std::holds_alternative<MarkupDrawCommand>(line)) {
+            std::get<MarkupDrawCommand>(line).x += extra_indent;
+        } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(line)) {
+            std::get<JustifiedMarkupDrawCommand>(line).x += extra_indent;
+        } else {
+            std::abort();
+        }
     }
     Length current_y_origin = rel_y;
     int lines_in_paragraph = 0;
     for(auto &line : built_lines) {
-        if(heights.total_height() + cur_par.line_height > bottom_watermark) {
+        if(heights.total_height() + chpar.line_height > bottom_watermark) {
             new_page(true);
-            current_y_origin = -lines_in_paragraph * cur_par.line_height;
+            current_y_origin = -lines_in_paragraph * chpar.line_height;
             rel_y = Length::zero();
         }
         ++lines_in_paragraph;
         layout.text.emplace_back(std::move(line));
         adjust_y(layout.text.back(), current_y_origin);
-        rel_y += cur_par.line_height;
-        heights.text_height += cur_par.line_height;
+        rel_y += chpar.line_height;
+        heights.text_height += chpar.line_height;
     }
-    first_paragraph = false;
 }
 
 void Paginator::create_footnote(const Footnote &f,
