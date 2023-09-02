@@ -36,6 +36,8 @@ public:
         textblock_width = w - inner - outer;
         textblock_height = h - top - bottom;
 
+        line_height = 14;
+
         page = 1;
         surf = cairo_pdf_surface_create("paginationtest.pdf", w, h);
         cr = cairo_create(surf);
@@ -46,7 +48,26 @@ public:
         cairo_surface_destroy(surf);
     }
 
-    void create() { draw_textbox(); }
+    void create() {
+        draw_textbox();
+        draw_textlines(top, 3, 30);
+    }
+
+    void draw_textlines(double y, int32_t num_lines, double first_line_indent) {
+        const double left = left_margin();
+        cairo_save(cr);
+        cairo_set_source_rgb(cr, 0.9, 0.9, 0.9);
+        for(int32_t i = 0; i < num_lines; ++i) {
+            const double indent = i == 0 ? first_line_indent : 0;
+            cairo_rectangle(cr,
+                            left + indent,
+                            y + i * line_height,
+                            textblock_width - indent,
+                            0.7 * line_height);
+            cairo_fill(cr);
+        }
+        cairo_restore(cr);
+    }
 
     double left_margin() const { return (page % 2 == 1) ? inner : outer; }
 
@@ -67,6 +88,7 @@ private:
     double w, h;
     double inner, outer, top, bottom;
     double textblock_width, textblock_height;
+    double line_height;
     int32_t page;
 };
 
