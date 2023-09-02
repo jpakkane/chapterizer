@@ -52,3 +52,6 @@ executable('voikkotest', 'voikkotest.cpp',
     dependencies: voikko_dep)
 
 executable('blocktest', 'blocktest.cpp')
+
+executable('paginationtest', 'paginationtest.cpp',
+    dependencies: cairo_dep)
