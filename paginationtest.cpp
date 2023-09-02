@@ -17,9 +17,64 @@
 #include <cairo.h>
 #include <cairo-pdf.h>
 #include <cstdlib>
+#include <cassert>
+
+#include <vector>
+#include <string>
+#include <variant>
+
+struct Paragraph {
+    std::vector<std::string> lines;
+};
+
+struct Heading {
+    std::vector<std::string> lines;
+};
+
+struct Figure {
+    double h;
+    std::string text;
+};
+
+typedef std::variant<Paragraph, Heading, Figure> Element;
+
+struct TextLoc {
+    size_t element;
+    size_t line;
+};
+
+struct PageContent {
+    TextLoc start;
+    TextLoc end;
+    // std::vector<size_t> images;
+    // std::something footnotes;
+};
+
 namespace {
 
 double mm2pt(const double x) { return x * 2.8346456693; }
+
+Paragraph dummy_paragraph(int32_t num_lines) {
+    Paragraph p;
+    for(int32_t i = 0; i < num_lines; ++i) {
+        p.lines.emplace_back("");
+    }
+    return p;
+}
+
+std::vector<Element> create_document() {
+    std::vector<Element> es;
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(5));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(6));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(10));
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(2));
+    return es;
+}
 
 } // namespace
 
@@ -37,6 +92,9 @@ public:
         textblock_height = h - top - bottom;
 
         line_height = 14;
+        line_target = 34;
+
+        assert(int32_t(textblock_height / line_height) == line_target);
 
         page = 1;
         surf = cairo_pdf_surface_create("paginationtest.pdf", w, h);
@@ -50,7 +108,14 @@ public:
 
     void create() {
         draw_textbox();
-        draw_textlines(top, 3, 30);
+        auto elements = create_document();
+        const double indent = 30;
+        double y = top;
+        for(const auto &e : elements) {
+            const auto &p = std::get<Paragraph>(e);
+            draw_textlines(y, p.lines.size(), indent);
+            y += p.lines.size() * line_height;
+        }
     }
 
     void draw_textlines(double y, int32_t num_lines, double first_line_indent) {
@@ -59,10 +124,11 @@ public:
         cairo_set_source_rgb(cr, 0.9, 0.9, 0.9);
         for(int32_t i = 0; i < num_lines; ++i) {
             const double indent = i == 0 ? first_line_indent : 0;
+            const double last_line_multiplier = i + 1 == num_lines ? 0.8 : 1.0;
             cairo_rectangle(cr,
                             left + indent,
                             y + i * line_height,
-                            textblock_width - indent,
+                            last_line_multiplier * (textblock_width - indent),
                             0.7 * line_height);
             cairo_fill(cr);
         }
@@ -89,6 +155,7 @@ private:
     double inner, outer, top, bottom;
     double textblock_width, textblock_height;
     double line_height;
+    int32_t line_target;
     int32_t page;
 };
 
