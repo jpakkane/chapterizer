@@ -114,8 +114,27 @@ public:
         for(const auto &e : elements) {
             const auto &p = std::get<Paragraph>(e);
             draw_textlines(y, p.lines.size(), indent);
+            draw_page_number();
             y += p.lines.size() * line_height;
         }
+    }
+
+    void draw_page_number() {
+        const double line_width = 24;
+        const double pointsize = 12;
+        cairo_save(cr);
+        cairo_set_source_rgb(cr, 0, 0, 0);
+        cairo_set_line_width(cr, line_width);
+        cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
+        cairo_move_to(cr, -line_width, h / 2);
+        cairo_rel_line_to(cr, 2 * line_width, 0);
+        cairo_stroke(cr);
+        cairo_set_source_rgb(cr, 1, 1, 1);
+        cairo_move_to(cr, line_width / 2 - pointsize / 2.5, h / 2 + pointsize / 2.5);
+        cairo_select_font_face(cr, "serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+        cairo_set_font_size(cr, pointsize);
+        cairo_show_text(cr, "888");
+        cairo_restore(cr);
     }
 
     void draw_textlines(double y, int32_t num_lines, double first_line_indent) {
