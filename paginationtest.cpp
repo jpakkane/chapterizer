@@ -64,15 +64,184 @@ Paragraph dummy_paragraph(int32_t num_lines) {
 
 std::vector<Element> create_document() {
     std::vector<Element> es;
-    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(8));
+    es.emplace_back(dummy_paragraph(15));
     es.emplace_back(dummy_paragraph(5));
+    es.emplace_back(dummy_paragraph(3));
+    // scene
+    es.emplace_back(dummy_paragraph(6));
+
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(7));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(2));
     es.emplace_back(dummy_paragraph(2));
     es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(7));
+    es.emplace_back(dummy_paragraph(15));
+    es.emplace_back(dummy_paragraph(5));
+    es.emplace_back(dummy_paragraph(3));
+    // scene
+    es.emplace_back(dummy_paragraph(13));
     es.emplace_back(dummy_paragraph(6));
+
+    es.emplace_back(dummy_paragraph(5));
     es.emplace_back(dummy_paragraph(1));
-    es.emplace_back(dummy_paragraph(10));
+    es.emplace_back(dummy_paragraph(2));
     es.emplace_back(dummy_paragraph(4));
     es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(12));
+    es.emplace_back(dummy_paragraph(13));
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(8));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(7));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(4));
+
+    es.emplace_back(dummy_paragraph(6));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(6));
+    es.emplace_back(dummy_paragraph(13));
+    es.emplace_back(dummy_paragraph(8));
+
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(5));
+    es.emplace_back(dummy_paragraph(5));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(5));
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(6));
+
+    es.emplace_back(dummy_paragraph(3));
+    // scene
+    es.emplace_back(dummy_paragraph(15));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(6));
+
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(1));
+
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(5));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(8));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(1));
+    // scene
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(7));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(4));
+
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(7));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(5));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(3));
+
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(4));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(7));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(4));
+
+    es.emplace_back(dummy_paragraph(13));
+    es.emplace_back(dummy_paragraph(5));
+    es.emplace_back(dummy_paragraph(3));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(1));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(2));
+    es.emplace_back(dummy_paragraph(2));
+
     return es;
 }
 
@@ -106,51 +275,112 @@ public:
         cairo_surface_destroy(surf);
     }
 
-    void create() {
-        draw_textbox();
-        auto elements = create_document();
+    std::vector<TextLoc> split_to_pages(const std::vector<Element> &elements) {
+        std::vector<TextLoc> splits;
+        int num_lines = 0;
+        for(size_t eind = 0; eind < elements.size(); ++eind) {
+            const auto &e = elements[eind];
+            const auto &p = std::get<Paragraph>(e);
+            for(size_t lind = 0; lind < p.lines.size(); ++lind) {
+                if(num_lines >= line_target) {
+                    splits.emplace_back(TextLoc{eind, lind});
+                    num_lines = 0;
+                }
+                ++num_lines;
+            }
+        }
+        if(num_lines > 0) {
+            splits.emplace_back(
+                TextLoc{elements.size() - 1, std::get<Paragraph>(elements.back()).lines.size()});
+        }
+        return splits;
+    }
+
+    void draw_page(const std::vector<Element> &elements, const TextLoc &start, const TextLoc &end) {
         const double indent = 30;
         double y = top;
-        for(const auto &e : elements) {
-            const auto &p = std::get<Paragraph>(e);
-            draw_textlines(y, p.lines.size(), indent);
-            draw_page_number();
-            y += p.lines.size() * line_height;
+        size_t eind = start.element;
+        size_t lind = start.line;
+        while(eind <= end.element) {
+            if(eind == end.element && lind == end.line) {
+                break;
+            }
+            const auto &p = std::get<Paragraph>(elements[eind]);
+            assert(eind <= end.element);
+            if(eind == end.element) {
+                // Last thing on this page.
+                while(lind < end.line) {
+                    draw_textline(y, lind == 0 ? indent : 0.0, lind == p.lines.size() - 1);
+                    y += line_height;
+                    ++lind;
+                }
+                eind = end.element;
+                lind = end.line;
+            } else {
+                while(lind < p.lines.size()) {
+                    draw_textline(y, lind == 0 ? indent : 0.0, lind == p.lines.size() - 1);
+                    y += line_height;
+                    if(++lind >= p.lines.size()) {
+                        ++eind;
+                        lind = 0;
+                        break;
+                    }
+                }
+            }
+        }
+        draw_page_number();
+    }
+
+    void create() {
+        auto elements = create_document();
+        auto splitpoints = split_to_pages(elements);
+        printf("%d splits\n", (int)splitpoints.size());
+        draw_textbox();
+        TextLoc previous{0, 0};
+        for(const auto &current : splitpoints) {
+            draw_page(elements, previous, current);
+            cairo_show_page(cr);
+            ++page;
+            previous = current;
         }
     }
 
     void draw_page_number() {
-        const double line_width = 24;
+        const double line_width = 20;
         const double pointsize = 12;
+        const double yref = h / 2;
+        const double texty = yref + pointsize / 2.5;
+        const double linex = page % 2 ? w - line_width : -line_width;
+        const double line_length = 2 * line_width;
         cairo_save(cr);
         cairo_set_source_rgb(cr, 0, 0, 0);
         cairo_set_line_width(cr, line_width);
         cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
-        cairo_move_to(cr, -line_width, h / 2);
-        cairo_rel_line_to(cr, 2 * line_width, 0);
+        cairo_move_to(cr, linex, yref);
+        cairo_rel_line_to(cr, line_length, 0);
         cairo_stroke(cr);
         cairo_set_source_rgb(cr, 1, 1, 1);
-        cairo_move_to(cr, line_width / 2 - pointsize / 2.5, h / 2 + pointsize / 2.5);
+        const double textx = page % 2 ? w - line_width : line_width / 4; // FIXME, alignment
+        cairo_move_to(cr, textx, texty);
         cairo_select_font_face(cr, "serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
         cairo_set_font_size(cr, pointsize);
-        cairo_show_text(cr, "888");
+        char buf[128];
+        snprintf(buf, 128, "%d", page);
+        cairo_show_text(cr, buf);
         cairo_restore(cr);
     }
 
-    void draw_textlines(double y, int32_t num_lines, double first_line_indent) {
+    void draw_textline(double y, double indent, bool is_last_line) {
         const double left = left_margin();
         cairo_save(cr);
         cairo_set_source_rgb(cr, 0.9, 0.9, 0.9);
-        for(int32_t i = 0; i < num_lines; ++i) {
-            const double indent = i == 0 ? first_line_indent : 0;
-            const double last_line_multiplier = i + 1 == num_lines ? 0.8 : 1.0;
-            cairo_rectangle(cr,
-                            left + indent,
-                            y + i * line_height,
-                            last_line_multiplier * (textblock_width - indent),
-                            0.7 * line_height);
-            cairo_fill(cr);
-        }
+        const double last_line_multiplier = is_last_line ? 0.8 : 1.0;
+        cairo_rectangle(cr,
+                        left + indent,
+                        y,
+                        last_line_multiplier * (textblock_width - indent),
+                        0.7 * line_height);
+        cairo_fill(cr);
         cairo_restore(cr);
     }
 
