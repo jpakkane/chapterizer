@@ -67,7 +67,7 @@ struct LayoutPenalties {
     double orphan = 10;
     double different_spread = 10;
     double missing_target = 5;
-    double last_page_widow = 100;
+    double last_page_widow = 80;
 };
 
 namespace {
@@ -272,7 +272,7 @@ public:
     PageSplitter(const std::vector<Element> &e, int32_t target)
         : elements(e), line_target{target} {}
 
-    std::vector<PaginationData> split_to_pages() {
+    std::vector<PaginationData> split_to_pages() const {
         std::vector<PaginationData> pages;
         int num_lines = 0;
         TextLoc previous{0, 0};
@@ -300,7 +300,34 @@ public:
     }
 
 private:
-    PaginationData compute_page_stats(const TextLoc &from, const TextLoc &to, int32_t num_lines) {
+    double compute_penalties(const std::vector<PaginationData> &pages, bool is_complete) const {
+        assert(!pages.empty());
+        double total_penalty = 0;
+        int page_num = 0;
+        for(const auto &page : pages) {
+            ++page_num;
+            if(page.s.has_widow) {
+                total_penalty += penalties.widow;
+            }
+            if(page.s.has_orphan) {
+                total_penalty += penalties.orphan;
+            }
+            if(page_num > 1 && page_num != (int32_t)pages.size() && page_num % 2 == 1) {
+                total_penalty +=
+                    penalties.different_spread * abs(pages[page_num - 1].s.height_delta);
+            }
+            if(page.c.num_lines != line_target && page_num != (int32_t)pages.size()) {
+                total_penalty += penalties.missing_target;
+            }
+        }
+        if(is_complete && pages.back().c.num_lines == 1) {
+            total_penalty += penalties.last_page_widow;
+        }
+        return total_penalty;
+    }
+
+    PaginationData
+    compute_page_stats(const TextLoc &from, const TextLoc &to, int32_t num_lines) const {
         PaginationData pd;
         pd.c.start = from;
         pd.c.end = to;
@@ -317,7 +344,7 @@ private:
         return pd;
     }
 
-    void compute_interpage_stats(std::vector<PaginationData> &pages) {
+    void compute_interpage_stats(std::vector<PaginationData> &pages) const {
         for(size_t i = 1; i < pages.size(); ++i) {
             pages[i].s.height_delta =
                 int32_t(pages[i].c.num_lines) - int32_t(pages[i - 1].c.num_lines);
