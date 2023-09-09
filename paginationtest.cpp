@@ -46,8 +46,20 @@ struct TextLoc {
 struct PageContent {
     TextLoc start;
     TextLoc end;
+    int32_t num_lines;
     // std::vector<size_t> images;
     // std::something footnotes;
+};
+
+struct PageStats {
+    bool has_widow = false;
+    bool has_orphan = false;
+    int32_t height_delta = 0; // line count difference to previous page
+};
+
+struct PaginationData {
+    PageContent c;
+    PageStats s;
 };
 
 namespace {
@@ -261,11 +273,11 @@ public:
         textblock_height = h - top - bottom;
 
         line_height = 14;
-        line_target = 34;
+        line_target = textblock_height / line_height;
 
         assert(int32_t(textblock_height / line_height) == line_target);
 
-        page = 1;
+        page_number = 1;
         surf = cairo_pdf_surface_create("paginationtest.pdf", w, h);
         cr = cairo_create(surf);
     }
@@ -275,47 +287,80 @@ public:
         cairo_surface_destroy(surf);
     }
 
-    std::vector<TextLoc> split_to_pages(const std::vector<Element> &elements) {
-        std::vector<TextLoc> splits;
+    PaginationData compute_page_stats(const std::vector<Element> &elements,
+                                      const TextLoc &from,
+                                      const TextLoc &to,
+                                      int32_t num_lines) {
+        PaginationData pd;
+        pd.c.start = from;
+        pd.c.end = to;
+        pd.c.num_lines = num_lines;
+        const auto &from_el = std::get<Paragraph>(elements[from.element]);
+        const auto &to_el = std::get<Paragraph>(elements[to.element]);
+        if(from.line == from_el.lines.size() - 1 && from_el.lines.size() > 1) {
+            pd.s.has_widow = true;
+        }
+        if(to.line == 1 && to_el.lines.size() > 1) {
+            pd.s.has_orphan = true;
+        }
+
+        return pd;
+    }
+
+    void compute_interpage_stats(std::vector<PaginationData> &pages) {
+        for(size_t i = 1; i < pages.size(); ++i) {
+            pages[i].s.height_delta =
+                int32_t(pages[i].c.num_lines) - int32_t(pages[i - 1].c.num_lines);
+        }
+    }
+
+    std::vector<PaginationData> split_to_pages(const std::vector<Element> &elements) {
+        std::vector<PaginationData> pages;
         int num_lines = 0;
+        TextLoc previous{0, 0};
         for(size_t eind = 0; eind < elements.size(); ++eind) {
             const auto &e = elements[eind];
             const auto &p = std::get<Paragraph>(e);
             for(size_t lind = 0; lind < p.lines.size(); ++lind) {
                 if(num_lines >= line_target) {
-                    splits.emplace_back(TextLoc{eind, lind});
-                    num_lines = 0;
+                    assert(num_lines == line_target);
+                    TextLoc next{eind, lind};
+                    pages.emplace_back(compute_page_stats(elements, previous, next, num_lines));
+                    num_lines = 1; // Will be correct on the next round.
+                    previous = next;
+                } else {
+                    ++num_lines;
                 }
-                ++num_lines;
             }
         }
         if(num_lines > 0) {
-            splits.emplace_back(
-                TextLoc{elements.size() - 1, std::get<Paragraph>(elements.back()).lines.size()});
+            TextLoc next{elements.size() - 1, std::get<Paragraph>(elements.back()).lines.size()};
+            pages.emplace_back(compute_page_stats(elements, previous, next, num_lines));
         }
-        return splits;
+        compute_interpage_stats(pages);
+        return pages;
     }
 
-    void draw_page(const std::vector<Element> &elements, const TextLoc &start, const TextLoc &end) {
+    void draw_page(const std::vector<Element> &elements, const PageContent &page) {
         const double indent = 30;
         double y = top;
-        size_t eind = start.element;
-        size_t lind = start.line;
-        while(eind <= end.element) {
-            if(eind == end.element && lind == end.line) {
+        size_t eind = page.start.element;
+        size_t lind = page.start.line;
+        while(eind <= page.end.element) {
+            if(eind == page.end.element && lind == page.end.line) {
                 break;
             }
             const auto &p = std::get<Paragraph>(elements[eind]);
-            assert(eind <= end.element);
-            if(eind == end.element) {
+            assert(eind <= page.end.element);
+            if(eind == page.end.element) {
                 // Last thing on this page.
-                while(lind < end.line) {
+                while(lind < page.end.line) {
                     draw_textline(y, lind == 0 ? indent : 0.0, lind == p.lines.size() - 1);
                     y += line_height;
                     ++lind;
                 }
-                eind = end.element;
-                lind = end.line;
+                eind = page.end.element;
+                lind = page.end.line;
             } else {
                 while(lind < p.lines.size()) {
                     draw_textline(y, lind == 0 ? indent : 0.0, lind == p.lines.size() - 1);
@@ -331,36 +376,39 @@ public:
         draw_page_number();
     }
 
-    void print_stats(const std::vector<Element> &elements,
-                     const std::vector<TextLoc> &splitpoints) {
-        TextLoc previous{0, 0};
-        int page_num = 1;
-        for(const auto &next : splitpoints) {
-            const auto &prev_el = std::get<Paragraph>(elements[previous.element]);
-            const auto &next_el = std::get<Paragraph>(elements[next.element]);
-            if(previous.line == prev_el.lines.size() - 1 && prev_el.lines.size() > 1) {
+    void print_stats(const std::vector<PaginationData> &pages) {
+        assert(!pages.empty());
+        int page_num = 0;
+        for(const auto &page : pages) {
+            ++page_num;
+            if(page.s.has_widow) {
                 printf("%d: widow line.\n", page_num);
             }
-            if(next.line == 1 && next_el.lines.size() > 1) {
+            if(page.s.has_orphan) {
                 printf("%d: orphan line.\n", page_num);
             }
-
-            ++page_num;
-            previous = next;
+            if(page_num > 1 && page_num != (int32_t)pages.size() && page_num % 2 == 1 &&
+               pages[page_num - 1].s.height_delta != 0) {
+                printf("%d: spread height difference.\n", page_num);
+            }
+            if(page.c.num_lines != line_target && page_num != (int32_t)pages.size()) {
+                printf("%d: line target not met.\n", page_num);
+            }
+        }
+        if(pages.back().c.num_lines == 1) {
+            printf("%d: last page only has one line.\n", page_num);
         }
     }
 
     void create() {
         auto elements = create_document();
-        auto splitpoints = split_to_pages(elements);
-        print_stats(elements, splitpoints);
-        draw_textbox();
-        TextLoc previous{0, 0};
-        for(const auto &current : splitpoints) {
-            draw_page(elements, previous, current);
+        auto pages = split_to_pages(elements);
+        print_stats(pages);
+        for(const auto &current : pages) {
+            draw_textbox();
+            draw_page(elements, current.c);
             cairo_show_page(cr);
-            ++page;
-            previous = current;
+            ++page_number;
         }
     }
 
@@ -369,7 +417,7 @@ public:
         const double pointsize = 12;
         const double yref = h / 2;
         const double texty = yref + pointsize / 2.5;
-        const double linex = page % 2 ? w - line_width : -line_width;
+        const double linex = page_number % 2 ? w - line_width : -line_width;
         const double line_length = 2 * line_width;
         cairo_save(cr);
         cairo_set_source_rgb(cr, 0, 0, 0);
@@ -379,12 +427,12 @@ public:
         cairo_rel_line_to(cr, line_length, 0);
         cairo_stroke(cr);
         cairo_set_source_rgb(cr, 1, 1, 1);
-        const double textx = page % 2 ? w - line_width : line_width / 4; // FIXME, alignment
+        const double textx = page_number % 2 ? w - line_width : line_width / 4; // FIXME, alignment
         cairo_move_to(cr, textx, texty);
         cairo_select_font_face(cr, "serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
         cairo_set_font_size(cr, pointsize);
         char buf[128];
-        snprintf(buf, 128, "%d", page);
+        snprintf(buf, 128, "%d", page_number);
         cairo_show_text(cr, buf);
         cairo_restore(cr);
     }
@@ -403,7 +451,7 @@ public:
         cairo_restore(cr);
     }
 
-    double left_margin() const { return (page % 2 == 1) ? inner : outer; }
+    double left_margin() const { return (page_number % 2 == 1) ? inner : outer; }
 
     void draw_textbox() {
         double left = left_margin();
@@ -424,7 +472,7 @@ private:
     double textblock_width, textblock_height;
     double line_height;
     int32_t line_target;
-    int32_t page;
+    int32_t page_number;
 };
 
 int main() {
