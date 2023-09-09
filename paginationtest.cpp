@@ -331,10 +331,29 @@ public:
         draw_page_number();
     }
 
+    void print_stats(const std::vector<Element> &elements,
+                     const std::vector<TextLoc> &splitpoints) {
+        TextLoc previous{0, 0};
+        int page_num = 1;
+        for(const auto &next : splitpoints) {
+            const auto &prev_el = std::get<Paragraph>(elements[previous.element]);
+            const auto &next_el = std::get<Paragraph>(elements[next.element]);
+            if(previous.line == prev_el.lines.size() - 1 && prev_el.lines.size() > 1) {
+                printf("%d: widow line.\n", page_num);
+            }
+            if(next.line == 1 && next_el.lines.size() > 1) {
+                printf("%d: orphan line.\n", page_num);
+            }
+
+            ++page_num;
+            previous = next;
+        }
+    }
+
     void create() {
         auto elements = create_document();
         auto splitpoints = split_to_pages(elements);
-        printf("%d splits\n", (int)splitpoints.size());
+        print_stats(elements, splitpoints);
         draw_textbox();
         TextLoc previous{0, 0};
         for(const auto &current : splitpoints) {
