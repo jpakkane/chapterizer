@@ -22,6 +22,7 @@
 #include <vector>
 #include <string>
 #include <variant>
+#include <optional>
 
 struct Paragraph {
     std::vector<std::string> lines;
@@ -68,6 +69,13 @@ struct LayoutPenalties {
     double different_spread = 10;
     double missing_target = 5;
     double last_page_widow = 80;
+};
+
+struct PotentialSplits {
+    std::optional<TextLoc> one_less;
+    TextLoc locally_optimal;
+    int32_t optimal_lines;
+    std::optional<TextLoc> one_more;
 };
 
 namespace {
@@ -272,28 +280,40 @@ public:
     PageSplitter(const std::vector<Element> &e, int32_t target)
         : elements(e), line_target{target} {}
 
-    std::vector<PaginationData> split_to_pages() const {
-        std::vector<PaginationData> pages;
+    PotentialSplits compute_splits(const TextLoc &from) const {
+        PotentialSplits splits;
         int num_lines = 0;
-        TextLoc previous{0, 0};
-        for(size_t eind = 0; eind < elements.size(); ++eind) {
+        for(size_t eind = from.element; eind < elements.size(); ++eind) {
             const auto &e = elements[eind];
             const auto &p = std::get<Paragraph>(e);
-            for(size_t lind = 0; lind < p.lines.size(); ++lind) {
-                if(num_lines >= line_target) {
-                    assert(num_lines == line_target);
-                    TextLoc next{eind, lind};
-                    pages.emplace_back(compute_page_stats(previous, next, num_lines));
-                    num_lines = 1; // Will be correct on the next round.
-                    previous = next;
+            const auto lind_start = eind == from.element ? from.line : 0;
+            for(size_t lind = lind_start; lind < p.lines.size(); ++lind) {
+                if(num_lines > line_target) {
+                    splits.one_more = TextLoc{eind, lind};
+                    return splits;
+                } else if(num_lines == line_target) {
+                    splits.locally_optimal = TextLoc{eind, lind};
+                    splits.optimal_lines = num_lines;
                 } else {
-                    ++num_lines;
+                    splits.one_less = TextLoc(eind, lind);
                 }
+                ++num_lines;
             }
         }
-        if(num_lines > 0) {
-            TextLoc next{elements.size() - 1, std::get<Paragraph>(elements.back()).lines.size()};
-            pages.emplace_back(compute_page_stats(previous, next, num_lines));
+        splits.locally_optimal =
+            TextLoc{elements.size(), std::get<Paragraph>(elements.back()).lines.size()};
+        return splits;
+    }
+
+    std::vector<PaginationData> split_to_pages() const {
+        std::vector<PaginationData> pages;
+        TextLoc previous{0, 0};
+        while(previous.element < elements.size() &&
+              previous.line < std::get<Paragraph>(elements[previous.element]).lines.size()) {
+            const auto potentials = compute_splits(previous);
+            pages.emplace_back(
+                compute_page_stats(previous, potentials.locally_optimal, potentials.optimal_lines));
+            previous = potentials.locally_optimal;
         }
         compute_interpage_stats(pages);
         return pages;
