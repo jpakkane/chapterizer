@@ -62,6 +62,14 @@ struct PaginationData {
     PageStats s;
 };
 
+struct LayoutPenalties {
+    double widow = 20;
+    double orphan = 10;
+    double different_spread = 10;
+    double missing_target = 5;
+    double last_page_widow = 100;
+};
+
 namespace {
 
 double mm2pt(const double x) { return x * 2.8346456693; }
@@ -259,6 +267,68 @@ std::vector<Element> create_document() {
 
 } // namespace
 
+class PageSplitter {
+public:
+    PageSplitter(const std::vector<Element> &e, int32_t target)
+        : elements(e), line_target{target} {}
+
+    std::vector<PaginationData> split_to_pages() {
+        std::vector<PaginationData> pages;
+        int num_lines = 0;
+        TextLoc previous{0, 0};
+        for(size_t eind = 0; eind < elements.size(); ++eind) {
+            const auto &e = elements[eind];
+            const auto &p = std::get<Paragraph>(e);
+            for(size_t lind = 0; lind < p.lines.size(); ++lind) {
+                if(num_lines >= line_target) {
+                    assert(num_lines == line_target);
+                    TextLoc next{eind, lind};
+                    pages.emplace_back(compute_page_stats(previous, next, num_lines));
+                    num_lines = 1; // Will be correct on the next round.
+                    previous = next;
+                } else {
+                    ++num_lines;
+                }
+            }
+        }
+        if(num_lines > 0) {
+            TextLoc next{elements.size() - 1, std::get<Paragraph>(elements.back()).lines.size()};
+            pages.emplace_back(compute_page_stats(previous, next, num_lines));
+        }
+        compute_interpage_stats(pages);
+        return pages;
+    }
+
+private:
+    PaginationData compute_page_stats(const TextLoc &from, const TextLoc &to, int32_t num_lines) {
+        PaginationData pd;
+        pd.c.start = from;
+        pd.c.end = to;
+        pd.c.num_lines = num_lines;
+        const auto &from_el = std::get<Paragraph>(elements[from.element]);
+        const auto &to_el = std::get<Paragraph>(elements[to.element]);
+        if(from.line == from_el.lines.size() - 1 && from_el.lines.size() > 1) {
+            pd.s.has_widow = true;
+        }
+        if(to.line == 1 && to_el.lines.size() > 1) {
+            pd.s.has_orphan = true;
+        }
+
+        return pd;
+    }
+
+    void compute_interpage_stats(std::vector<PaginationData> &pages) {
+        for(size_t i = 1; i < pages.size(); ++i) {
+            pages[i].s.height_delta =
+                int32_t(pages[i].c.num_lines) - int32_t(pages[i - 1].c.num_lines);
+        }
+    }
+
+    LayoutPenalties penalties;
+    const std::vector<Element> &elements;
+    const int32_t line_target;
+};
+
 class Paginator {
 public:
     Paginator() {
@@ -285,60 +355,6 @@ public:
     ~Paginator() {
         cairo_destroy(cr);
         cairo_surface_destroy(surf);
-    }
-
-    PaginationData compute_page_stats(const std::vector<Element> &elements,
-                                      const TextLoc &from,
-                                      const TextLoc &to,
-                                      int32_t num_lines) {
-        PaginationData pd;
-        pd.c.start = from;
-        pd.c.end = to;
-        pd.c.num_lines = num_lines;
-        const auto &from_el = std::get<Paragraph>(elements[from.element]);
-        const auto &to_el = std::get<Paragraph>(elements[to.element]);
-        if(from.line == from_el.lines.size() - 1 && from_el.lines.size() > 1) {
-            pd.s.has_widow = true;
-        }
-        if(to.line == 1 && to_el.lines.size() > 1) {
-            pd.s.has_orphan = true;
-        }
-
-        return pd;
-    }
-
-    void compute_interpage_stats(std::vector<PaginationData> &pages) {
-        for(size_t i = 1; i < pages.size(); ++i) {
-            pages[i].s.height_delta =
-                int32_t(pages[i].c.num_lines) - int32_t(pages[i - 1].c.num_lines);
-        }
-    }
-
-    std::vector<PaginationData> split_to_pages(const std::vector<Element> &elements) {
-        std::vector<PaginationData> pages;
-        int num_lines = 0;
-        TextLoc previous{0, 0};
-        for(size_t eind = 0; eind < elements.size(); ++eind) {
-            const auto &e = elements[eind];
-            const auto &p = std::get<Paragraph>(e);
-            for(size_t lind = 0; lind < p.lines.size(); ++lind) {
-                if(num_lines >= line_target) {
-                    assert(num_lines == line_target);
-                    TextLoc next{eind, lind};
-                    pages.emplace_back(compute_page_stats(elements, previous, next, num_lines));
-                    num_lines = 1; // Will be correct on the next round.
-                    previous = next;
-                } else {
-                    ++num_lines;
-                }
-            }
-        }
-        if(num_lines > 0) {
-            TextLoc next{elements.size() - 1, std::get<Paragraph>(elements.back()).lines.size()};
-            pages.emplace_back(compute_page_stats(elements, previous, next, num_lines));
-        }
-        compute_interpage_stats(pages);
-        return pages;
     }
 
     void draw_page(const std::vector<Element> &elements, const PageContent &page) {
@@ -402,7 +418,8 @@ public:
 
     void create() {
         auto elements = create_document();
-        auto pages = split_to_pages(elements);
+        PageSplitter splitter(elements, line_target);
+        auto pages = splitter.split_to_pages();
         print_stats(pages);
         for(const auto &current : pages) {
             draw_textbox();
