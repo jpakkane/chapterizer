@@ -66,8 +66,8 @@ struct PaginationData {
 struct LayoutPenalties {
     double widow = 20;
     double orphan = 10;
-    double different_spread = 10;
-    double missing_target = 5;
+    double different_spread = 5;
+    double missing_target = 1;
     double last_page_widow = 80;
 };
 
@@ -280,6 +280,14 @@ public:
     PageSplitter(const std::vector<Element> &e, int32_t target)
         : elements(e), line_target{target} {}
 
+    std::vector<PaginationData> split_to_pages() {
+        std::vector<PaginationData> pages;
+
+        split_recursive(pages);
+        return std::move(best_split);
+    }
+
+private:
     PotentialSplits compute_splits(const PageLoc &from) {
         PotentialSplits splits;
         int num_lines = 0;
@@ -305,43 +313,47 @@ public:
         return splits;
     }
 
-    std::vector<PaginationData> split_to_pages() {
-        std::vector<PaginationData> pages;
-
-        split_recursive(pages);
-        return std::move(best_split);
-    }
-
-    void split_recursive(std::vector<PaginationData> &pages) {
-        PageLoc previous{0, 0};
-        if(!pages.empty()) {
-            previous = pages.back().c.end;
-        }
-        const auto potentials = compute_splits(previous);
-        const auto &optimal = potentials.locally_optimal;
-        if(optimal.element < elements.size() &&
-           optimal.line < std::get<Paragraph>(elements[optimal.element]).lines.size()) {
-            auto page_stats =
-                compute_page_stats(previous, potentials.locally_optimal, potentials.optimal_lines);
-            pages.emplace_back(std::move(page_stats));
-            compute_interpage_stats(pages);
+    void descend(std::vector<PaginationData> &pages,
+                 const PageLoc &split_point,
+                 const int32_t optimal_lines,
+                 const PageLoc &previous) {
+        auto page_stats = compute_page_stats(previous, split_point, optimal_lines);
+        pages.emplace_back(std::move(page_stats));
+        compute_interpage_stats(pages);
+        if(split_point.element < elements.size() &&
+           split_point.line < std::get<Paragraph>(elements[split_point.element]).lines.size()) {
             auto current_penalty = compute_penalties(pages, false);
             if(current_penalty < best_penalty) {
                 split_recursive(pages);
             }
-            pages.pop_back();
         } else {
-            // Reached the end of element array.
-            compute_interpage_stats(pages);
-            const double penalty = compute_penalties(pages, true);
-            if(penalty < best_penalty) {
-                best_penalty = penalty;
+            const double total_penalty = compute_penalties(pages, true);
+            if(total_penalty < best_penalty) {
+                best_penalty = total_penalty;
                 best_split = pages;
             }
         }
+        pages.pop_back();
     }
 
-private:
+    void split_recursive(std::vector<PaginationData> &pages) {
+        PageLoc previous{0, 0};
+        const auto num_pages = pages.size();
+        if(!pages.empty()) {
+            previous = pages.back().c.end;
+        }
+        const auto potentials = compute_splits(previous);
+        descend(pages, potentials.locally_optimal, potentials.optimal_lines, previous);
+        assert(pages.size() == num_pages);
+        if(potentials.one_less) {
+            descend(pages, *potentials.one_less, potentials.optimal_lines - 1, previous);
+        }
+        if(potentials.one_more) {
+            descend(pages, *potentials.one_more, potentials.optimal_lines + 1, previous);
+        }
+        assert(pages.size() == num_pages);
+    }
+
     double compute_penalties(const std::vector<PaginationData> &pages, bool is_complete) const {
         assert(!pages.empty());
         double total_penalty = 0;
@@ -358,7 +370,8 @@ private:
                 total_penalty +=
                     penalties.different_spread * abs(pages[page_num - 1].s.height_delta);
             }
-            if(page.c.num_lines != line_target && page_num != (int32_t)pages.size()) {
+            if(page.c.num_lines != line_target && page_num != (int32_t)pages.size() &&
+               page_num != 1) {
                 total_penalty += penalties.missing_target;
             }
         }
@@ -479,7 +492,8 @@ public:
                pages[page_num - 1].s.height_delta != 0) {
                 printf("%d: spread height difference.\n", page_num);
             }
-            if(page.c.num_lines != line_target && page_num != (int32_t)pages.size()) {
+            if(page.c.num_lines != line_target && page_num != (int32_t)pages.size() &&
+               page_num != 1) {
                 printf("%d: line target not met.\n", page_num);
             }
         }
