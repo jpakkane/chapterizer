@@ -39,14 +39,14 @@ struct Figure {
 
 typedef std::variant<Paragraph, Heading, Figure> Element;
 
-struct TextLoc {
+struct PageLoc {
     size_t element;
     size_t line;
 };
 
 struct PageContent {
-    TextLoc start;
-    TextLoc end;
+    PageLoc start;
+    PageLoc end;
     int32_t num_lines;
     // std::vector<size_t> images;
     // std::something footnotes;
@@ -72,10 +72,10 @@ struct LayoutPenalties {
 };
 
 struct PotentialSplits {
-    std::optional<TextLoc> one_less;
-    TextLoc locally_optimal;
+    std::optional<PageLoc> one_less;
+    PageLoc locally_optimal;
     int32_t optimal_lines;
-    std::optional<TextLoc> one_more;
+    std::optional<PageLoc> one_more;
 };
 
 namespace {
@@ -280,7 +280,7 @@ public:
     PageSplitter(const std::vector<Element> &e, int32_t target)
         : elements(e), line_target{target} {}
 
-    PotentialSplits compute_splits(const TextLoc &from) const {
+    PotentialSplits compute_splits(const PageLoc &from) {
         PotentialSplits splits;
         int num_lines = 0;
         for(size_t eind = from.element; eind < elements.size(); ++eind) {
@@ -289,39 +289,56 @@ public:
             const auto lind_start = eind == from.element ? from.line : 0;
             for(size_t lind = lind_start; lind < p.lines.size(); ++lind) {
                 if(num_lines > line_target) {
-                    splits.one_more = TextLoc{eind, lind};
+                    splits.one_more = PageLoc{eind, lind};
                     return splits;
                 } else if(num_lines == line_target) {
-                    splits.locally_optimal = TextLoc{eind, lind};
+                    splits.locally_optimal = PageLoc{eind, lind};
                     splits.optimal_lines = num_lines;
                 } else {
-                    splits.one_less = TextLoc(eind, lind);
+                    splits.one_less = PageLoc(eind, lind);
                 }
                 ++num_lines;
             }
         }
         splits.locally_optimal =
-            TextLoc{elements.size(), std::get<Paragraph>(elements.back()).lines.size()};
+            PageLoc{elements.size(), std::get<Paragraph>(elements.back()).lines.size()};
         return splits;
     }
 
     std::vector<PaginationData> split_to_pages() {
         std::vector<PaginationData> pages;
-        TextLoc previous{0, 0};
-        while(previous.element < elements.size() &&
-              previous.line < std::get<Paragraph>(elements[previous.element]).lines.size()) {
-            const auto potentials = compute_splits(previous);
-            pages.emplace_back(
-                compute_page_stats(previous, potentials.locally_optimal, potentials.optimal_lines));
-            previous = potentials.locally_optimal;
+
+        split_recursive(pages);
+        return std::move(best_split);
+    }
+
+    void split_recursive(std::vector<PaginationData> &pages) {
+        PageLoc previous{0, 0};
+        if(!pages.empty()) {
+            previous = pages.back().c.end;
         }
-        compute_interpage_stats(pages);
-        const double penalty = compute_penalties(pages, true);
-        if(penalty < best_penalty) {
-            best_penalty = penalty;
-            best_split = pages;
+        const auto potentials = compute_splits(previous);
+        const auto &optimal = potentials.locally_optimal;
+        if(optimal.element < elements.size() &&
+           optimal.line < std::get<Paragraph>(elements[optimal.element]).lines.size()) {
+            auto page_stats =
+                compute_page_stats(previous, potentials.locally_optimal, potentials.optimal_lines);
+            pages.emplace_back(std::move(page_stats));
+            compute_interpage_stats(pages);
+            auto current_penalty = compute_penalties(pages, false);
+            if(current_penalty < best_penalty) {
+                split_recursive(pages);
+            }
+            pages.pop_back();
+        } else {
+            // Reached the end of element array.
+            compute_interpage_stats(pages);
+            const double penalty = compute_penalties(pages, true);
+            if(penalty < best_penalty) {
+                best_penalty = penalty;
+                best_split = pages;
+            }
         }
-        return pages;
     }
 
 private:
@@ -352,7 +369,7 @@ private:
     }
 
     PaginationData
-    compute_page_stats(const TextLoc &from, const TextLoc &to, int32_t num_lines) const {
+    compute_page_stats(const PageLoc &from, const PageLoc &to, int32_t num_lines) const {
         PaginationData pd;
         pd.c.start = from;
         pd.c.end = to;
