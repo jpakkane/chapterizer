@@ -305,7 +305,7 @@ public:
         return splits;
     }
 
-    std::vector<PaginationData> split_to_pages() const {
+    std::vector<PaginationData> split_to_pages() {
         std::vector<PaginationData> pages;
         TextLoc previous{0, 0};
         while(previous.element < elements.size() &&
@@ -316,6 +316,11 @@ public:
             previous = potentials.locally_optimal;
         }
         compute_interpage_stats(pages);
+        const double penalty = compute_penalties(pages, true);
+        if(penalty < best_penalty) {
+            best_penalty = penalty;
+            best_split = pages;
+        }
         return pages;
     }
 
@@ -374,6 +379,9 @@ private:
     LayoutPenalties penalties;
     const std::vector<Element> &elements;
     const int32_t line_target;
+
+    std::vector<PaginationData> best_split;
+    double best_penalty = 1e100;
 };
 
 class Paginator {
