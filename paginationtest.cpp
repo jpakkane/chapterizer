@@ -423,6 +423,7 @@ public:
         outer = mm2pt(15);
         top = mm2pt(15);
         bottom = mm2pt(25);
+        bleed = mm2pt(20);
 
         textblock_width = w - inner - outer;
         textblock_height = h - top - bottom;
@@ -433,7 +434,7 @@ public:
         assert(int32_t(textblock_height / line_height) == line_target);
 
         page_number = 1;
-        surf = cairo_pdf_surface_create("paginationtest.pdf", w, h);
+        surf = cairo_pdf_surface_create("paginationtest.pdf", w + 2 * bleed, h + 2 * bleed);
         cr = cairo_create(surf);
     }
 
@@ -508,8 +509,12 @@ public:
         auto pages = splitter.split_to_pages();
         print_stats(pages);
         for(const auto &current : pages) {
+            cairo_save(cr);
+            draw_trims();
+            cairo_translate(cr, bleed, bleed);
             draw_textbox();
             draw_page(elements, current.c);
+            cairo_restore(cr);
             cairo_show_page(cr);
             ++page_number;
         }
@@ -520,8 +525,8 @@ public:
         const double pointsize = 12;
         const double yref = h / 2;
         const double texty = yref + pointsize / 2.5;
-        const double linex = page_number % 2 ? w - line_width : -line_width;
-        const double line_length = 2 * line_width;
+        const double linex = page_number % 2 ? w - 0.75 * line_width : -0.75 * line_width;
+        const double line_length = 1.5 * line_width;
         cairo_save(cr);
         cairo_set_source_rgb(cr, 0, 0, 0);
         cairo_set_line_width(cr, line_width);
@@ -530,7 +535,8 @@ public:
         cairo_rel_line_to(cr, line_length, 0);
         cairo_stroke(cr);
         cairo_set_source_rgb(cr, 1, 1, 1);
-        const double textx = page_number % 2 ? w - line_width : line_width / 4; // FIXME, alignment
+        const double textx =
+            page_number % 2 ? w - 0.75 * line_width : line_width / 3; // FIXME, alignment
         cairo_move_to(cr, textx, texty);
         cairo_select_font_face(cr, "serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
         cairo_set_font_size(cr, pointsize);
@@ -556,6 +562,34 @@ public:
 
     double left_margin() const { return (page_number % 2 == 1) ? inner : outer; }
 
+    void draw_trims() {
+        cairo_move_to(cr, bleed, 0);
+        cairo_rel_line_to(cr, 0, bleed / 2);
+        cairo_move_to(cr, w + bleed, 0);
+        cairo_rel_line_to(cr, 0, bleed / 2);
+        cairo_move_to(cr, bleed, h + 2 * bleed);
+        cairo_rel_line_to(cr, 0, -bleed / 2);
+        cairo_move_to(cr, w + bleed, h + 2 * bleed);
+        cairo_rel_line_to(cr, 0, -bleed / 2);
+
+        cairo_move_to(cr, 0, bleed);
+        cairo_rel_line_to(cr, bleed / 2, 0);
+        cairo_move_to(cr, w + 2 * bleed, bleed);
+        cairo_rel_line_to(cr, -bleed / 2, 0);
+        cairo_move_to(cr, 0, h + bleed);
+        cairo_rel_line_to(cr, bleed / 2, 0);
+        cairo_move_to(cr, w + 2 * bleed, h + bleed);
+        cairo_rel_line_to(cr, -bleed / 2, 0);
+
+        cairo_stroke(cr);
+
+        cairo_save(cr);
+        cairo_set_line_width(cr, 0.5);
+        cairo_rectangle(cr, bleed, bleed, w, h);
+        cairo_stroke(cr);
+        cairo_restore(cr);
+    }
+
     void draw_textbox() {
         double left = left_margin();
         // double right = (page % 2 == 1) ? outer : inner;
@@ -570,7 +604,7 @@ private:
     cairo_t *cr;
     cairo_surface_t *surf;
 
-    double w, h;
+    double w, h, bleed;
     double inner, outer, top, bottom;
     double textblock_width, textblock_height;
     double line_height;
