@@ -528,7 +528,7 @@ public:
         const double linex = page_number % 2 ? w - 0.75 * line_width : -0.75 * line_width;
         const double line_length = 1.5 * line_width;
         cairo_save(cr);
-        cairo_set_source_rgb(cr, 0, 0, 0);
+        cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
         cairo_set_line_width(cr, line_width);
         cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
         cairo_move_to(cr, linex, yref);
