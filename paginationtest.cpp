@@ -553,9 +553,9 @@ public:
 
     void draw_page_number() {
         const double line_width = 20;
-        const double pointsize = 12;
+        const double pointsize = 11;
         const double yref = h / 2;
-        const double texty = yref + pointsize / 2.5;
+        const double texty = yref + pointsize / 2.9;
         const double linex = page_number % 2 ? w - 0.75 * line_width : -0.75 * line_width;
         const double line_length = 1.5 * line_width;
         cairo_save(cr);
@@ -566,14 +566,17 @@ public:
         cairo_rel_line_to(cr, line_length, 0);
         cairo_stroke(cr);
         cairo_set_source_rgb(cr, 1, 1, 1);
-        const double textx =
-            page_number % 2 ? w - 0.75 * line_width : line_width / 3; // FIXME, alignment
+        const double textx = page_number % 2 ? w - line_width : line_width / 4; // FIXME, alignment
         cairo_move_to(cr, textx, texty);
         cairo_select_font_face(cr, "serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
         cairo_set_font_size(cr, pointsize);
         char buf[128];
-        snprintf(buf, 128, "%d", page_number);
-        cairo_show_text(cr, buf);
+        snprintf(buf, 128, "%d", 100 + page_number);
+        cairo_text_path(cr, buf);
+        cairo_fill_preserve(cr);
+        cairo_set_line_width(cr, 0.2);
+        cairo_set_source_rgb(cr, 0, 0, 0);
+        cairo_stroke(cr);
         cairo_restore(cr);
     }
 
