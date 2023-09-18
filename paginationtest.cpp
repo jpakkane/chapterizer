@@ -37,7 +37,19 @@ struct Figure {
     std::string text;
 };
 
-typedef std::variant<Paragraph, Heading, Figure> Element;
+struct EmptyLine {};
+
+typedef std::variant<Paragraph, Heading, Figure, EmptyLine> Element;
+
+size_t lines_in_element(const Element &e) {
+    if(std::holds_alternative<Paragraph>(e)) {
+        return std::get<Paragraph>(e).lines.size();
+    }
+    if(std::holds_alternative<EmptyLine>(e)) {
+        return 1;
+    }
+    std::abort();
+}
 
 struct PageLoc {
     size_t element;
@@ -110,7 +122,7 @@ std::vector<Element> create_document() {
     es.emplace_back(dummy_paragraph(15));
     es.emplace_back(dummy_paragraph(5));
     es.emplace_back(dummy_paragraph(3));
-    // scene
+    es.emplace_back(EmptyLine{});
     es.emplace_back(dummy_paragraph(13));
     es.emplace_back(dummy_paragraph(6));
 
@@ -163,7 +175,7 @@ std::vector<Element> create_document() {
     es.emplace_back(dummy_paragraph(6));
 
     es.emplace_back(dummy_paragraph(3));
-    // scene
+    es.emplace_back(EmptyLine{});
     es.emplace_back(dummy_paragraph(15));
     es.emplace_back(dummy_paragraph(1));
     es.emplace_back(dummy_paragraph(2));
@@ -201,7 +213,7 @@ std::vector<Element> create_document() {
     es.emplace_back(dummy_paragraph(3));
     es.emplace_back(dummy_paragraph(4));
     es.emplace_back(dummy_paragraph(1));
-    // scene
+    es.emplace_back(EmptyLine{});
     es.emplace_back(dummy_paragraph(2));
     es.emplace_back(dummy_paragraph(1));
     es.emplace_back(dummy_paragraph(2));
@@ -293,9 +305,9 @@ private:
         int num_lines = 0;
         for(size_t eind = from.element; eind < elements.size(); ++eind) {
             const auto &e = elements[eind];
-            const auto &p = std::get<Paragraph>(e);
             const auto lind_start = eind == from.element ? from.line : 0;
-            for(size_t lind = lind_start; lind < p.lines.size(); ++lind) {
+            const auto element_lines = lines_in_element(e);
+            for(size_t lind = lind_start; lind < element_lines; ++lind) {
                 if(num_lines > line_target) {
                     splits.one_more = PageLoc{eind, lind};
                     return splits;
@@ -320,8 +332,8 @@ private:
         auto page_stats = compute_page_stats(previous, split_point, optimal_lines);
         pages.emplace_back(std::move(page_stats));
         compute_interpage_stats(pages);
-        if(split_point.element < elements.size() &&
-           split_point.line < std::get<Paragraph>(elements[split_point.element]).lines.size()) {
+        const auto split_point_lines = lines_in_element(elements[split_point.element]);
+        if(split_point.element < elements.size() && split_point.line < split_point_lines) {
             auto current_penalty = compute_penalties(pages, false);
             if(current_penalty < best_penalty) {
                 split_recursive(pages);
@@ -387,12 +399,12 @@ private:
         pd.c.start = from;
         pd.c.end = to;
         pd.c.num_lines = num_lines;
-        const auto &from_el = std::get<Paragraph>(elements[from.element]);
-        const auto &to_el = std::get<Paragraph>(elements[to.element]);
-        if(from.line == from_el.lines.size() - 1 && from_el.lines.size() > 1) {
+        const auto from_el_lines = lines_in_element(elements[from.element]);
+        const auto to_el_lines = lines_in_element(elements[to.element]);
+        if(from.line == from_el_lines - 1 && from_el_lines > 1) {
             pd.s.has_widow = true;
         }
-        if(to.line == 1 && to_el.lines.size() > 1) {
+        if(to.line == 1 && to_el_lines > 1) {
             pd.s.has_orphan = true;
         }
 
@@ -443,8 +455,18 @@ public:
         cairo_surface_destroy(surf);
     }
 
-    void draw_page(const std::vector<Element> &elements, const PageContent &page) {
+    double compute_indent(const std::vector<Element> &elements, size_t eind, size_t lind) const {
         const double indent = 30;
+        if(eind == 0 && lind == 0) {
+            return 0;
+        }
+        if(eind > 0 && lind == 0 && std::holds_alternative<EmptyLine>(elements[eind - 1])) {
+            return 0;
+        }
+        return lind == 0 ? indent : 0.0;
+    }
+
+    void draw_page(const std::vector<Element> &elements, const PageContent &page) {
         double y = top;
         size_t eind = page.start.element;
         size_t lind = page.start.line;
@@ -452,27 +474,36 @@ public:
             if(eind == page.end.element && lind == page.end.line) {
                 break;
             }
-            const auto &p = std::get<Paragraph>(elements[eind]);
-            assert(eind <= page.end.element);
-            if(eind == page.end.element) {
-                // Last thing on this page.
-                while(lind < page.end.line) {
-                    draw_textline(y, lind == 0 ? indent : 0.0, lind == p.lines.size() - 1);
-                    y += line_height;
-                    ++lind;
-                }
-                eind = page.end.element;
-                lind = page.end.line;
-            } else {
-                while(lind < p.lines.size()) {
-                    draw_textline(y, lind == 0 ? indent : 0.0, lind == p.lines.size() - 1);
-                    y += line_height;
-                    if(++lind >= p.lines.size()) {
-                        ++eind;
-                        lind = 0;
-                        break;
+            const auto &e = elements[eind];
+            if(std::holds_alternative<Paragraph>(e)) {
+                const auto &p = std::get<Paragraph>(e);
+                assert(eind <= page.end.element);
+                if(eind == page.end.element) {
+                    // Last thing on this page.
+                    while(lind < page.end.line) {
+                        const auto current_indent = compute_indent(elements, eind, lind);
+                        draw_textline(y, current_indent, lind == p.lines.size() - 1);
+                        y += line_height;
+                        ++lind;
+                    }
+                    eind = page.end.element;
+                    lind = page.end.line;
+                } else {
+                    while(lind < p.lines.size()) {
+                        const auto current_indent = compute_indent(elements, eind, lind);
+                        draw_textline(y, current_indent, lind == p.lines.size() - 1);
+                        y += line_height;
+                        if(++lind >= p.lines.size()) {
+                            ++eind;
+                            lind = 0;
+                            break;
+                        }
                     }
                 }
+            } else if(std::holds_alternative<EmptyLine>(e)) {
+                y += line_height;
+                ++eind;
+                lind = 0;
             }
         }
         draw_page_number();
