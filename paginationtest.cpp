@@ -553,18 +553,33 @@ public:
 
     void draw_page_number() {
         const double line_width = 20;
-        const double pointsize = 11;
+        const double pointsize = 10;
         const double yref = h / 2;
         const double texty = yref + pointsize / 2.9;
-        const double linex = page_number % 2 ? w - 0.75 * line_width : -0.75 * line_width;
-        const double line_length = 1.5 * line_width;
+        const double line_center_x = page_number % 2 ? w : 0;
+        const double line_length = 2.5 * line_width;
+        const double corner = 0.2 * line_width;
+
+        const double line_top = yref - line_width / 2;
+        const double line_bottom = yref + line_width / 2;
         cairo_save(cr);
         cairo_set_source_rgb(cr, 0.5, 0.5, 0.5);
-        cairo_set_line_width(cr, line_width);
-        cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
-        cairo_move_to(cr, linex, yref);
-        cairo_rel_line_to(cr, line_length, 0);
-        cairo_stroke(cr);
+        const auto line_left = line_center_x - line_length / 2;
+        const auto line_right = line_center_x + line_length / 2;
+        cairo_move_to(cr, line_left + corner, line_top);
+        cairo_curve_to(cr, line_left, line_top, line_left, line_top, line_left, line_top + corner);
+        cairo_line_to(cr, line_left, line_bottom - corner);
+        cairo_curve_to(
+            cr, line_left, line_bottom, line_left, line_bottom, line_left + corner, line_bottom);
+        cairo_line_to(cr, line_right - corner, line_bottom);
+        cairo_curve_to(
+            cr, line_right, line_bottom, line_right, line_bottom, line_right, line_bottom - corner);
+        cairo_line_to(cr, line_right, line_top + corner);
+        cairo_curve_to(
+            cr, line_right, line_top, line_right, line_top, line_right - corner, line_top);
+
+        cairo_close_path(cr);
+        cairo_fill(cr);
         cairo_set_source_rgb(cr, 1, 1, 1);
         const double textx = page_number % 2 ? w - line_width : line_width / 4; // FIXME, alignment
         cairo_move_to(cr, textx, texty);
