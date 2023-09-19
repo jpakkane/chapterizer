@@ -567,16 +567,37 @@ public:
         const auto line_left = line_center_x - line_length / 2;
         const auto line_right = line_center_x + line_length / 2;
         cairo_move_to(cr, line_left + corner, line_top);
-        cairo_curve_to(cr, line_left, line_top, line_left, line_top, line_left, line_top + corner);
+        cairo_curve_to(cr,
+                       line_left + 0.5 * corner,
+                       line_top,
+                       line_left,
+                       line_top + 0.5 * corner,
+                       line_left,
+                       line_top + corner);
         cairo_line_to(cr, line_left, line_bottom - corner);
-        cairo_curve_to(
-            cr, line_left, line_bottom, line_left, line_bottom, line_left + corner, line_bottom);
+        cairo_curve_to(cr,
+                       line_left,
+                       line_bottom - 0.5 * corner,
+                       line_left + 0.5 * corner,
+                       line_bottom,
+                       line_left + corner,
+                       line_bottom);
         cairo_line_to(cr, line_right - corner, line_bottom);
-        cairo_curve_to(
-            cr, line_right, line_bottom, line_right, line_bottom, line_right, line_bottom - corner);
+        cairo_curve_to(cr,
+                       line_right - 0.5 * corner,
+                       line_bottom,
+                       line_right,
+                       line_bottom - 0.5 * corner,
+                       line_right,
+                       line_bottom - corner);
         cairo_line_to(cr, line_right, line_top + corner);
-        cairo_curve_to(
-            cr, line_right, line_top, line_right, line_top, line_right - corner, line_top);
+        cairo_curve_to(cr,
+                       line_right,
+                       line_top + 0.5 * corner,
+                       line_right - 0.5 * corner,
+                       line_top,
+                       line_right - corner,
+                       line_top);
 
         cairo_close_path(cr);
         cairo_fill(cr);
