@@ -312,7 +312,6 @@ std::vector<Element> create_quote_chapter() {
     es.emplace_back(dummy_paragraph(5));
     es.emplace_back(dummy_paragraph(10));
     es.emplace_back(dummy_paragraph(13));
-    es.emplace_back(dummy_paragraph(13));
     return es;
 }
 
@@ -320,6 +319,14 @@ std::vector<Element> create_test_chapter() {
     std::vector<Element> es;
     es.emplace_back(dummy_paragraph(40));
     return es;
+}
+
+std::vector<std::vector<Element>> create_document() {
+    std::vector<std::vector<Element>> chapters;
+    chapters.emplace_back(create_basic_chapter());
+    chapters.emplace_back(create_quote_chapter());
+    chapters.emplace_back(create_test_chapter());
+    return chapters;
 }
 
 } // namespace
@@ -593,30 +600,44 @@ public:
 
     void create() {
         // auto elements = create_basic_chapter();
-        auto elements = create_quote_chapter();
-        printf("%d elements\n", (int)elements.size());
-        PageSplitter splitter(elements, line_target);
-        auto pages = splitter.split_to_pages();
-        print_stats(pages);
-        for(const auto &current : pages) {
-            cairo_save(cr);
-            draw_trims();
-            cairo_translate(cr, bleed, bleed);
-            draw_textbox();
-            draw_page(elements, current.c);
-            cairo_restore(cr);
-            cairo_show_page(cr);
-            ++page_number;
+        auto chapters = create_document();
+        num_chapters = (int32_t)chapters.size();
+        chapter_number = 0;
+        for(const auto &elements : chapters) {
+            if(page_number > 1 && page_number % 2 == 0) {
+                cairo_show_page(cr);
+                ++page_number;
+            }
+            PageSplitter splitter(elements, line_target);
+            auto pages = splitter.split_to_pages();
+            print_stats(pages);
+            for(const auto &current : pages) {
+                cairo_save(cr);
+                draw_trims();
+                cairo_translate(cr, bleed, bleed);
+                draw_textbox();
+                draw_cross();
+                draw_page(elements, current.c);
+                cairo_restore(cr);
+                cairo_show_page(cr);
+                ++page_number;
+            }
+            ++chapter_number;
         }
+    }
+
+    double y_offset_for_tab(const double line_width) {
+        const double total_height = num_chapters * line_width;
+        return h / 2 - total_height / 2 + 0.5 * line_width + chapter_number * line_width;
     }
 
     void draw_page_number() {
         const double line_width = 20;
         const double pointsize = 10;
-        const double yref = h / 2;
+        const double yref = y_offset_for_tab(line_width);
         const double texty = yref + pointsize / 2.9;
         const double line_center_x = page_number % 2 ? w : 0;
-        const double line_length = 2.5 * line_width;
+        const double line_length = 2.8 * line_width;
         const double corner = 0.2 * line_width;
 
         const double line_top = yref - line_width / 2;
@@ -661,7 +682,8 @@ public:
         cairo_close_path(cr);
         cairo_fill(cr);
         cairo_set_source_rgb(cr, 1, 1, 1);
-        const double textx = page_number % 2 ? w - line_width : line_width / 4; // FIXME, alignment
+        const double textx =
+            page_number % 2 ? w - 1.2 * line_width : line_width / 4; // FIXME, alignment
         cairo_move_to(cr, textx, texty);
         cairo_select_font_face(cr, "serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
         cairo_set_font_size(cr, pointsize);
@@ -730,6 +752,17 @@ public:
         cairo_restore(cr);
     }
 
+    void draw_cross() {
+        cairo_save(cr);
+        cairo_set_line_width(cr, 0.5);
+        cairo_move_to(cr, w / 2, 0);
+        cairo_rel_line_to(cr, 0, h);
+        cairo_move_to(cr, 0, h / 2);
+        cairo_rel_line_to(cr, w, 0);
+        cairo_stroke(cr);
+        cairo_restore(cr);
+    }
+
 private:
     cairo_t *cr;
     cairo_surface_t *surf;
@@ -739,7 +772,9 @@ private:
     double textblock_width, textblock_height;
     double line_height;
     int32_t line_target;
-    int32_t page_number;
+    int32_t page_number; // 1-based
+    int32_t chapter_number;
+    int32_t num_chapters;
 };
 
 int main() {
