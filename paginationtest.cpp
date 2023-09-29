@@ -26,6 +26,8 @@
 
 struct Paragraph {
     std::vector<std::string> lines;
+    double indent = 30.0;
+    double narrowing = 0.0;
 };
 
 struct Heading {
@@ -94,8 +96,12 @@ namespace {
 
 double mm2pt(const double x) { return x * 2.8346456693; }
 
-Paragraph dummy_paragraph(int32_t num_lines) {
+Paragraph dummy_paragraph(int32_t num_lines, double narrowing = 0.0) {
     Paragraph p;
+    p.narrowing = narrowing;
+    if(narrowing > 0) {
+        p.indent = 0;
+    }
     for(int32_t i = 0; i < num_lines; ++i) {
         p.lines.emplace_back("");
     }
@@ -456,14 +462,16 @@ public:
     }
 
     double compute_indent(const std::vector<Element> &elements, size_t eind, size_t lind) const {
-        const double indent = 30;
         if(eind == 0 && lind == 0) {
             return 0;
         }
         if(eind > 0 && lind == 0 && std::holds_alternative<EmptyLine>(elements[eind - 1])) {
             return 0;
         }
-        return lind == 0 ? indent : 0.0;
+        if(!std::holds_alternative<Paragraph>(elements[eind])) {
+            return 0;
+        }
+        return lind == 0 ? std::get<Paragraph>(elements[eind]).indent : 0.0;
     }
 
     void draw_page(const std::vector<Element> &elements, const PageContent &page) {
@@ -482,7 +490,7 @@ public:
                     // Last thing on this page.
                     while(lind < page.end.line) {
                         const auto current_indent = compute_indent(elements, eind, lind);
-                        draw_textline(y, current_indent, lind == p.lines.size() - 1);
+                        draw_textline(y, current_indent, lind == p.lines.size() - 1, p.narrowing);
                         y += line_height;
                         ++lind;
                     }
@@ -491,7 +499,7 @@ public:
                 } else {
                     while(lind < p.lines.size()) {
                         const auto current_indent = compute_indent(elements, eind, lind);
-                        draw_textline(y, current_indent, lind == p.lines.size() - 1);
+                        draw_textline(y, current_indent, lind == p.lines.size() - 1, p.narrowing);
                         y += line_height;
                         if(++lind >= p.lines.size()) {
                             ++eind;
@@ -616,15 +624,16 @@ public:
         cairo_restore(cr);
     }
 
-    void draw_textline(double y, double indent, bool is_last_line) {
+    void draw_textline(double y, double indent, bool is_last_line, double narrowing) {
         const double left = left_margin();
+        const double narrow_width = narrowing * textblock_width;
         cairo_save(cr);
         cairo_set_source_rgb(cr, 0.9, 0.9, 0.9);
         const double last_line_multiplier = is_last_line ? 0.8 : 1.0;
         cairo_rectangle(cr,
-                        left + indent,
+                        left + indent + narrow_width,
                         y,
-                        last_line_multiplier * (textblock_width - indent),
+                        last_line_multiplier * (textblock_width - indent - 2 * narrow_width),
                         0.7 * line_height);
         cairo_fill(cr);
         cairo_restore(cr);
