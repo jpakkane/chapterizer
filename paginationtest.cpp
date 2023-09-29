@@ -108,7 +108,7 @@ Paragraph dummy_paragraph(int32_t num_lines, double narrowing = 0.0) {
     return p;
 }
 
-std::vector<Element> create_document() {
+std::vector<Element> create_basic_chapter() {
     std::vector<Element> es;
     es.emplace_back(dummy_paragraph(8));
     es.emplace_back(dummy_paragraph(15));
@@ -291,6 +291,37 @@ std::vector<Element> create_document() {
     return es;
 }
 
+std::vector<Element> create_quote_chapter() {
+    std::vector<Element> es;
+    es.emplace_back(dummy_paragraph(10));
+    es.emplace_back(dummy_paragraph(15));
+    es.emplace_back(dummy_paragraph(12));
+    es.emplace_back(dummy_paragraph(10));
+    es.emplace_back(dummy_paragraph(10));
+    es.emplace_back(EmptyLine{});
+    es.emplace_back(dummy_paragraph(1, 0.2));
+    es.emplace_back(EmptyLine{});
+    es.emplace_back(dummy_paragraph(3, 0.2));
+    es.emplace_back(EmptyLine{});
+    es.emplace_back(dummy_paragraph(2, 0.2));
+    es.emplace_back(EmptyLine{});
+    es.emplace_back(dummy_paragraph(1, 0.2));
+    es.emplace_back(EmptyLine{});
+    es.emplace_back(dummy_paragraph(1, 0.2));
+    es.emplace_back(EmptyLine{});
+    es.emplace_back(dummy_paragraph(5));
+    es.emplace_back(dummy_paragraph(10));
+    es.emplace_back(dummy_paragraph(13));
+    es.emplace_back(dummy_paragraph(13));
+    return es;
+}
+
+std::vector<Element> create_test_chapter() {
+    std::vector<Element> es;
+    es.emplace_back(dummy_paragraph(40));
+    return es;
+}
+
 } // namespace
 
 class PageSplitter {
@@ -309,11 +340,12 @@ private:
     PotentialSplits compute_splits(const PageLoc &from) {
         PotentialSplits splits;
         int num_lines = 0;
-        for(size_t eind = from.element; eind < elements.size(); ++eind) {
+        size_t lind, eind;
+        for(eind = from.element; eind < elements.size(); ++eind) {
             const auto &e = elements[eind];
             const auto lind_start = eind == from.element ? from.line : 0;
             const auto element_lines = lines_in_element(e);
-            for(size_t lind = lind_start; lind < element_lines; ++lind) {
+            for(lind = lind_start; lind < element_lines; ++lind) {
                 if(num_lines > line_target) {
                     splits.one_more = PageLoc{eind, lind};
                     return splits;
@@ -326,8 +358,8 @@ private:
                 ++num_lines;
             }
         }
-        splits.locally_optimal =
-            PageLoc{elements.size(), std::get<Paragraph>(elements.back()).lines.size()};
+        // The last paragraph overflowed the page
+        splits.locally_optimal = PageLoc{eind - 1, lind};
         return splits;
     }
 
@@ -543,7 +575,9 @@ public:
     }
 
     void create() {
-        auto elements = create_document();
+        // auto elements = create_basic_chapter();
+        auto elements = create_quote_chapter();
+        printf("%d elements\n", (int)elements.size());
         PageSplitter splitter(elements, line_target);
         auto pages = splitter.split_to_pages();
         print_stats(pages);
