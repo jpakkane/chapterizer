@@ -341,25 +341,33 @@ private:
         PotentialSplits splits;
         int num_lines = 0;
         size_t lind, eind;
+        bool first_line_on_page = true;
         for(eind = from.element; eind < elements.size(); ++eind) {
             const auto &e = elements[eind];
             const auto lind_start = eind == from.element ? from.line : 0;
             const auto element_lines = lines_in_element(e);
             for(lind = lind_start; lind < element_lines; ++lind) {
-                if(num_lines > line_target) {
-                    splits.one_more = PageLoc{eind, lind};
-                    return splits;
-                } else if(num_lines == line_target) {
-                    splits.locally_optimal = PageLoc{eind, lind};
-                    splits.optimal_lines = num_lines;
+                if(first_line_on_page && std::holds_alternative<EmptyLine>(e)) {
+                    // Whitespace at the beginning of the page does not count.
                 } else {
-                    splits.one_less = PageLoc(eind, lind);
+                    if(num_lines > line_target) {
+                        splits.one_more = PageLoc{eind, lind};
+                        return splits;
+                    } else if(num_lines == line_target) {
+                        splits.locally_optimal = PageLoc{eind, lind};
+                        splits.optimal_lines = num_lines;
+                    } else {
+                        splits.one_less = PageLoc(eind, lind);
+                    }
+                    ++num_lines;
                 }
-                ++num_lines;
+                first_line_on_page = false;
             }
         }
         // The last paragraph overflowed the page
+        splits.one_less.reset();
         splits.locally_optimal = PageLoc{eind - 1, lind};
+        splits.one_more.reset();
         return splits;
     }
 
@@ -510,11 +518,20 @@ public:
         double y = top;
         size_t eind = page.start.element;
         size_t lind = page.start.line;
+        bool first_line = true;
         while(eind <= page.end.element) {
             if(eind == page.end.element && lind == page.end.line) {
                 break;
             }
             const auto &e = elements[eind];
+            if(first_line) {
+                // Whitespace at the beginning of the page is not rendered.
+                first_line = false;
+                if(std::holds_alternative<EmptyLine>(e)) {
+                    ++eind;
+                    continue;
+                }
+            }
             if(std::holds_alternative<Paragraph>(e)) {
                 const auto &p = std::get<Paragraph>(e);
                 assert(eind <= page.end.element);
