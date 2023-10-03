@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
     }
     if(doc.data.generate_epub) {
         Epub epub(doc);
-        epub.generate("epub_test.epub");
+        epub.generate(doc.data.epub.ofname.c_str());
     }
     return 0;
 }
