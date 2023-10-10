@@ -253,6 +253,7 @@ void Epub::generate(const char *ofilename) {
     fs::path css_in = doc.data.top_dir / doc.data.epub.stylesheet;
     fs::copy(css_in, cssfile);
 
+    write_frontmatter(oebpsdir);
     write_chapters(oebpsdir);
     write_footnotes(oebpsdir);
     write_opf(contentfile);
@@ -416,6 +417,22 @@ void Epub::write_ncx(const char *ofile) {
 
     write_navmap(root);
     ncx.SaveFile(ofile);
+}
+
+void Epub::write_frontmatter(const fs::path &outdir) {
+    tinyxml2::XMLDocument epubdoc;
+    auto ofile = outdir / "frontmatter.xhtml";
+    auto *body = write_header(epubdoc);
+    auto title = epubdoc.NewElement("h1");
+    title->SetText(doc.data.title.c_str());
+    body->InsertEndChild(title);
+    auto author = epubdoc.NewElement("h2");
+    author->SetText(doc.data.author.c_str());
+    body->InsertEndChild(author);
+    auto p = epubdoc.NewElement("p");
+    p->SetText(current_date().c_str());
+    body->InsertEndChild(p);
+    epubdoc.SaveFile(ofile.c_str());
 }
 
 void Epub::write_chapters(const fs::path &outdir) {
@@ -607,6 +624,12 @@ void Epub::write_navmap(tinyxml2::XMLElement *root) {
 void Epub::generate_epub_manifest(tinyxml2::XMLNode *manifest) {
     auto opf = manifest->GetDocument();
 
+    auto frontnode = opf->NewElement("item");
+    frontnode->SetAttribute("id", "frontmatter");
+    frontnode->SetAttribute("href", "frontmatter.xhtml");
+    frontnode->SetAttribute("media-type", "application/xhtml+xml");
+    manifest->InsertEndChild(frontnode);
+
     const int bufsize = 128;
     char buf[bufsize];
     int chapter = 1;
@@ -670,6 +693,9 @@ void Epub::generate_spine(tinyxml2::XMLNode *spine) {
     const int bufsize = 128;
     char buf[bufsize];
     int chapter = 1;
+    auto frontnode = opf->NewElement("itemref");
+    frontnode->SetAttribute("idref", "frontmatter");
+    spine->InsertEndChild(frontnode);
     for(const auto &e : doc.elements) {
         if(!std::holds_alternative<Section>(e)) {
             continue;

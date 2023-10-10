@@ -32,6 +32,7 @@ public:
 private:
     void write_opf(const std::filesystem::path &ofile);
     void write_ncx(const char *ofile);
+    void write_frontmatter(const std::filesystem::path &outdir);
     void write_chapters(const std::filesystem::path &outdir);
     void write_footnotes(const std::filesystem::path &outdir);
     void write_navmap(tinyxml2::XMLElement *root);
