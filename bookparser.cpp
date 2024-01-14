@@ -30,6 +30,7 @@ const std::unordered_map<std::string, SpecialBlockType> specialmap{
     {"footnote", SpecialBlockType::Footnote},
     {"numberlist", SpecialBlockType::NumberList},
     {"letter", SpecialBlockType::Letter},
+    {"sign", SpecialBlockType::Sign},
 };
 
 } // namespace
@@ -197,6 +198,8 @@ void StructureParser::build_element() {
             doc.elements.emplace_back(NumberList{pop_lines_to_paragraphs()});
         } else if(current_special == SpecialBlockType::Letter) {
             doc.elements.emplace_back(Letter{pop_lines_to_paragraphs()});
+        } else if(current_special == SpecialBlockType::Sign) {
+            doc.elements.emplace_back(SignBlock{std::move(stored_lines)});
         } else {
             std::abort();
         }

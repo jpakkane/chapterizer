@@ -197,6 +197,21 @@ void write_codeblock(tinyxml2::XMLDocument &epubdoc,
     body->InsertEndChild(p);
 }
 
+void write_signblock(tinyxml2::XMLDocument &epubdoc,
+                     tinyxml2::XMLElement *body,
+                     const SignBlock &sign) {
+    auto p = epubdoc.NewElement("p");
+    p->SetAttribute("class", "sign");
+    for(size_t i = 0; i < sign.raw_lines.size(); ++i) {
+        auto *textline = epubdoc.NewText(sign.raw_lines[i].c_str());
+        p->InsertEndChild(textline);
+        if(i != sign.raw_lines.size() - 1) {
+            p->InsertEndChild(epubdoc.NewElement("br"));
+        }
+    }
+    body->InsertEndChild(p);
+}
+
 void write_letter(tinyxml2::XMLDocument &epubdoc,
                   tinyxml2::XMLElement *body,
                   const Letter &letter) {
@@ -490,6 +505,9 @@ void Epub::write_chapters(const fs::path &outdir) {
         } else if(std::holds_alternative<CodeBlock>(e)) {
             write_codeblock(epubdoc, body, std::get<CodeBlock>(e));
             is_new_after_special = true;
+        } else if(std::holds_alternative<SignBlock>(e)) {
+            write_signblock(epubdoc, body, std::get<SignBlock>(e));
+            is_new_after_special = true;
         } else if(std::holds_alternative<Letter>(e)) {
             write_letter(epubdoc, body, std::get<Letter>(e));
             is_new_after_special = true;
@@ -521,6 +539,7 @@ void Epub::write_chapters(const fs::path &outdir) {
             img->SetAttribute("src", imagepath.c_str());
             p->InsertEndChild(img);
         } else {
+            printf("Unkown block type in epub generation.\n");
             std::abort();
         }
     }

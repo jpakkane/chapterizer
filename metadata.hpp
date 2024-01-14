@@ -131,6 +131,10 @@ struct CodeBlock {
     std::vector<std::string> raw_lines;
 };
 
+struct SignBlock {
+    std::vector<std::string> raw_lines;
+};
+
 struct Footnote {
     int number;
     std::string text;
@@ -147,9 +151,16 @@ struct Figure {
 struct SceneChange {};
 
 // Also needs images, footnotes, unformatted text etc.
-typedef std::
-    variant<Paragraph, Section, SceneChange, CodeBlock, Footnote, NumberList, Figure, Letter>
-        DocElement;
+typedef std::variant<Paragraph,
+                     Section,
+                     SceneChange,
+                     CodeBlock,
+                     Footnote,
+                     NumberList,
+                     Figure,
+                     Letter,
+                     SignBlock>
+    DocElement;
 
 struct Document {
     Metadata data;
