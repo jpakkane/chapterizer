@@ -47,7 +47,7 @@ struct ReMatchOffsets {
 
 std::string get_normalized_string(std::string_view v);
 
-enum class SpecialBlockType : int { Code, Footnote, NumberList, Letter, Unset };
+enum class SpecialBlockType : int { Code, Footnote, NumberList, Letter, Sign, Unset };
 
 struct ReMatchResult {
     re_match minfo;
