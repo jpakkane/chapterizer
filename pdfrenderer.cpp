@@ -334,6 +334,7 @@ void PdfRenderer::render_markup_as_is(
     std::string tmp;
     interrobang_fix(line, tmp);
     pango_layout_set_markup(layout, tmp.c_str(), -1);
+    std::string_view blub(line);
 
     switch(alignment) {
     case TextAlignment::Left:

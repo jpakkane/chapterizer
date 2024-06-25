@@ -201,6 +201,8 @@ std::string wordfragment2markup(StyleStack &current_style,
             markup += "&lt;";
         } else if(view[i] == '>') {
             markup += "&gt;";
+        } else if(view[i] == '&') {
+            markup += "&amp;";
         } else {
             markup += view[i];
         }
