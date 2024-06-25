@@ -54,7 +54,7 @@ int main() {
     pango_layout_set_attributes(layout, NULL);
 
     cairo_move_to(cr, 72, 72 + 3 * 12);
-    pango_layout_set_markup(layout, "This is a line of text.", -1);
+    pango_layout_set_markup(layout, "This is a line of text &amp; an ampersand.", -1);
     pango_cairo_update_layout(cr, layout);
     pango_cairo_show_layout(cr, layout);
     pango_layout_set_attributes(layout, NULL);

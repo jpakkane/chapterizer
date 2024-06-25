@@ -106,6 +106,20 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
     return changes;
 }
 
+std::string escape_pango_chars(const std::string &txt) {
+    std::string quoted;
+    quoted.reserve(txt.size());
+    for(auto c: txt) {
+        switch(c) {
+        case '<' : quoted += "&lt;"; break;
+        case '>' : quoted += "&gt;"; break;
+        case '&' : quoted += "&amp;"; break;
+        default : quoted += c; break;
+        }
+    }
+    return quoted;
+}
+
 } // namespace
 
 Paginator::Paginator(const Document &d)
@@ -485,7 +499,8 @@ void Paginator::render_page_num(const FontParameters &par) {
         // so logical page numbers are offset from physical pages by one.
         std::string text =
             doc.data.draftdata.page_number_template + std::to_string(current_page - 1);
-        rend->render_markup_as_is(text.c_str(),
+        auto quoted = escape_pango_chars(text);
+        rend->render_markup_as_is(quoted.c_str(),
                                   styles.normal.font,
                                   current_left_margin() + textblock_width(),
                                   m.upper - 2 * styles.normal.line_height,
@@ -771,8 +786,9 @@ void Paginator::create_draft_title_page() {
         doc.data.draftdata.email.c_str(), styles.code.font, left_edge, y, TextAlignment::Left);
 
     y = textblock_center - 3 * styles.title.line_height;
+    auto escaped_title = escape_pango_chars(doc.data.title);
     rend->render_markup_as_is(
-        doc.data.title.c_str(), styles.title.font, middle, y, TextAlignment::Centered);
+        escaped_title.c_str(), styles.title.font, middle, y, TextAlignment::Centered);
     y += 2 * styles.title.line_height;
     rend->render_markup_as_is(
         doc.data.author.c_str(), styles.author.font, middle, y, TextAlignment::Centered);
