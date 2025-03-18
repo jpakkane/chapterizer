@@ -168,7 +168,10 @@ void append_block_of_text(tinyxml2::XMLDocument &epubdoc,
         tagstack.top()->InsertEndChild(ending);
     }
     tagstack.pop();
-    assert(tagstack.empty());
+    if(!tagstack.empty()) {
+        printf("Tag stack not empty, some paragraph has unclosed tags:\n%s", text.c_str());
+        std::abort();
+    }
 }
 
 tinyxml2::XMLElement *write_block_of_text(tinyxml2::XMLDocument &epubdoc,
