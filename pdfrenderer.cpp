@@ -93,9 +93,15 @@ uint32_t get_last_char(const std::string &markup) {
 
 } // namespace
 
-PdfRenderer::PdfRenderer(
-    const char *ofname, Length pagew, Length pageh, const char *title, const char *author) {
-    surf = cairo_pdf_surface_create(workname, pagew.pt(), pageh.pt());
+PdfRenderer::PdfRenderer(const char *ofname,
+                         Length pagew,
+                         Length pageh,
+                         Length bleed_,
+                         const char *title,
+                         const char *author)
+    : bleed{bleed_.pt()}, mediaw{pagew.pt() + 2 * bleed}, mediah{pageh.pt() + 2 * bleed} {
+
+    surf = cairo_pdf_surface_create(workname, mediaw, mediah);
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_TITLE, title);
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_AUTHOR, author);
     cairo_pdf_surface_set_metadata(surf, CAIRO_PDF_METADATA_CREATOR, "Superpdf from Outer Space!");
@@ -103,6 +109,7 @@ PdfRenderer::PdfRenderer(
     layout = pango_cairo_create_layout(cr);
     PangoContext *context = pango_layout_get_context(layout);
     pango_context_set_round_glyph_positions(context, FALSE);
+    init_page();
 
     // Can't use scale to draw in millimeters because it also scales text size.
     // cairo_scale(cr, 595.0 / 21.0, 595.0 / 21.0);
@@ -378,8 +385,63 @@ void PdfRenderer::render_line_centered(const char *line,
 }
 
 void PdfRenderer::new_page() {
+    finalize_page();
     cairo_surface_show_page(surf);
+    init_page();
     ++pages;
+}
+
+void PdfRenderer::init_page() {
+    if(bleed > 0) {
+        cairo_save(cr);
+        cairo_translate(cr, bleed, bleed);
+    }
+}
+
+void PdfRenderer::finalize_page() {
+    if(bleed > 0) {
+        cairo_restore(cr);
+        draw_cropmarks();
+    }
+}
+
+void PdfRenderer::draw_cropmarks() {
+    const auto b = bleed;
+
+    cairo_save(cr);
+    cairo_move_to(cr, b, 0);
+    cairo_rel_line_to(cr, 0, b / 2);
+    cairo_move_to(cr, 0, b);
+    cairo_rel_line_to(cr, b / 2, 0);
+
+    cairo_move_to(cr, b, 0);
+    cairo_rel_line_to(cr, 0, b / 2);
+    cairo_move_to(cr, 0, b);
+    cairo_rel_line_to(cr, b / 2, 0);
+
+    cairo_move_to(cr, mediaw - b, 0);
+    cairo_rel_line_to(cr, 0, b / 2);
+    cairo_move_to(cr, mediaw - b / 2, b);
+    cairo_rel_line_to(cr, b / 2, 0);
+
+    cairo_move_to(cr, b, mediah);
+    cairo_rel_line_to(cr, 0, -b / 2);
+    cairo_move_to(cr, 0, mediah - b);
+    cairo_rel_line_to(cr, b / 2, 0);
+
+    cairo_move_to(cr, mediaw - b, mediah);
+    cairo_rel_line_to(cr, 0, -b / 2);
+    cairo_move_to(cr, mediaw, mediah - b);
+    cairo_rel_line_to(cr, -b / 2, 0);
+
+    cairo_set_line_width(cr, 5);
+    cairo_set_source_rgb(cr, 1, 1, 1);
+    cairo_stroke_preserve(cr);
+    cairo_set_line_width(cr, 1);
+    cairo_set_source_rgb(cr, 0, 0, 0);
+    cairo_stroke(cr);
+
+    cairo_restore(cr);
 }
 
 void PdfRenderer::draw_line(Length x0, Length y0, Length x1, Length y1, Length thickness) {

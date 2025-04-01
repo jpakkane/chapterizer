@@ -9,7 +9,7 @@
         "chapter1.bd",
         "chapter2.bd"
     ],
-    "draft": {
+    "draft2": {
         "surname": "Pakkanen",
         "email": "jpakkane@gmail.com",
         "phone": "040 222 2222"
@@ -27,6 +27,7 @@
             "upper": 15,
             "lower": 20
         },
+        "bleed": 20,
         "styles": {
             "normal": {
                 "line_height": 14,

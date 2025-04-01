@@ -44,8 +44,12 @@ struct Coord {
 
 class PdfRenderer {
 public:
-    explicit PdfRenderer(
-        const char *ofname, Length pagew, Length pageh, const char *title, const char *author);
+    explicit PdfRenderer(const char *ofname,
+                         Length pagew,
+                         Length pageh,
+                         Length bleed,
+                         const char *title,
+                         const char *author);
     ~PdfRenderer();
 
     void render_line_justified(const std::string &text,
@@ -91,11 +95,17 @@ public:
 
     void add_section_outline(int section_number, const std::string &text);
 
+    void init_page();
+    void finalize_page();
+
 private:
     void draw_grid();
+    void draw_cropmarks();
     void setup_pango(const FontParameters &par);
 
     int pages = 1;
+    double bleed;
+    double mediaw, mediah;
     cairo_t *cr;
     cairo_surface_t *surf;
     PangoLayout *layout;

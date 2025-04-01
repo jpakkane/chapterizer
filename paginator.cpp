@@ -109,12 +109,20 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
 std::string escape_pango_chars(const std::string &txt) {
     std::string quoted;
     quoted.reserve(txt.size());
-    for(auto c: txt) {
+    for(auto c : txt) {
         switch(c) {
-        case '<' : quoted += "&lt;"; break;
-        case '>' : quoted += "&gt;"; break;
-        case '&' : quoted += "&amp;"; break;
-        default : quoted += c; break;
+        case '<':
+            quoted += "&lt;";
+            break;
+        case '>':
+            quoted += "&gt;";
+            break;
+        case '&':
+            quoted += "&amp;";
+            break;
+        default:
+            quoted += c;
+            break;
         }
     }
     return quoted;
@@ -127,8 +135,12 @@ Paginator::Paginator(const Document &d)
       m(doc.data.pdf.margins) {}
 
 void Paginator::generate_pdf(const char *outfile) {
-    rend.reset(
-        new PdfRenderer(outfile, page.w, page.h, doc.data.title.c_str(), doc.data.author.c_str()));
+    rend.reset(new PdfRenderer(outfile,
+                               page.w,
+                               page.h,
+                               doc.data.is_draft ? Length::zero() : doc.data.pdf.bleed,
+                               doc.data.title.c_str(),
+                               doc.data.author.c_str()));
 
     const bool only_maintext = false;
 
@@ -164,6 +176,7 @@ void Paginator::generate_pdf(const char *outfile) {
             flush_draw_commands();
         }
     }
+    rend->finalize_page();
     rend.reset(nullptr);
 }
 

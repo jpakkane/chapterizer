@@ -23,7 +23,7 @@ inline double pt2mm(const double x) { return x / 2.8346456693; }
 
 class Length {
 private:
-    explicit Length(double d) : v_m(d){};
+    explicit Length(double d) : v_m(d) {};
 
 public:
     double v_m = 0.0;
@@ -32,7 +32,7 @@ public:
     static Length from_pt(double val) { return Length::from_mm(pt2mm(val)); }
 
     Length() : v_m(0.0) {}
-    Length(const Length &d) : v_m(d.v_m){};
+    Length(const Length &d) : v_m(d.v_m) {};
 
     static Length zero() { return Length{0.0}; }
 

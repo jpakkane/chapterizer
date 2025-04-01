@@ -156,6 +156,11 @@ void load_pdf_element(Metadata &m, const json &pdf) {
     }
     auto page = pdf["page"];
     auto margins = pdf["margins"];
+    if(pdf.contains("bleed")) {
+        m.pdf.bleed = Length::from_mm(get_double(pdf, "bleed"));
+    } else {
+        m.pdf.bleed = Length::zero();
+    }
 
     if(pdf.contains("colophon")) {
         auto colophon_file = m.top_dir / get_string(pdf, "colophon");

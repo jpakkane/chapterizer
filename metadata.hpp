@@ -74,6 +74,7 @@ struct PdfMetadata {
     std::string ofname;
     std::vector<std::string> colophon;
     PageSize page;
+    Length bleed;
     Margins margins;
     ChapterStyles styles;
     Spaces spaces;
