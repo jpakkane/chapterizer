@@ -51,6 +51,30 @@ void adjust_y(TextCommands &c, Length diff) {
     }
 }
 
+std::string escape_pango_chars(const std::string &txt) {
+    std::string quoted;
+    quoted.reserve(txt.size());
+    for(auto c : txt) {
+        switch(c) {
+        case '<':
+            quoted += "&lt;";
+            break;
+        case '>':
+            quoted += "&gt;";
+            break;
+        case '&':
+            quoted += "&amp;";
+            break;
+        default:
+            quoted += c;
+            break;
+        }
+    }
+    return quoted;
+}
+
+} // namespace
+
 // NOTE: mutates the input words.
 std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::string &word) {
     std::vector<FormattingChange> changes;
@@ -105,30 +129,6 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
     word = buf;
     return changes;
 }
-
-std::string escape_pango_chars(const std::string &txt) {
-    std::string quoted;
-    quoted.reserve(txt.size());
-    for(auto c : txt) {
-        switch(c) {
-        case '<':
-            quoted += "&lt;";
-            break;
-        case '>':
-            quoted += "&gt;";
-            break;
-        case '&':
-            quoted += "&amp;";
-            break;
-        default:
-            quoted += c;
-            break;
-        }
-    }
-    return quoted;
-}
-
-} // namespace
 
 Paginator::Paginator(const Document &d)
     : doc(d), page(doc.data.pdf.page), styles(d.data.pdf.styles), spaces(d.data.pdf.spaces),

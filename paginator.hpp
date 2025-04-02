@@ -79,6 +79,8 @@ struct Heights {
     }
 };
 
+std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::string &word);
+
 class Paginator {
 public:
     Paginator(const Document &d);

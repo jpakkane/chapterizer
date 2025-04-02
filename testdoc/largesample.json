@@ -1,0 +1,138 @@
+{
+    "title": "The Super Book of Stuff",
+    "author": "Bob McBob",
+    "language": "fi",
+    "dedication_": "dedication.txt",
+    "credits": "credits.txt",
+    "postcredits": "postcredits.txt",
+    "sources": [
+        "chapterlong.bd"
+    ],
+    "draft2": {
+        "surname": "Pakkanen",
+        "email": "jpakkane@gmail.com",
+        "phone": "040 111 1111"
+    },
+    "pdf": {
+        "colophon": "colophon.txt",
+        "filename": "large_bookout.pdf",
+        "page": {
+            "width": 130,
+            "height": 210
+        },
+        "margins": {
+            "inner": 20,
+            "outer": 15,
+            "upper": 15,
+            "lower": 20
+        },
+        "bleed": 20,
+        "styles": {
+            "normal": {
+                "line_height": 14,
+                "indent": 5,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "regular",
+                    "pointsize": 10
+                }
+            },
+            "section": {
+                "line_height": 16,
+                "indent": 0,
+                "font": {
+                    "name": "Liberation Sans",
+                    "type": "bold",
+                    "pointsize": 14
+                }
+            },
+            "code": {
+                "line_height": 12,
+                "indent": 0,
+                "font": {
+                    "name": "Liberation Mono",
+                    "type": "regular",
+                    "pointsize": 9
+                }
+            },
+            "title": {
+                "line_height": 22,
+                "indent": 0,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "bold",
+                    "pointsize": 16
+                }
+            },
+            "author": {
+                "line_height": 16,
+                "indent": 0,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "regular",
+                    "pointsize": 14
+                }
+            },
+            "footnote": {
+                "line_height": 11,
+                "indent": 5,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "regular",
+                    "pointsize": 9
+                }
+            },
+            "letter": {
+                "line_height": 14,
+                "indent": 5,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "italic",
+                    "pointsize": 10
+                }
+            },
+            "lists": {
+                "line_height": 12,
+                "indent": 0,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "regular",
+                    "pointsize": 10
+                }
+            },
+            "colophon": {
+                "line_height": 11,
+                "indent": 5,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "regular",
+                    "pointsize": 9
+                }
+            },
+            "dedication": {
+                "line_height": 12,
+                "indent": 0,
+                "font": {
+                    "name": "Liberation Serif",
+                    "type": "italic",
+                    "pointsize": 10
+                }
+            }
+        },
+        "spaces": {
+            "above_section": 20,
+            "below_section": 10,
+            "different_paragraphs": 3,
+            "codeblock_indent": 5,
+            "letter_indent": 10,
+            "footnote_separation": 2
+        }
+    },
+    "epub2": {
+        "stylesheet": "book.css",
+        "cover": "epub_cover.png",
+        "filename": "large_bookout.epub",
+        "ISBN": "123456789X",
+        "file_as": "McBob, Bob"
+    }
+}
