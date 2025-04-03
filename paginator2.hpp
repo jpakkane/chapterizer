@@ -59,7 +59,11 @@ struct ImagePage {
     size_t image_id;
 };
 
-typedef std::variant<SectionPage, RegularPage, ImagePage> Page;
+struct EmptyPage {
+
+};
+
+typedef std::variant<SectionPage, RegularPage, ImagePage, EmptyPage> Page;
 
 class Paginator2 {
 public:
@@ -86,6 +90,8 @@ private:
                           const ExtraPenaltyAmounts &extras,
                           const ChapterParameters &chpar,
                           Length extra_indent);
+
+    void optimize_page_splits();
 
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
                                                       bool permit_hyphenation = true);

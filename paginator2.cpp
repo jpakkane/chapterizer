@@ -18,6 +18,20 @@
 #include <paragraphformatter.hpp>
 #include <cassert>
 
+namespace {
+
+const std::vector<TextCommands> &get_lines(const TextElement &e) {
+    if(auto *sec = std::get_if<SectionElement>(&e)) {
+        return sec->lines;
+    } else if(auto *par = std::get_if<ParagraphElement>(&e)) {
+        return par->lines;
+    } else {
+        std::abort();
+    }
+};
+
+} // namespace
+
 Paginator2::Paginator2(const Document &d)
     : doc(d), page(doc.data.pdf.page), styles(d.data.pdf.styles), spaces(d.data.pdf.spaces),
       m(doc.data.pdf.margins) {
@@ -43,7 +57,6 @@ void Paginator2::generate_pdf(const char *outfile) {
 void Paginator2::build_main_text() {
     ExtraPenaltyAmounts extras;
     bool first_paragraph = true;
-    bool first_section = true;
 
     assert(std::holds_alternative<Section>(doc.elements.front()));
     size_t element_id{(size_t)-1};
@@ -53,6 +66,7 @@ void Paginator2::build_main_text() {
         if(auto *sec = std::get_if<Section>(&e)) {
             create_section(*sec, extras);
             // first_section, first_paragraph;
+            first_paragraph = true;
         } else if(auto *par = std::get_if<Paragraph>(&e)) {
             create_paragraph(*par,
                              extras,
@@ -64,8 +78,44 @@ void Paginator2::build_main_text() {
             std::abort();
         }
     }
-    // optimize_page_splits();
+    optimize_page_splits();
     // create_pdf();
+}
+
+void Paginator2::optimize_page_splits() {
+    size_t start_element = 0;
+    size_t start_line = 0;
+
+    assert(current_page == 1);
+    size_t lines_on_page = 0;
+    const size_t max_lines = 25;
+    for(size_t current_element = 0; current_element < elements.size(); ++current_element) {
+        const auto &e = elements[current_element];
+        auto &lines = get_lines(e);
+        for(size_t current_line = 0; current_line < lines.size(); ++current_line) {
+            if(lines_on_page >= max_lines) {
+                TextLimits limits;
+                limits.start_element = start_element;
+                limits.start_line = start_line;
+                limits.end_element = current_element;
+                limits.end_line = current_line;
+                pages.emplace_back(RegularPage{limits, {}, {}});
+                start_element = current_element;
+                start_line = current_line;
+                lines_on_page = 1;
+            } else {
+                ++lines_on_page;
+            }
+        }
+    }
+    if(lines_on_page > 0) {
+        TextLimits limits;
+        limits.start_element = start_element;
+        limits.start_line = start_line;
+        limits.end_element = elements.size();
+        limits.end_line = get_lines(elements.back()).size();
+        pages.emplace_back(RegularPage{limits, {}, {}});
+    }
 }
 
 void Paginator2::create_section(const Section &s, const ExtraPenaltyAmounts &extras) {
@@ -221,7 +271,32 @@ void Paginator2::dump_text(const char *path) {
             }
         }
     };
-    for(const auto &e : elements) {
+    for(const auto &p : pages) {
+        fprintf(f, " -- PAGE --\n\n");
+        if(auto *reg = std::get_if<RegularPage>(&p)) {
+            for(size_t eid = reg->main_text.start_element; eid < reg->main_text.end_element;
+                ++eid) {
+                auto &lines = get_lines(elements[eid]);
+                const auto &tmp = lines[0];
+                size_t current_line =
+                    eid == reg->main_text.start_element == eid ? reg->main_text.start_line : 0;
+                const size_t end_line = eid == reg->main_text.end_element == eid
+                                            ? reg->main_text.end_line
+                                            : lines.size();
+                for(; current_line < end_line; ++current_line) {
+                    plaintextprinter(lines[current_line]);
+                    fprintf(f, "\n");
+                }
+                fprintf(f, "\n");
+            }
+        } else if(auto *sec = std::get_if<SectionPage>(&p)) {
+            std::abort();
+        } else {
+            std::abort();
+        }
+    }
+    /*
+    while(false) {
         if(auto *sec = std::get_if<SectionElement>(&e)) {
             fprintf(f, "SECTION\n\n");
             for(const auto &l : sec->lines) {
@@ -240,4 +315,5 @@ void Paginator2::dump_text(const char *path) {
             // ignore
         }
     }
+*/
 }
