@@ -100,6 +100,8 @@ private:
     Length textblock_height() const { return page.h - m.upper - m.lower; }
 
     void dump_text(const char *path);
+    void print_stats();
+
     const Document &doc;
     // These are just helpers to cut down on typing.
     const PageSize &page;

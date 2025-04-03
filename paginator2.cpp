@@ -52,6 +52,7 @@ void Paginator2::generate_pdf(const char *outfile) {
         dumpfile.replace_extension(".dump.txt");
         dump_text(dumpfile.string().c_str());
     }
+    print_stats();
 }
 
 void Paginator2::build_main_text() {
@@ -112,7 +113,7 @@ void Paginator2::optimize_page_splits() {
         TextLimits limits;
         limits.start_element = start_element;
         limits.start_line = start_line;
-        limits.end_element = elements.size();
+        limits.end_element = elements.size() - 1;
         limits.end_line = get_lines(elements.back()).size();
         pages.emplace_back(RegularPage{limits, {}, {}});
     }
@@ -279,10 +280,9 @@ void Paginator2::dump_text(const char *path) {
                 auto &lines = get_lines(elements[eid]);
                 const auto &tmp = lines[0];
                 size_t current_line =
-                    eid == reg->main_text.start_element == eid ? reg->main_text.start_line : 0;
-                const size_t end_line = eid == reg->main_text.end_element == eid
-                                            ? reg->main_text.end_line
-                                            : lines.size();
+                    eid == reg->main_text.start_element ? reg->main_text.start_line : 0;
+                const size_t end_line =
+                    eid == reg->main_text.end_element ? reg->main_text.end_line : lines.size();
                 for(; current_line < end_line; ++current_line) {
                     plaintextprinter(lines[current_line]);
                     fprintf(f, "\n");
@@ -316,4 +316,28 @@ void Paginator2::dump_text(const char *path) {
         }
     }
 */
+}
+
+void Paginator2::print_stats() {
+    for(size_t page_num = 0; page_num < pages.size(); ++page_num) {
+        const auto &p = pages[page_num];
+        fprintf(stats, "Page %d\n\n", (int)page_num + 1);
+        const auto &page_info = std::get<RegularPage>(p);
+        size_t first_element_id = page_info.main_text.start_element;
+        size_t first_line_id = page_info.main_text.start_line;
+        size_t last_element_id = page_info.main_text.end_element;
+        size_t last_line_id = page_info.main_text.end_element;
+
+        const auto &start_lines = get_lines(elements[first_element_id]);
+        const auto &end_lines = get_lines(elements[last_element_id]);
+        // Widow
+        if(end_lines.size() > 1 && last_line_id == end_lines.size() - 1) {
+            fprintf(stats, "Widow line\n");
+        }
+        // Orphan
+        if(start_lines.size() > 1 && first_line_id == 1) {
+            fprintf(stats, "Orphan line\n");
+        }
+        fprintf(stats, "\n");
+    }
 }
