@@ -93,6 +93,7 @@ private:
     Length textblock_width() const { return page.w - m.inner - m.outer; }
     Length textblock_height() const { return page.h - m.upper - m.lower; }
 
+    void dump_text(const char *path);
     const Document &doc;
     // These are just helpers to cut down on typing.
     const PageSize &page;

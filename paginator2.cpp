@@ -33,6 +33,11 @@ void Paginator2::generate_pdf(const char *outfile) {
     stats = fopen(statfile.string().c_str(), "w");
     fprintf(stats, "Statistics\n\n");
     build_main_text();
+    if(true) {
+        std::filesystem::path dumpfile(outfile);
+        dumpfile.replace_extension(".dump.txt");
+        dump_text(dumpfile.string().c_str());
+    }
 }
 
 void Paginator2::build_main_text() {
@@ -194,4 +199,45 @@ std::vector<EnrichedWord> Paginator2::text_to_formatted_words(const std::string 
                                                   start_style});
     }
     return processed_words;
+}
+
+void Paginator2::dump_text(const char *path) {
+    FILE *f = fopen(path, "w");
+    std::unique_ptr<FILE, int (*)(FILE *)> fcloser(f, fclose);
+    auto plaintextprinter = [&f](const TextCommands &c) {
+        if(const auto *just = std::get_if<JustifiedMarkupDrawCommand>(&c)) {
+            for(const auto &w : just->markup_words) {
+                if(w.back() != ' ') {
+                    fprintf(f, "%s ", w.c_str());
+                } else {
+                    fprintf(f, "%s", w.c_str());
+                }
+            }
+        } else if(const auto *rag = std::get_if<MarkupDrawCommand>(&c)) {
+            if(rag->markup.back() != ' ') {
+                fprintf(f, "%s ", rag->markup.c_str());
+            } else {
+                fprintf(f, "%s", rag->markup.c_str());
+            }
+        }
+    };
+    for(const auto &e : elements) {
+        if(auto *sec = std::get_if<SectionElement>(&e)) {
+            fprintf(f, "SECTION\n\n");
+            for(const auto &l : sec->lines) {
+                plaintextprinter(l);
+                fprintf(f, "\n");
+            }
+            fprintf(f, "\n");
+        } else if(auto *par = std::get_if<ParagraphElement>(&e)) {
+            fprintf(f, "\n");
+            for(const auto &l : par->lines) {
+                plaintextprinter(l);
+                fprintf(f, "\n");
+            }
+            fprintf(f, "\n");
+        } else {
+            // ignore
+        }
+    }
 }
