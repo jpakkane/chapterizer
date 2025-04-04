@@ -37,11 +37,40 @@ struct FootnoteElement {};
 typedef std::variant<SectionElement, EmptyLineElement, ParagraphElement, FootnoteElement>
     TextElement;
 
+struct TextElementIterator {
+    TextElementIterator() {
+        element = 0;
+        line = 0;
+        elems = nullptr;
+    }
+
+    explicit TextElementIterator(std::vector<TextElement> &original) {
+        elems = &original;
+        element = 0;
+        line = 0;
+    }
+
+    TextElement& operator*();
+
+    void operator++();
+
+    bool operator==(const TextElementIterator &o) const {
+        return elems == o.elems && element == o.element && line == o.line;
+    }
+
+    bool operator!=(const TextElementIterator &o) const {
+        return !(*this == o);
+    }
+
+    size_t element;
+    size_t line;
+    std::vector<TextElement> *elems;
+};
+
+
 struct TextLimits {
-    size_t start_element;
-    size_t start_line;
-    size_t end_element;
-    size_t end_line;
+    TextElementIterator start;
+    TextElementIterator end;
 };
 
 struct SectionPage {

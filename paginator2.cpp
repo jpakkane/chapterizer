@@ -32,6 +32,22 @@ const std::vector<TextCommands> &get_lines(const TextElement &e) {
 
 } // namespace
 
+void TextElementIterator::operator++() {
+    if(element >= elems->size()) {
+        return;
+    }
+
+    const auto &lines = get_lines((*elems)[element]);
+    if(line >= lines.size()) {
+        ++element;
+        line = 0;
+    } else {
+        ++line;
+    }
+}
+
+TextElement &TextElementIterator::operator*() { return (*elems)[element]; }
+
 Paginator2::Paginator2(const Document &d)
     : doc(d), page(doc.data.pdf.page), styles(d.data.pdf.styles), spaces(d.data.pdf.spaces),
       m(doc.data.pdf.margins) {
@@ -84,25 +100,23 @@ void Paginator2::build_main_text() {
 }
 
 void Paginator2::optimize_page_splits() {
-    size_t start_element = 0;
-    size_t start_line = 0;
-
     assert(current_page == 1);
     size_t lines_on_page = 0;
     const size_t max_lines = 25;
-    for(size_t current_element = 0; current_element < elements.size(); ++current_element) {
-        const auto &e = elements[current_element];
+    TextElementIterator start(elements);
+    TextElementIterator end = start;
+    end.element = elements.size();
+
+    for(TextElementIterator current = start; current != end; ++current) {
+        const auto &e = *current;
         auto &lines = get_lines(e);
         for(size_t current_line = 0; current_line < lines.size(); ++current_line) {
             if(lines_on_page >= max_lines) {
                 TextLimits limits;
-                limits.start_element = start_element;
-                limits.start_line = start_line;
-                limits.end_element = current_element;
-                limits.end_line = current_line;
+                limits.start = start;
+                limits.end = current;
                 pages.emplace_back(RegularPage{limits, {}, {}});
-                start_element = current_element;
-                start_line = current_line;
+                start = current;
                 lines_on_page = 1;
             } else {
                 ++lines_on_page;
@@ -111,10 +125,8 @@ void Paginator2::optimize_page_splits() {
     }
     if(lines_on_page > 0) {
         TextLimits limits;
-        limits.start_element = start_element;
-        limits.start_line = start_line;
-        limits.end_element = elements.size() - 1;
-        limits.end_line = get_lines(elements.back()).size();
+        limits.start = start;
+        limits.end = end;
         pages.emplace_back(RegularPage{limits, {}, {}});
     }
 }
@@ -275,18 +287,11 @@ void Paginator2::dump_text(const char *path) {
     for(const auto &p : pages) {
         fprintf(f, " -- PAGE --\n\n");
         if(auto *reg = std::get_if<RegularPage>(&p)) {
-            for(size_t eid = reg->main_text.start_element; eid < reg->main_text.end_element;
-                ++eid) {
-                auto &lines = get_lines(elements[eid]);
+            for(TextElementIterator it = reg->main_text.start; it != reg->main_text.end; ++it) {
+                auto &lines = get_lines(*it);
                 const auto &tmp = lines[0];
-                size_t current_line =
-                    eid == reg->main_text.start_element ? reg->main_text.start_line : 0;
-                const size_t end_line =
-                    eid == reg->main_text.end_element ? reg->main_text.end_line : lines.size();
-                for(; current_line < end_line; ++current_line) {
-                    plaintextprinter(lines[current_line]);
-                    fprintf(f, "\n");
-                }
+                size_t current_line = it.line;
+                plaintextprinter(lines[current_line]);
                 fprintf(f, "\n");
             }
         } else if(auto *sec = std::get_if<SectionPage>(&p)) {
@@ -323,10 +328,10 @@ void Paginator2::print_stats() {
         const auto &p = pages[page_num];
         fprintf(stats, "Page %d\n\n", (int)page_num + 1);
         const auto &page_info = std::get<RegularPage>(p);
-        size_t first_element_id = page_info.main_text.start_element;
-        size_t first_line_id = page_info.main_text.start_line;
-        size_t last_element_id = page_info.main_text.end_element;
-        size_t last_line_id = page_info.main_text.end_element;
+        size_t first_element_id = page_info.main_text.start.element;
+        size_t first_line_id = page_info.main_text.start.line;
+        size_t last_element_id = page_info.main_text.end.element;
+        size_t last_line_id = page_info.main_text.end.element;
 
         const auto &start_lines = get_lines(elements[first_element_id]);
         const auto &end_lines = get_lines(elements[last_element_id]);
