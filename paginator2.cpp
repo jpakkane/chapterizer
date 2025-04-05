@@ -16,19 +16,10 @@
 
 #include <paginator2.hpp>
 #include <paragraphformatter.hpp>
+#include <chapterformatter.hpp>
 #include <cassert>
 
 namespace {
-
-const std::vector<TextCommands> &get_lines(const TextElement &e) {
-    if(auto *sec = std::get_if<SectionElement>(&e)) {
-        return sec->lines;
-    } else if(auto *par = std::get_if<ParagraphElement>(&e)) {
-        return par->lines;
-    } else {
-        std::abort();
-    }
-};
 
 void plaintextprinter(FILE *f, const TextCommands &c) {
     if(const auto *just = std::get_if<JustifiedMarkupDrawCommand>(&c)) {
@@ -48,6 +39,18 @@ void plaintextprinter(FILE *f, const TextCommands &c) {
     }
 };
 
+} // namespace
+
+const std::vector<TextCommands> &get_lines(const TextElement &e) {
+    if(auto *sec = std::get_if<SectionElement>(&e)) {
+        return sec->lines;
+    } else if(auto *par = std::get_if<ParagraphElement>(&e)) {
+        return par->lines;
+    } else {
+        std::abort();
+    }
+};
+
 size_t lines_on_page(const Page &p) {
     size_t num_lines = 0;
     if(auto *reg = std::get_if<RegularPage>(&p)) {
@@ -60,8 +63,6 @@ size_t lines_on_page(const Page &p) {
     }
     return num_lines;
 }
-
-} // namespace
 
 void TextElementIterator::operator++() {
     if(element_id >= elems->size()) {
@@ -114,7 +115,6 @@ void Paginator2::generate_pdf(const char *outfile) {
         dumpfile.replace_extension(".dump.txt");
         dump_text(dumpfile.string().c_str());
     }
-    print_stats();
 }
 
 void Paginator2::build_main_text() {
@@ -122,9 +122,7 @@ void Paginator2::build_main_text() {
     bool first_paragraph = true;
 
     assert(std::holds_alternative<Section>(doc.elements.front()));
-    size_t element_id{(size_t)-1};
     for(const auto &e : doc.elements) {
-        ++element_id;
 
         if(auto *sec = std::get_if<Section>(&e)) {
             create_section(*sec, extras);
@@ -146,32 +144,14 @@ void Paginator2::build_main_text() {
 }
 
 void Paginator2::optimize_page_splits() {
-    assert(current_page == 1);
-    size_t lines_on_page = 0;
-    const size_t max_lines = 25;
     TextElementIterator start(elements);
-    TextElementIterator end = start;
+    TextElementIterator end(start);
     end.element_id = elements.size();
-
-    for(TextElementIterator current = start; current != end; ++current) {
-        const auto &e = current.element();
-        if(lines_on_page >= max_lines) {
-            TextLimits limits;
-            limits.start = start;
-            limits.end = current;
-            pages.emplace_back(RegularPage{limits, {}, {}});
-            start = current;
-            lines_on_page = 1;
-        } else {
-            ++lines_on_page;
-        }
-    }
-    if(lines_on_page > 0) {
-        TextLimits limits;
-        limits.start = start;
-        limits.end = end;
-        pages.emplace_back(RegularPage{limits, {}, {}});
-    }
+    end.line_id = 0;
+    ChapterFormatter chf(start, end, elements);
+    auto optimized_chapter = chf.optimize_pages();
+    print_stats(optimized_chapter);
+    pages = std::move(optimized_chapter.pages);
 }
 
 void Paginator2::create_section(const Section &s, const ExtraPenaltyAmounts &extras) {
@@ -354,50 +334,28 @@ void Paginator2::dump_text(const char *path) {
 */
 }
 
-void Paginator2::print_stats() {
-    size_t even_page_height = 0;
-    size_t odd_page_height = 0;
-    for(size_t page_num = 0; page_num < pages.size(); ++page_num) {
-        const auto &p = pages[page_num];
-        const size_t num_lines_on_page = lines_on_page(p);
-        if((page_num + 1) % 2) {
-            odd_page_height = num_lines_on_page;
-        } else {
-            even_page_height = num_lines_on_page;
-        }
-        const bool on_last_page = page_num == pages.size() - 1;
-        const bool on_first_page = page_num == 0;
-        fprintf(stats, "Page %d\n\n", (int)page_num + 1);
-        const auto &page_info = std::get<RegularPage>(p);
-        size_t first_element_id = page_info.main_text.start.element_id;
-        size_t first_line_id = page_info.main_text.start.line_id;
-        size_t last_element_id = page_info.main_text.end.element_id;
-        size_t last_line_id = page_info.main_text.end.line_id;
+void Paginator2::print_stats(const PageLayoutResult &res) {
+    const size_t page_number_offset = 1;
+    for(size_t page_num = 0; page_num < res.pages.size(); ++page_num) {
+        fprintf(stats, "-- Page %d --\n\n", (int)(page_num + page_number_offset));
 
-        const auto &start_lines = get_lines(elements[first_element_id]);
-        if(last_element_id >= elements.size()) {
-            continue;
-            // FIXME: add end-of-chapter widow super penalty here.
+        for(const auto &p : res.stats.orphans) {
+            if(p == page_number_offset + page_num) {
+                fprintf(stats, "Orphan line.\n");
+                break;
+            }
         }
-        const auto &end_lines = get_lines(elements[last_element_id]);
-
-        // Orphan
-        if(end_lines.size() > 1 && last_line_id == 1) {
-            fprintf(stats, "Orphan line: ");
-            plaintextprinter(stats, end_lines[0]);
-            fprintf(stats, "\n");
-        }
-        // Widow
-        if(start_lines.size() > 1 && first_line_id == start_lines.size() - 1) {
-            fprintf(stats, "Widow line: ");
-            plaintextprinter(stats, start_lines[start_lines.size() - 1]);
-            fprintf(stats, "\n");
+        for(const auto &p : res.stats.widows) {
+            if(p == page_number_offset + page_num) {
+                fprintf(stats, "Widow line.\n");
+                break;
+            }
         }
 
         // Mismatch
-        if(!on_first_page && !on_last_page && (((page_num + 1) % 2) == 1)) {
-            if(even_page_height != odd_page_height) {
-                fprintf(stderr, "Page spread height mismatch.\n");
+        for(const auto &mismatch : res.stats.mismatches) {
+            if(mismatch.page_number == page_number_offset + page_num) {
+                fprintf(stats, "Height mismatch.\n");
             }
         }
         fprintf(stats, "\n");

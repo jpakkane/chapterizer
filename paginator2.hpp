@@ -96,6 +96,26 @@ struct EmptyPage {
 
 typedef std::variant<SectionPage, RegularPage, ImagePage, EmptyPage> Page;
 
+struct HeightMismatch {
+    size_t page_number;
+    int64_t delta;
+};
+
+struct PageStatistics {
+    std::vector<size_t> widows;
+    std::vector<size_t> orphans;
+    std::vector<HeightMismatch> mismatches;
+};
+
+struct PageLayoutResult {
+    std::vector<Page> pages;
+    PageStatistics stats;
+    size_t total_penalty = 0;
+};
+
+const std::vector<TextCommands> &get_lines(const TextElement &e);
+size_t lines_on_page(const Page &p);
+
 class Paginator2 {
 public:
     Paginator2(const Document &d);
@@ -131,7 +151,7 @@ private:
     Length textblock_height() const { return page.h - m.upper - m.lower; }
 
     void dump_text(const char *path);
-    void print_stats();
+    void print_stats(const PageLayoutResult &res);
 
     const Document &doc;
     // These are just helpers to cut down on typing.
