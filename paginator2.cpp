@@ -48,6 +48,19 @@ void plaintextprinter(FILE *f, const TextCommands &c) {
     }
 };
 
+size_t lines_on_page(const Page &p) {
+    size_t num_lines = 0;
+    if(auto *reg = std::get_if<RegularPage>(&p)) {
+        for(auto it = reg->main_text.start; it != reg->main_text.end; ++it) {
+            ++num_lines;
+        }
+    } else {
+        fprintf(stderr, "Unsupported page.\n");
+        std::abort();
+    }
+    return num_lines;
+}
+
 } // namespace
 
 void TextElementIterator::operator++() {
@@ -342,8 +355,18 @@ void Paginator2::dump_text(const char *path) {
 }
 
 void Paginator2::print_stats() {
+    size_t even_page_height = 0;
+    size_t odd_page_height = 0;
     for(size_t page_num = 0; page_num < pages.size(); ++page_num) {
         const auto &p = pages[page_num];
+        const size_t num_lines_on_page = lines_on_page(p);
+        if((page_num + 1) % 2) {
+            odd_page_height = num_lines_on_page;
+        } else {
+            even_page_height = num_lines_on_page;
+        }
+        const bool on_last_page = page_num == pages.size() - 1;
+        const bool on_first_page = page_num == 0;
         fprintf(stats, "Page %d\n\n", (int)page_num + 1);
         const auto &page_info = std::get<RegularPage>(p);
         size_t first_element_id = page_info.main_text.start.element_id;
@@ -369,6 +392,13 @@ void Paginator2::print_stats() {
             fprintf(stats, "Widow line: ");
             plaintextprinter(stats, start_lines[start_lines.size() - 1]);
             fprintf(stats, "\n");
+        }
+
+        // Mismatch
+        if(!on_first_page && !on_last_page && (((page_num + 1) % 2) == 1)) {
+            if(even_page_height != odd_page_height) {
+                fprintf(stderr, "Page spread height mismatch.\n");
+            }
         }
         fprintf(stats, "\n");
     }
