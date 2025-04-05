@@ -39,31 +39,32 @@ typedef std::variant<SectionElement, EmptyLineElement, ParagraphElement, Footnot
 
 struct TextElementIterator {
     TextElementIterator() {
-        element = 0;
-        line = 0;
+        element_id = 0;
+        line_id = 0;
         elems = nullptr;
     }
 
     explicit TextElementIterator(std::vector<TextElement> &original) {
         elems = &original;
-        element = 0;
-        line = 0;
+        element_id = 0;
+        line_id = 0;
     }
 
-    TextElement& operator*();
+    const TextElement &element();
+    const TextCommands &line();
 
     void operator++();
 
     bool operator==(const TextElementIterator &o) const {
-        return elems == o.elems && element == o.element && line == o.line;
+        return elems == o.elems && element_id == o.element_id && line_id == o.line_id;
     }
 
     bool operator!=(const TextElementIterator &o) const {
         return !(*this == o);
     }
 
-    size_t element;
-    size_t line;
+    size_t element_id;
+    size_t line_id;
     std::vector<TextElement> *elems;
 };
 

@@ -33,20 +33,21 @@ const std::vector<TextCommands> &get_lines(const TextElement &e) {
 } // namespace
 
 void TextElementIterator::operator++() {
-    if(element >= elems->size()) {
+    if(element_id >= elems->size()) {
         return;
     }
 
-    const auto &lines = get_lines((*elems)[element]);
-    if(line >= lines.size()) {
-        ++element;
-        line = 0;
-    } else {
-        ++line;
+    const auto &lines = get_lines((*elems)[element_id]);
+    ++line_id;
+    if(line_id >= lines.size()) {
+        ++element_id;
+        line_id = 0;
     }
 }
 
-TextElement &TextElementIterator::operator*() { return (*elems)[element]; }
+const TextElement &TextElementIterator::element() { return elems->at(element_id); }
+
+const TextCommands &TextElementIterator::line() { return get_lines(element()).at(line_id); }
 
 Paginator2::Paginator2(const Document &d)
     : doc(d), page(doc.data.pdf.page), styles(d.data.pdf.styles), spaces(d.data.pdf.spaces),
@@ -105,22 +106,19 @@ void Paginator2::optimize_page_splits() {
     const size_t max_lines = 25;
     TextElementIterator start(elements);
     TextElementIterator end = start;
-    end.element = elements.size();
+    end.element_id = elements.size();
 
     for(TextElementIterator current = start; current != end; ++current) {
-        const auto &e = *current;
-        auto &lines = get_lines(e);
-        for(size_t current_line = 0; current_line < lines.size(); ++current_line) {
-            if(lines_on_page >= max_lines) {
-                TextLimits limits;
-                limits.start = start;
-                limits.end = current;
-                pages.emplace_back(RegularPage{limits, {}, {}});
-                start = current;
-                lines_on_page = 1;
-            } else {
-                ++lines_on_page;
-            }
+        const auto &e = current.element();
+        if(lines_on_page >= max_lines) {
+            TextLimits limits;
+            limits.start = start;
+            limits.end = current;
+            pages.emplace_back(RegularPage{limits, {}, {}});
+            start = current;
+            lines_on_page = 1;
+        } else {
+            ++lines_on_page;
         }
     }
     if(lines_on_page > 0) {
@@ -284,15 +282,19 @@ void Paginator2::dump_text(const char *path) {
             }
         }
     };
+    size_t page_num = 0;
     for(const auto &p : pages) {
-        fprintf(f, " -- PAGE --\n\n");
+        ++page_num;
+        fprintf(f, "%s -- PAGE %d --\n\n", (page_num != 1) ? "\n" : "", (int)page_num);
         if(auto *reg = std::get_if<RegularPage>(&p)) {
+            TextElementIterator previous = reg->main_text.start;
             for(TextElementIterator it = reg->main_text.start; it != reg->main_text.end; ++it) {
-                auto &lines = get_lines(*it);
-                const auto &tmp = lines[0];
-                size_t current_line = it.line;
-                plaintextprinter(lines[current_line]);
+                if(previous.element_id != it.element_id) {
+                    fprintf(f, "\n");
+                }
+                plaintextprinter(it.line());
                 fprintf(f, "\n");
+                previous = it;
             }
         } else if(auto *sec = std::get_if<SectionPage>(&p)) {
             std::abort();
@@ -328,13 +330,17 @@ void Paginator2::print_stats() {
         const auto &p = pages[page_num];
         fprintf(stats, "Page %d\n\n", (int)page_num + 1);
         const auto &page_info = std::get<RegularPage>(p);
-        size_t first_element_id = page_info.main_text.start.element;
-        size_t first_line_id = page_info.main_text.start.line;
-        size_t last_element_id = page_info.main_text.end.element;
-        size_t last_line_id = page_info.main_text.end.element;
+        size_t first_element_id = page_info.main_text.start.element_id;
+        size_t first_line_id = page_info.main_text.start.line_id;
+        size_t last_element_id = page_info.main_text.end.element_id;
+        size_t last_line_id = page_info.main_text.end.element_id;
 
         const auto &start_lines = get_lines(elements[first_element_id]);
+        if(last_element_id >= elements.size()) {
+            continue;
+        }
         const auto &end_lines = get_lines(elements[last_element_id]);
+
         // Widow
         if(end_lines.size() > 1 && last_line_id == end_lines.size() - 1) {
             fprintf(stats, "Widow line\n");
