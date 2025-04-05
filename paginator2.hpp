@@ -54,6 +54,7 @@ struct TextElementIterator {
     const TextCommands &line();
 
     void operator++();
+    void operator--();
 
     bool operator==(const TextElementIterator &o) const {
         return elems == o.elems && element_id == o.element_id && line_id == o.line_id;

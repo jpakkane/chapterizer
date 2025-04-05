@@ -30,6 +30,24 @@ const std::vector<TextCommands> &get_lines(const TextElement &e) {
     }
 };
 
+void plaintextprinter(FILE *f, const TextCommands &c) {
+    if(const auto *just = std::get_if<JustifiedMarkupDrawCommand>(&c)) {
+        for(const auto &w : just->markup_words) {
+            if(w.back() != ' ') {
+                fprintf(f, "%s ", w.c_str());
+            } else {
+                fprintf(f, "%s", w.c_str());
+            }
+        }
+    } else if(const auto *rag = std::get_if<MarkupDrawCommand>(&c)) {
+        if(rag->markup.back() != ' ') {
+            fprintf(f, "%s ", rag->markup.c_str());
+        } else {
+            fprintf(f, "%s", rag->markup.c_str());
+        }
+    }
+};
+
 } // namespace
 
 void TextElementIterator::operator++() {
@@ -42,6 +60,20 @@ void TextElementIterator::operator++() {
     if(line_id >= lines.size()) {
         ++element_id;
         line_id = 0;
+    }
+}
+
+void TextElementIterator::operator--() {
+    if(element_id == 0 || line_id == 0) {
+        return;
+    }
+
+    const auto &lines = get_lines((*elems)[element_id]);
+    if(line_id == 0) {
+        --element_id;
+        line_id = lines.size() - 1;
+    } else {
+        --line_id;
     }
 }
 
@@ -265,23 +297,7 @@ std::vector<EnrichedWord> Paginator2::text_to_formatted_words(const std::string 
 void Paginator2::dump_text(const char *path) {
     FILE *f = fopen(path, "w");
     std::unique_ptr<FILE, int (*)(FILE *)> fcloser(f, fclose);
-    auto plaintextprinter = [&f](const TextCommands &c) {
-        if(const auto *just = std::get_if<JustifiedMarkupDrawCommand>(&c)) {
-            for(const auto &w : just->markup_words) {
-                if(w.back() != ' ') {
-                    fprintf(f, "%s ", w.c_str());
-                } else {
-                    fprintf(f, "%s", w.c_str());
-                }
-            }
-        } else if(const auto *rag = std::get_if<MarkupDrawCommand>(&c)) {
-            if(rag->markup.back() != ' ') {
-                fprintf(f, "%s ", rag->markup.c_str());
-            } else {
-                fprintf(f, "%s", rag->markup.c_str());
-            }
-        }
-    };
+
     size_t page_num = 0;
     for(const auto &p : pages) {
         ++page_num;
@@ -292,7 +308,7 @@ void Paginator2::dump_text(const char *path) {
                 if(previous.element_id != it.element_id) {
                     fprintf(f, "\n");
                 }
-                plaintextprinter(it.line());
+                plaintextprinter(f, it.line());
                 fprintf(f, "\n");
                 previous = it;
             }
@@ -333,21 +349,26 @@ void Paginator2::print_stats() {
         size_t first_element_id = page_info.main_text.start.element_id;
         size_t first_line_id = page_info.main_text.start.line_id;
         size_t last_element_id = page_info.main_text.end.element_id;
-        size_t last_line_id = page_info.main_text.end.element_id;
+        size_t last_line_id = page_info.main_text.end.line_id;
 
         const auto &start_lines = get_lines(elements[first_element_id]);
         if(last_element_id >= elements.size()) {
             continue;
+            // FIXME: add end-of-chapter widow super penalty here.
         }
         const auto &end_lines = get_lines(elements[last_element_id]);
 
-        // Widow
-        if(end_lines.size() > 1 && last_line_id == end_lines.size() - 1) {
-            fprintf(stats, "Widow line\n");
-        }
         // Orphan
-        if(start_lines.size() > 1 && first_line_id == 1) {
-            fprintf(stats, "Orphan line\n");
+        if(end_lines.size() > 1 && last_line_id == 1) {
+            fprintf(stats, "Orphan line: ");
+            plaintextprinter(stats, end_lines[0]);
+            fprintf(stats, "\n");
+        }
+        // Widow
+        if(start_lines.size() > 1 && first_line_id == start_lines.size() - 1) {
+            fprintf(stats, "Widow line: ");
+            plaintextprinter(stats, start_lines[start_lines.size() - 1]);
+            fprintf(stats, "\n");
         }
         fprintf(stats, "\n");
     }
