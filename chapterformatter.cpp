@@ -38,12 +38,22 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
         if(lines_on_page >= target_height) {
             TextLimits limits;
             limits.start = run_start;
-            limits.end = current;
-            r.pages.emplace_back(RegularPage{limits, {}, {}});
-            const size_t height_validation = r.pages.size();
-            optimize_recursive(current, r, lines_on_page);
-            assert(height_validation == r.pages.size());
-            r.pages.pop_back();
+            {
+                limits.end = current;
+                r.pages.emplace_back(RegularPage{limits, {}, {}});
+                const size_t height_validation = r.pages.size();
+                optimize_recursive(current, r, lines_on_page);
+                assert(height_validation == r.pages.size());
+                r.pages.pop_back();
+            }
+            {
+                --limits.end;
+                r.pages.emplace_back(RegularPage{limits, {}, {}});
+                const auto height_validation = r.pages.size();
+                optimize_recursive(limits.end, r, lines_on_page);
+                assert(height_validation == r.pages.size());
+                r.pages.pop_back();
+            }
             return;
         } else {
             ++lines_on_page;
