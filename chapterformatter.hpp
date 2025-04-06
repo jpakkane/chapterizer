@@ -20,13 +20,22 @@
 
 class ChapterFormatter {
 public:
-    ChapterFormatter(const TextElementIterator &start, const TextElementIterator &end,
+    ChapterFormatter(const TextElementIterator &start,
+                     const TextElementIterator &end,
                      const std::vector<TextElement> &elms);
 
     PageLayoutResult optimize_pages();
 
 private:
+    static constexpr size_t WidowPenalty = 10;
+    static constexpr size_t OrphanPenalty = 10;
+    static constexpr size_t MismatchPenalty = 7;
+
     PageStatistics compute_penalties(const std::vector<Page> &pages) const;
+
+    void optimize_recursive(TextElementIterator run_start,
+                            PageLayoutResult &r,
+                            size_t previous_page_height);
 
     const TextElementIterator start;
     const TextElementIterator end;
@@ -36,4 +45,3 @@ private:
     PageLayoutResult best_layout;
     size_t target_height = 25;
 };
-

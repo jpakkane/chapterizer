@@ -15,6 +15,7 @@
  */
 
 #include <chapterformatter.hpp>
+#include <cassert>
 
 ChapterFormatter::ChapterFormatter(const TextElementIterator &start_,
                                    const TextElementIterator &end_,
@@ -23,19 +24,27 @@ ChapterFormatter::ChapterFormatter(const TextElementIterator &start_,
 
 PageLayoutResult ChapterFormatter::optimize_pages() {
     PageLayoutResult r;
-    size_t lines_on_page = 0;
-    const size_t max_lines = 25;
 
     auto run_start = start;
+    optimize_recursive(run_start, r, 0);
+    return std::move(best_layout);
+}
 
+void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
+                                          PageLayoutResult &r,
+                                          size_t previous_page_height) {
+    size_t lines_on_page = 0;
     for(TextElementIterator current = run_start; current != end; ++current) {
-        if(lines_on_page >= max_lines) {
+        if(lines_on_page >= target_height) {
             TextLimits limits;
             limits.start = run_start;
             limits.end = current;
             r.pages.emplace_back(RegularPage{limits, {}, {}});
-            run_start = current;
-            lines_on_page = 1;
+            const size_t height_validation = r.pages.size();
+            optimize_recursive(current, r, lines_on_page);
+            assert(height_validation == r.pages.size());
+            r.pages.pop_back();
+            return;
         } else {
             ++lines_on_page;
         }
@@ -47,8 +56,13 @@ PageLayoutResult ChapterFormatter::optimize_pages() {
         r.pages.emplace_back(RegularPage{limits, {}, {}});
     }
     r.stats = compute_penalties(r.pages);
-    best_layout = std::move(r);
-    return std::move(best_layout);
+    if(r.stats.total_penalty < best_penalty) {
+        best_layout = r;
+        best_penalty = r.stats.total_penalty;
+    }
+    if(lines_on_page > 0) {
+        r.pages.pop_back();
+    }
 }
 
 PageStatistics ChapterFormatter::compute_penalties(const std::vector<Page> &pages) const {
@@ -82,18 +96,21 @@ PageStatistics ChapterFormatter::compute_penalties(const std::vector<Page> &page
         // Orphan
         if(end_lines.size() > 1 && last_line_id == 1) {
             stats.orphans.push_back(page_number_offset + page_num);
+            stats.total_penalty += OrphanPenalty;
         }
         // Widow
         if(start_lines.size() > 1 && first_line_id == start_lines.size() - 1) {
             stats.widows.push_back(page_number_offset + page_num);
+            stats.total_penalty += WidowPenalty;
         }
 
         // Mismatch
         if(!on_first_page && !on_last_page && (((page_num + 1) % 2) == 1)) {
             if(even_page_height != odd_page_height) {
+                const auto mismatch_amount = (int64_t)even_page_height - (int64_t)odd_page_height;
                 stats.mismatches.emplace_back(
-                    HeightMismatch{page_number_offset + page_num,
-                                   (int64_t)even_page_height - (int64_t)odd_page_height});
+                    HeightMismatch{page_number_offset + page_num, mismatch_amount});
+                stats.total_penalty += abs(mismatch_amount) * MismatchPenalty;
             }
         }
     }

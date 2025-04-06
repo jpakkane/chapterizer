@@ -60,15 +60,12 @@ struct TextElementIterator {
         return elems == o.elems && element_id == o.element_id && line_id == o.line_id;
     }
 
-    bool operator!=(const TextElementIterator &o) const {
-        return !(*this == o);
-    }
+    bool operator!=(const TextElementIterator &o) const { return !(*this == o); }
 
     size_t element_id;
     size_t line_id;
     std::vector<TextElement> *elems;
 };
-
 
 struct TextLimits {
     TextElementIterator start;
@@ -90,9 +87,7 @@ struct ImagePage {
     size_t image_id;
 };
 
-struct EmptyPage {
-
-};
+struct EmptyPage {};
 
 typedef std::variant<SectionPage, RegularPage, ImagePage, EmptyPage> Page;
 
@@ -105,12 +100,12 @@ struct PageStatistics {
     std::vector<size_t> widows;
     std::vector<size_t> orphans;
     std::vector<HeightMismatch> mismatches;
+    size_t total_penalty = 0;
 };
 
 struct PageLayoutResult {
     std::vector<Page> pages;
     PageStatistics stats;
-    size_t total_penalty = 0;
 };
 
 const std::vector<TextCommands> &get_lines(const TextElement &e);
