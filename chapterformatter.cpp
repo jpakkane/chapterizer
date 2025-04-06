@@ -98,8 +98,10 @@ PageStatistics ChapterFormatter::compute_penalties(const std::vector<Page> &page
 
         const auto &start_lines = get_lines(elements[first_element_id]);
         if(last_element_id >= elements.size()) {
+            if(first_element_id == elements.size() - 1 && first_line_id == start_lines.size() - 1) {
+                stats.total_penalty += SingleLinePage;
+            }
             continue;
-            // FIXME: add end-of-chapter widow super penalty here.
         }
         const auto &end_lines = get_lines(elements[last_element_id]);
 

@@ -30,6 +30,7 @@ private:
     static constexpr size_t WidowPenalty = 10;
     static constexpr size_t OrphanPenalty = 10;
     static constexpr size_t MismatchPenalty = 7;
+    static constexpr size_t SingleLinePage = 1000;
 
     PageStatistics compute_penalties(const std::vector<Page> &pages) const;
 
