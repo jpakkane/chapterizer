@@ -26,7 +26,10 @@ PageLayoutResult ChapterFormatter::optimize_pages() {
     PageLayoutResult r;
 
     auto run_start = start;
-    optimize_recursive(run_start, r, 0);
+    try {
+        optimize_recursive(run_start, r, 0);
+    } catch(const OptimalResultFound &) {
+    }
     return std::move(best_layout);
 }
 
@@ -39,6 +42,7 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
             TextLimits limits;
             limits.start = run_start;
             {
+                // Exact.
                 limits.end = current;
                 r.pages.emplace_back(RegularPage{limits, {}, {}});
                 const size_t height_validation = r.pages.size();
@@ -47,12 +51,26 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
                 r.pages.pop_back();
             }
             {
+                // One line short
+                limits.end = current;
                 --limits.end;
                 r.pages.emplace_back(RegularPage{limits, {}, {}});
                 const auto height_validation = r.pages.size();
                 optimize_recursive(limits.end, r, lines_on_page);
                 assert(height_validation == r.pages.size());
                 r.pages.pop_back();
+            }
+            {
+                // One line long
+                if(current != end) {
+                    limits.end = current;
+                    ++limits.end;
+                    r.pages.emplace_back(RegularPage{limits, {}, {}});
+                    const auto height_validation = r.pages.size();
+                    optimize_recursive(limits.end, r, lines_on_page);
+                    assert(height_validation == r.pages.size());
+                    r.pages.pop_back();
+                }
             }
             return;
         } else {
@@ -69,6 +87,9 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
     if(r.stats.total_penalty < best_penalty) {
         best_layout = r;
         best_penalty = r.stats.total_penalty;
+        if(best_penalty == 0) {
+            throw OptimalResultFound{};
+        }
     }
     if(lines_on_page > 0) {
         r.pages.pop_back();

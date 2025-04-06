@@ -18,6 +18,8 @@
 
 #include <paginator2.hpp>
 
+struct OptimalResultFound {};
+
 class ChapterFormatter {
 public:
     ChapterFormatter(const TextElementIterator &start,
