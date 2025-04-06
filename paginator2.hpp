@@ -139,6 +139,8 @@ private:
 
     void optimize_page_splits();
 
+    void render_output();
+
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
                                                       bool permit_hyphenation = true);
 
@@ -148,13 +150,15 @@ private:
     void dump_text(const char *path);
     void print_stats(const PageLayoutResult &res);
 
+    void new_page();
+
     const Document &doc;
     // These are just helpers to cut down on typing.
     const PageSize &page;
     const ChapterStyles &styles;
     const Spaces &spaces;
     const Margins &m;
-    // std::unique_ptr<PdfRenderer> rend;
+    std::unique_ptr<PdfRenderer> rend;
     WordHyphenator hyphen;
     int current_page = 1;
     int chapter_start_page = -1;

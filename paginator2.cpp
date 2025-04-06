@@ -104,7 +104,6 @@ Paginator2::Paginator2(const Document &d)
 Paginator2::~Paginator2() { fclose(stats); }
 
 void Paginator2::generate_pdf(const char *outfile) {
-    printf("Add functionality here.\n");
     std::filesystem::path statfile(outfile);
     statfile.replace_extension(".stats.txt");
     stats = fopen(statfile.string().c_str(), "w");
@@ -115,7 +114,50 @@ void Paginator2::generate_pdf(const char *outfile) {
         dumpfile.replace_extension(".dump.txt");
         dump_text(dumpfile.string().c_str());
     }
+    rend.reset(new PdfRenderer(outfile,
+                               page.w,
+                               page.h,
+                               doc.data.is_draft ? Length::zero() : doc.data.pdf.bleed,
+                               doc.data.title.c_str(),
+                               doc.data.author.c_str()));
+    // rend->init_page();
+    render_output();
 }
+
+void Paginator2::render_output() {
+    const size_t page_offset = 1;
+    for(size_t current_page_number = 0; current_page_number < pages.size(); ++current_page_number) {
+        const size_t book_page_number = current_page_number + page_offset;
+        const Page &p = pages[current_page_number];
+        if(auto *reg = std::get_if<RegularPage>(&p)) {
+            const Length line_height = styles.normal.line_height;
+            Length y = m.upper + line_height;
+            for(auto it = reg->main_text.start; it != reg->main_text.end; ++it) {
+                const auto &line = it.line();
+                const auto &x = (book_page_number % 2) == 0 ? doc.data.pdf.margins.inner
+                                                            : doc.data.pdf.margins.outer;
+                if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
+                    const auto extra_indent = textblock_width() - j->width;
+                    rend->render_line_justified(
+                        j->markup_words, styles.normal.font, j->width, x + extra_indent, y);
+                } else if(const auto *r = std::get_if<MarkupDrawCommand>(&line)) {
+                    rend->render_markup_as_is(
+                        r->markup.c_str(), styles.normal.font, x, y, TextAlignment::Left);
+                } else {
+                    std::abort();
+                }
+                y += line_height;
+            }
+        } else {
+            fprintf(stderr, "Not implemented yet.\n");
+            std::abort();
+        }
+        // draw page numbers etc.
+        new_page();
+    }
+}
+
+void Paginator2::new_page() { rend->new_page(); }
 
 void Paginator2::build_main_text() {
     ExtraPenaltyAmounts extras;
