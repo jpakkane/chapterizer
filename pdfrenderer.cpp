@@ -451,6 +451,15 @@ void PdfRenderer::draw_line(Length x0, Length y0, Length x1, Length y1, Length t
     cairo_stroke(cr);
 }
 
+void PdfRenderer::draw_line(
+    Length x0, Length y0, Length x1, Length y1, Length thickness, double g, cairo_line_cap_t cap) {
+    cairo_save(cr);
+    cairo_set_source_rgb(cr, g, g, g);
+    cairo_set_line_cap(cr, cap);
+    draw_line(x0, y0, x1, y1, thickness);
+    cairo_restore(cr);
+}
+
 ImageInfo PdfRenderer::get_image(const std::string &path) {
     ImageInfo result;
     auto it = loaded_images.find(path);

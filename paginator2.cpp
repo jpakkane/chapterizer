@@ -134,8 +134,8 @@ void Paginator2::render_output() {
             Length y = m.upper + line_height;
             for(auto it = reg->main_text.start; it != reg->main_text.end; ++it) {
                 const auto &line = it.line();
-                const auto &x = (book_page_number % 2) == 0 ? doc.data.pdf.margins.inner
-                                                            : doc.data.pdf.margins.outer;
+                const auto &x = (book_page_number % 2) == 0 ? doc.data.pdf.margins.outer
+                                                            : doc.data.pdf.margins.inner;
                 if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
                     const auto extra_indent = textblock_width() - j->width;
                     rend->render_line_justified(
@@ -153,11 +153,20 @@ void Paginator2::render_output() {
             std::abort();
         }
         // draw page numbers etc.
+        draw_edge_markers(0, book_page_number);
         new_page();
     }
 }
 
 void Paginator2::new_page() { rend->new_page(); }
+
+void Paginator2::draw_edge_markers(size_t chapter_number, size_t page_number) {
+    const Length stroke_width = Length::from_mm(5);
+    Length x = (page_number % 2) ? page.w : Length::zero();
+    Length y = m.upper;
+    // move downwards per chapter
+    rend->draw_line(x, y, x, y + 0.5 * stroke_width, stroke_width, 0.5, CAIRO_LINE_CAP_ROUND);
+}
 
 void Paginator2::build_main_text() {
     ExtraPenaltyAmounts extras;

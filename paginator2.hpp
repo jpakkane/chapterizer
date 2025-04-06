@@ -152,6 +152,8 @@ private:
 
     void new_page();
 
+    void draw_edge_markers(size_t chapter_number, size_t page_number);
+
     const Document &doc;
     // These are just helpers to cut down on typing.
     const PageSize &page;
