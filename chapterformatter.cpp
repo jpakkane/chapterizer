@@ -102,6 +102,11 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
             } else {
                 ++lines_on_page;
             }
+        } else if(const auto *empty = std::get_if<EmptyLineElement>(&current.element())) {
+            if(lines_on_page != 0) {
+                // Ignore empty space at the beginning of the line.
+                lines_on_page += empty->num_lines;
+            }
         } else {
             // FIXME, add images etc.
             std::abort();

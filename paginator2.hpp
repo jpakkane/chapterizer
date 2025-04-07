@@ -23,7 +23,9 @@ struct SectionElement {
     size_t chapter_number;
 };
 
-struct EmptyLineElement {};
+struct EmptyLineElement {
+    size_t num_lines = 1;
+};
 
 struct ParagraphElement {
     std::vector<TextCommands> lines;
@@ -174,7 +176,9 @@ private:
     int current_page = 1;
     int chapter_start_page = -1;
 
-    std::vector<Page> pages;
+    // Add frontmatter
+    std::vector<Page> maintext_pages;
+    // Add backmatter
     std::vector<TextElement> elements;
     FILE *stats;
 };

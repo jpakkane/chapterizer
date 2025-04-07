@@ -31,13 +31,17 @@ void plaintextprinter(FILE *f, const TextCommands &c) {
             }
         }
     } else if(const auto *rag = std::get_if<MarkupDrawCommand>(&c)) {
-        if(rag->markup.back() != ' ') {
+        if(rag->markup.empty()) {
+        } else if(rag->markup.back() != ' ') {
             fprintf(f, "%s ", rag->markup.c_str());
         } else {
             fprintf(f, "%s", rag->markup.c_str());
         }
     }
 };
+
+const std::vector<TextCommands> empty_line{
+    MarkupDrawCommand{"", nullptr, Length::zero(), Length::zero(), TextAlignment::Left}};
 
 } // namespace
 
@@ -46,16 +50,29 @@ const std::vector<TextCommands> &get_lines(const TextElement &e) {
         return sec->lines;
     } else if(auto *par = std::get_if<ParagraphElement>(&e)) {
         return par->lines;
+    } else if(auto *empty = std::get_if<EmptyLineElement>(&e)) {
+        (void)empty;
+        return empty_line;
     } else {
         std::abort();
     }
 };
 
+size_t get_num_lines(const TextElement &e) {
+    if(auto *empty = std::get_if<EmptyLineElement>(&e)) {
+        return empty->num_lines;
+    } else {
+        return get_lines(e).size();
+    }
+}
+
 size_t lines_on_page(const Page &p) {
     size_t num_lines = 0;
     if(auto *reg = std::get_if<RegularPage>(&p)) {
         for(auto it = reg->main_text.start; it != reg->main_text.end; ++it) {
-            ++num_lines;
+            if(num_lines > 0 || !std::holds_alternative<EmptyLineElement>(it.element())) {
+                ++num_lines;
+            }
         }
     } else if(auto *sec = std::get_if<SectionPage>(&p)) {
         const size_t chapter_heading_top_whitespace = 8;
@@ -66,7 +83,6 @@ size_t lines_on_page(const Page &p) {
         for(; it != sec->main_text.end; ++it) {
             ++num_lines;
         }
-
     } else {
         fprintf(stderr, "Unsupported page.\n");
         std::abort();
@@ -79,9 +95,9 @@ void TextElementIterator::operator++() {
         return;
     }
 
-    const auto &lines = get_lines((*elems)[element_id]);
+    auto num_lines = get_num_lines((*elems)[element_id]);
     ++line_id;
-    if(line_id >= lines.size()) {
+    if(line_id >= num_lines) {
         ++element_id;
         line_id = 0;
     }
@@ -136,9 +152,10 @@ void Paginator2::generate_pdf(const char *outfile) {
 
 void Paginator2::render_output() {
     const size_t page_offset = 1;
-    for(size_t current_page_number = 0; current_page_number < pages.size(); ++current_page_number) {
+    for(size_t current_page_number = 0; current_page_number < maintext_pages.size();
+        ++current_page_number) {
         const size_t book_page_number = current_page_number + page_offset;
-        const Page &p = pages[current_page_number];
+        const Page &p = maintext_pages[current_page_number];
         const auto &textblock_left =
             (book_page_number % 2) == 0 ? doc.data.pdf.margins.outer : doc.data.pdf.margins.inner;
         if(auto *reg_page = std::get_if<RegularPage>(&p)) {
@@ -181,7 +198,6 @@ void Paginator2::render_output() {
                 const auto &line = it.line();
 
                 if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
-                    const auto extra_indent = textblock_width() - j->width;
                     rend->render_line_justified(
                         j->markup_words, styles.normal.font, j->width, textblock_left + j->x, y);
                 } else if(const auto *r = std::get_if<MarkupDrawCommand>(&line)) {
@@ -249,7 +265,7 @@ void Paginator2::optimize_page_splits() {
     ChapterFormatter chf(start, end, elements);
     auto optimized_chapter = chf.optimize_pages();
     print_stats(optimized_chapter);
-    pages = std::move(optimized_chapter.pages);
+    maintext_pages = std::move(optimized_chapter.pages);
 }
 
 void Paginator2::create_section(const Section &s, const ExtraPenaltyAmounts &extras) {
@@ -293,6 +309,7 @@ void Paginator2::create_section(const Section &s, const ExtraPenaltyAmounts &ext
         }
     }
     elements.emplace_back(std::move(selem));
+    elements.emplace_back(EmptyLineElement{1});
 }
 
 void Paginator2::create_paragraph(const Paragraph &p,
@@ -390,7 +407,7 @@ void Paginator2::dump_text(const char *path) {
     std::unique_ptr<FILE, int (*)(FILE *)> fcloser(f, fclose);
 
     size_t page_num = 0;
-    for(const auto &p : pages) {
+    for(const auto &p : maintext_pages) {
         ++page_num;
         fprintf(f, "%s -- PAGE %d --\n\n", (page_num != 1) ? "\n" : "", (int)page_num);
         if(auto *reg = std::get_if<RegularPage>(&p)) {
