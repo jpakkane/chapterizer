@@ -83,7 +83,13 @@ public:
 
     void draw_line(Length x0, Length y0, Length x1, Length y1, Length thickness);
 
-    void draw_line(Length x0, Length y0, Length x1, Length y1, Length thickness, double g, cairo_line_cap_t cap);
+    void draw_line(Length x0,
+                   Length y0,
+                   Length x1,
+                   Length y1,
+                   Length thickness,
+                   double g,
+                   cairo_line_cap_t cap);
 
     ImageInfo get_image(const std::string &path);
 

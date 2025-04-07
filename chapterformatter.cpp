@@ -47,9 +47,8 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
             } else {
                 r.pages.emplace_back(RegularPage{limits, {}, {}});
             }
-            page_section_number.reset();
             const size_t height_validation = r.pages.size();
-            optimize_recursive(current, r, lines_on_page);
+            optimize_recursive(endpoint, r, lines_on_page);
             assert(height_validation == r.pages.size());
             r.pages.pop_back();
         };
@@ -57,7 +56,7 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
         if(lines_on_page >= target_height) {
             // Exact.
             auto endpoint = current;
-            push_and_resume(run_start, current);
+            push_and_resume(run_start, endpoint);
             // One line short
             --endpoint;
             push_and_resume(run_start, endpoint);
@@ -149,6 +148,7 @@ PageStatistics ChapterFormatter::compute_penalties(const std::vector<Page> &page
         const auto &start_lines = get_lines(elements[first_element_id]);
         if(last_element_id >= elements.size()) {
             if(first_element_id == elements.size() - 1 && first_line_id == start_lines.size() - 1) {
+                stats.single_line_last_page = true;
                 stats.total_penalty += SingleLinePage;
             }
             continue;

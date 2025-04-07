@@ -508,6 +508,10 @@ void Paginator2::print_stats(const PageLayoutResult &res) {
                 fprintf(stats, "Height mismatch.\n");
             }
         }
+
+        if(res.stats.single_line_last_page && page_num == res.pages.size() - 1) {
+            fprintf(stats, "FATAL: single line page.\n");
+        }
         fprintf(stats, "\n");
     }
 }

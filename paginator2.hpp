@@ -40,8 +40,9 @@ struct SpecialTextElement {
 
 struct FootnoteElement {};
 
-typedef std::variant<SectionElement, ParagraphElement, SpecialTextElement, EmptyLineElement, FootnoteElement>
-    TextElement;
+typedef std::
+    variant<SectionElement, ParagraphElement, SpecialTextElement, EmptyLineElement, FootnoteElement>
+        TextElement;
 
 struct TextElementIterator {
     TextElementIterator() {
@@ -114,6 +115,7 @@ struct PageStatistics {
     std::vector<size_t> widows;
     std::vector<size_t> orphans;
     std::vector<HeightMismatch> mismatches;
+    bool single_line_last_page = false;
     size_t total_penalty = 0;
 };
 
@@ -169,7 +171,9 @@ private:
 
     void draw_edge_markers(size_t chapter_number, size_t page_number);
 
-    void render_maintext_lines(const TextElementIterator &start_loc, const TextElementIterator &end_loc, size_t book_page_number,
+    void render_maintext_lines(const TextElementIterator &start_loc,
+                               const TextElementIterator &end_loc,
+                               size_t book_page_number,
                                Length y);
 
     const Document &doc;
