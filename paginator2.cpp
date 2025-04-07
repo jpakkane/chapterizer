@@ -57,6 +57,16 @@ size_t lines_on_page(const Page &p) {
         for(auto it = reg->main_text.start; it != reg->main_text.end; ++it) {
             ++num_lines;
         }
+    } else if(auto *sec = std::get_if<SectionPage>(&p)) {
+        const size_t chapter_heading_top_whitespace = 8;
+        num_lines += chapter_heading_top_whitespace; // FIXME
+        num_lines += 1;
+        auto it = sec->main_text.start;
+        it.next_element();
+        for(; it != sec->main_text.end; ++it) {
+            ++num_lines;
+        }
+
     } else {
         fprintf(stderr, "Unsupported page.\n");
         std::abort();
@@ -129,13 +139,42 @@ void Paginator2::render_output() {
     for(size_t current_page_number = 0; current_page_number < pages.size(); ++current_page_number) {
         const size_t book_page_number = current_page_number + page_offset;
         const Page &p = pages[current_page_number];
-        if(auto *reg = std::get_if<RegularPage>(&p)) {
+        const auto &x =
+            (book_page_number % 2) == 0 ? doc.data.pdf.margins.outer : doc.data.pdf.margins.inner;
+        if(auto *reg_page = std::get_if<RegularPage>(&p)) {
             const Length line_height = styles.normal.line_height;
             Length y = m.upper + line_height;
-            for(auto it = reg->main_text.start; it != reg->main_text.end; ++it) {
+            for(auto it = reg_page->main_text.start; it != reg_page->main_text.end; ++it) {
                 const auto &line = it.line();
-                const auto &x = (book_page_number % 2) == 0 ? doc.data.pdf.margins.outer
-                                                            : doc.data.pdf.margins.inner;
+
+                if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
+                    const auto extra_indent = textblock_width() - j->width;
+                    rend->render_line_justified(
+                        j->markup_words, styles.normal.font, j->width, x + extra_indent, y);
+                } else if(const auto *r = std::get_if<MarkupDrawCommand>(&line)) {
+                    rend->render_markup_as_is(
+                        r->markup.c_str(), styles.normal.font, x, y, TextAlignment::Left);
+                } else {
+                    std::abort();
+                }
+                y += line_height;
+            }
+        } else if(auto *sec_page = std::get_if<SectionPage>(&p)) {
+            const size_t chapter_heading_top_whitespace = 8;
+            const Length line_height = styles.normal.line_height;
+            Length y = m.upper + chapter_heading_top_whitespace * line_height;
+            auto it = sec_page->main_text.start;
+            const auto &section_element = std::get<SectionElement>(it.element());
+            it.next_element();
+            assert(section_element.lines.size() == 1);
+            const auto &line = std::get<MarkupDrawCommand>(section_element.lines.front());
+            rend->render_markup_as_is(
+                line.markup.c_str(), styles.section.font, x + line.x, y, line.alignment);
+            y += line_height;
+            // FIXME, copypaste from above.
+            for(; it != sec_page->main_text.end; ++it) {
+                const auto &line = it.line();
+
                 if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
                     const auto extra_indent = textblock_width() - j->width;
                     rend->render_line_justified(
@@ -213,6 +252,7 @@ void Paginator2::create_section(const Section &s, const ExtraPenaltyAmounts &ext
     // chapter_start_page = rend->page_num();
     // rend->add_section_outline(s.number, s.text);
     assert(s.level == 1);
+    selem.chapter_number = s.number;
     // Fancy stuff above the text.
     std::string title_string;
     TextAlignment section_alignment = TextAlignment::Centered;
@@ -223,7 +263,9 @@ void Paginator2::create_section(const Section &s, const ExtraPenaltyAmounts &ext
         title_string += s.text;
         section_alignment = TextAlignment::Left;
     } else {
-        title_string = std::to_string(s.number);
+        title_string = "·";
+        title_string += std::to_string(s.number);
+        title_string += "·";
         selem.lines.emplace_back(MarkupDrawCommand{title_string,
                                                    &styles.section.font,
                                                    textblock_width() / 2,
@@ -232,12 +274,15 @@ void Paginator2::create_section(const Section &s, const ExtraPenaltyAmounts &ext
         title_string = s.text;
     }
     // The title. Hyphenation is prohibited.
-    std::vector<EnrichedWord> processed_words = text_to_formatted_words(title_string, false);
-    ParagraphFormatter b(processed_words, section_width, styles.section, extras);
-    auto lines = b.split_formatted_lines();
-    auto built_lines = build_ragged_paragraph(lines, styles.section, section_alignment);
-    for(auto &line : built_lines) {
-        selem.lines.emplace_back(std::move(line));
+    const bool only_number_in_chapter_heading = !doc.data.is_draft;
+    if(!only_number_in_chapter_heading) {
+        std::vector<EnrichedWord> processed_words = text_to_formatted_words(title_string, false);
+        ParagraphFormatter b(processed_words, section_width, styles.section, extras);
+        auto lines = b.split_formatted_lines();
+        auto built_lines = build_ragged_paragraph(lines, styles.section, section_alignment);
+        for(auto &line : built_lines) {
+            selem.lines.emplace_back(std::move(line));
+        }
     }
     elements.emplace_back(std::move(selem));
 }
@@ -357,7 +402,16 @@ void Paginator2::dump_text(const char *path) {
                 previous = it;
             }
         } else if(auto *sec = std::get_if<SectionPage>(&p)) {
-            std::abort();
+            fprintf(f, "Chapter %d\n", (int)sec->section);
+            TextElementIterator previous = sec->main_text.start;
+            for(TextElementIterator it = sec->main_text.start; it != sec->main_text.end; ++it) {
+                if(previous.element_id != it.element_id) {
+                    fprintf(f, "\n");
+                }
+                plaintextprinter(f, it.line());
+                fprintf(f, "\n");
+                previous = it;
+            }
         } else {
             std::abort();
         }

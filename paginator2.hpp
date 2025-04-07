@@ -20,6 +20,7 @@
 
 struct SectionElement {
     std::vector<TextCommands> lines;
+    size_t chapter_number;
 };
 
 struct EmptyLineElement {};
@@ -55,6 +56,14 @@ struct TextElementIterator {
 
     void operator++();
     void operator--();
+
+    void next_element() {
+        if(element_id >= elems->size()) {
+            return;
+        }
+        ++element_id;
+        line_id = 0;
+    }
 
     bool operator==(const TextElementIterator &o) const {
         return elems == o.elems && element_id == o.element_id && line_id == o.line_id;
