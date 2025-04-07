@@ -216,7 +216,7 @@ void Paginator2::render_maintext_lines(const TextElementIterator &start_loc,
         } else if(auto *special = std::get_if<SpecialTextElement>(&it.element())) {
             const auto mu = std::get<MarkupDrawCommand>(line);
             rend->render_markup_as_is(mu.markup.c_str(),
-                                      styles.code.font,
+                                      *special->font,
                                       textblock_left + special->extra_indent,
                                       y,
                                       TextAlignment::Left);
@@ -264,6 +264,18 @@ void Paginator2::build_main_text() {
             elements.emplace_back(EmptyLineElement{1});
             create_codeblock(*cb);
             elements.emplace_back(EmptyLineElement{1});
+        } else if(auto *sc = std::get_if<SceneChange>(&e)) {
+            (void)sc;
+            elements.emplace_back(EmptyLineElement{1});
+            first_paragraph = true;
+        } else if(auto *foot = std::get_if<Footnote>(&e)) {
+            (void)foot;
+            // FIXME.
+        } else if(auto *letter = std::get_if<Letter>(&e)) {
+            elements.emplace_back(EmptyLineElement{1});
+            create_letter(*letter);
+            elements.emplace_back(EmptyLineElement{1});
+            first_paragraph = true;
         } else {
             fprintf(stderr, "Not supported yet.\n");
             std::abort();
@@ -276,11 +288,33 @@ void Paginator2::build_main_text() {
 void Paginator2::create_codeblock(const CodeBlock &cb) {
     SpecialTextElement el;
     el.extra_indent = spaces.codeblock_indent;
+    el.font = &styles.code.font;
     for(const auto &line : cb.raw_lines) {
         el.lines.emplace_back(MarkupDrawCommand{
             line.c_str(), &styles.code.font, Length::zero(), Length::zero(), TextAlignment::Left});
     }
     elements.emplace_back(std::move(el));
+}
+
+void Paginator2::create_letter(const Letter &letter) {
+    ExtraPenaltyAmounts extra;
+    size_t par_number = 0;
+    for(const auto &partext : letter.paragraphs) {
+        if(par_number > 0) {
+            elements.push_back(EmptyLineElement{1});
+        }
+        SpecialTextElement el;
+        el.extra_indent = spaces.codeblock_indent;
+        el.font = &styles.letter.font;
+        auto paragraph_width = textblock_width() - 2 * spaces.letter_indent;
+        std::vector<EnrichedWord> processed_words = text_to_formatted_words(partext);
+        ParagraphFormatter b(processed_words, paragraph_width, styles.letter, extra);
+        auto lines = b.split_formatted_lines();
+        el.extra_indent = spaces.letter_indent;
+        el.lines = build_ragged_paragraph(lines, styles.letter, TextAlignment::Left);
+        elements.emplace_back(std::move(el));
+        ++par_number;
+    }
 }
 
 void Paginator2::optimize_page_splits() {

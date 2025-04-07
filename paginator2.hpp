@@ -36,6 +36,7 @@ struct ParagraphElement {
 struct SpecialTextElement {
     std::vector<TextCommands> lines;
     Length extra_indent;
+    const FontParameters *font = nullptr;
 };
 
 struct FootnoteElement {};
@@ -148,6 +149,7 @@ private:
 
     void create_section(const Section &s, const ExtraPenaltyAmounts &extras);
     void create_codeblock(const CodeBlock &cb);
+    void create_letter(const Letter &letter);
 
     void create_paragraph(const Paragraph &p,
                           const ExtraPenaltyAmounts &extras,

@@ -150,15 +150,17 @@ PageStatistics ChapterFormatter::compute_penalties(const std::vector<Page> &page
             if(first_element_id == elements.size() - 1 && first_line_id == start_lines.size() - 1) {
                 stats.single_line_last_page = true;
                 stats.total_penalty += SingleLinePage;
+                continue;
             }
-            continue;
         }
-        const auto &end_lines = get_lines(elements[last_element_id]);
+        if(last_element_id < elements.size()) {
+            const auto &end_lines = get_lines(elements[last_element_id]);
 
-        // Orphan (single line at the end of a page)
-        if(end_lines.size() > 1 && last_line_id == 1) {
-            stats.orphans.push_back(page_number_offset + page_num);
-            stats.total_penalty += OrphanPenalty;
+            // Orphan (single line at the end of a page)
+            if(end_lines.size() > 1 && last_line_id == 1) {
+                stats.orphans.push_back(page_number_offset + page_num);
+                stats.total_penalty += OrphanPenalty;
+            }
         }
         // These are only counted for "regular" pages.
         if(std::holds_alternative<RegularPage>(p)) {
