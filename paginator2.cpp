@@ -139,7 +139,7 @@ void Paginator2::render_output() {
     for(size_t current_page_number = 0; current_page_number < pages.size(); ++current_page_number) {
         const size_t book_page_number = current_page_number + page_offset;
         const Page &p = pages[current_page_number];
-        const auto &x =
+        const auto &textblock_left =
             (book_page_number % 2) == 0 ? doc.data.pdf.margins.outer : doc.data.pdf.margins.inner;
         if(auto *reg_page = std::get_if<RegularPage>(&p)) {
             const Length line_height = styles.normal.line_height;
@@ -148,12 +148,14 @@ void Paginator2::render_output() {
                 const auto &line = it.line();
 
                 if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
-                    const auto extra_indent = textblock_width() - j->width;
                     rend->render_line_justified(
-                        j->markup_words, styles.normal.font, j->width, x + extra_indent, y);
+                        j->markup_words, styles.normal.font, j->width, textblock_left + j->x, y);
                 } else if(const auto *r = std::get_if<MarkupDrawCommand>(&line)) {
-                    rend->render_markup_as_is(
-                        r->markup.c_str(), styles.normal.font, x, y, TextAlignment::Left);
+                    rend->render_markup_as_is(r->markup.c_str(),
+                                              styles.normal.font,
+                                              textblock_left + r->x,
+                                              y,
+                                              TextAlignment::Left);
                 } else {
                     std::abort();
                 }
@@ -167,9 +169,12 @@ void Paginator2::render_output() {
             const auto &section_element = std::get<SectionElement>(it.element());
             it.next_element();
             assert(section_element.lines.size() == 1);
-            const auto &line = std::get<MarkupDrawCommand>(section_element.lines.front());
-            rend->render_markup_as_is(
-                line.markup.c_str(), styles.section.font, x + line.x, y, line.alignment);
+            const auto &chapter_number = std::get<MarkupDrawCommand>(section_element.lines.front());
+            rend->render_markup_as_is(chapter_number.markup.c_str(),
+                                      styles.section.font,
+                                      textblock_left + chapter_number.x,
+                                      y,
+                                      chapter_number.alignment);
             y += line_height;
             // FIXME, copypaste from above.
             for(; it != sec_page->main_text.end; ++it) {
@@ -178,10 +183,13 @@ void Paginator2::render_output() {
                 if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
                     const auto extra_indent = textblock_width() - j->width;
                     rend->render_line_justified(
-                        j->markup_words, styles.normal.font, j->width, x + extra_indent, y);
+                        j->markup_words, styles.normal.font, j->width, textblock_left + j->x, y);
                 } else if(const auto *r = std::get_if<MarkupDrawCommand>(&line)) {
-                    rend->render_markup_as_is(
-                        r->markup.c_str(), styles.normal.font, x, y, TextAlignment::Left);
+                    rend->render_markup_as_is(r->markup.c_str(),
+                                              styles.normal.font,
+                                              textblock_left + r->x,
+                                              y,
+                                              TextAlignment::Left);
                 } else {
                     std::abort();
                 }
@@ -311,9 +319,6 @@ Paginator2::build_justified_paragraph(const std::vector<std::vector<std::string>
                                       const ChapterParameters &text_par,
                                       const Length target_width) {
     Length rel_y = Length::zero();
-    Length x_off = Length::zero();
-    Length y_off = Length::zero();
-    const Length x;
     std::vector<TextCommands> line_commands;
     line_commands.reserve(lines.size());
     size_t line_num = 0;
@@ -322,19 +327,16 @@ Paginator2::build_justified_paragraph(const std::vector<std::vector<std::string>
         if(line_num < lines.size() - 1) {
             line_commands.emplace_back(JustifiedMarkupDrawCommand{markup_words,
                                                                   &text_par.font,
-                                                                  (x + current_indent) + x_off,
-                                                                  rel_y + y_off,
+                                                                  current_indent,
+                                                                  rel_y,
                                                                   target_width - current_indent});
         } else {
             std::string full_line;
             for(const auto &w : markup_words) {
                 full_line += w;
             }
-            line_commands.emplace_back(MarkupDrawCommand{std::move(full_line),
-                                                         &text_par.font,
-                                                         x + current_indent + x_off,
-                                                         rel_y + y_off,
-                                                         TextAlignment::Left});
+            line_commands.emplace_back(MarkupDrawCommand{
+                std::move(full_line), &text_par.font, current_indent, rel_y, TextAlignment::Left});
         }
         line_num++;
         rel_y += text_par.line_height;
