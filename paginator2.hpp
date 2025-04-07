@@ -33,11 +33,14 @@ struct ParagraphElement {
     Length paragraph_width;
 };
 
-struct SpecialTextElement {};
+struct SpecialTextElement {
+    std::vector<TextCommands> lines;
+    Length extra_indent;
+};
 
 struct FootnoteElement {};
 
-typedef std::variant<SectionElement, EmptyLineElement, ParagraphElement, FootnoteElement>
+typedef std::variant<SectionElement, ParagraphElement, SpecialTextElement, EmptyLineElement, FootnoteElement>
     TextElement;
 
 struct TextElementIterator {
@@ -142,6 +145,7 @@ private:
                            const TextAlignment alignment);
 
     void create_section(const Section &s, const ExtraPenaltyAmounts &extras);
+    void create_codeblock(const CodeBlock &cb);
 
     void create_paragraph(const Paragraph &p,
                           const ExtraPenaltyAmounts &extras,
@@ -164,6 +168,9 @@ private:
     void new_page();
 
     void draw_edge_markers(size_t chapter_number, size_t page_number);
+
+    void render_maintext_lines(const TextElementIterator &start_loc, const TextElementIterator &end_loc, size_t book_page_number,
+                               Length y);
 
     const Document &doc;
     // These are just helpers to cut down on typing.

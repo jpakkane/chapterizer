@@ -53,6 +53,23 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
             assert(height_validation == r.pages.size());
             r.pages.pop_back();
         };
+        // Have we filled the current page?
+        if(lines_on_page >= target_height) {
+            // Exact.
+            auto endpoint = current;
+            push_and_resume(run_start, current);
+            // One line short
+            --endpoint;
+            push_and_resume(run_start, endpoint);
+            // One line long
+            if(current != end) {
+                endpoint = current;
+                ++endpoint;
+                push_and_resume(run_start, endpoint);
+            }
+            // It's a bit weird to return here, but that's recursion for you.
+            return;
+        }
         if(auto *sec = std::get_if<SectionElement>(&current.element())) {
             // There can be only one of these in a chapter and it must come first.
             assert(current == run_start);
@@ -63,34 +80,15 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
             page_section_number = sec->chapter_number;
             ++lines_on_page;
         } else if(auto *par = std::get_if<ParagraphElement>(&current.element())) {
-            if(lines_on_page >= target_height) {
-                {
-                    // Exact.
-                    push_and_resume(run_start, current);
-                }
-                {
-                    // One line short
-                    auto endpoint = current;
-                    --endpoint;
-                    push_and_resume(run_start, endpoint);
-                }
-                {
-                    // One line long
-                    if(current != end) {
-                        auto endpoint = current;
-                        ++endpoint;
-                        push_and_resume(run_start, endpoint);
-                    }
-                }
-                return;
-            } else {
-                ++lines_on_page;
-            }
+            ++lines_on_page;
         } else if(const auto *empty = std::get_if<EmptyLineElement>(&current.element())) {
             if(lines_on_page != 0) {
                 // Ignore empty space at the beginning of the line.
                 lines_on_page += empty->num_lines;
             }
+        } else if(const auto *cb = std::get_if<SpecialTextElement>(&current.element())) {
+            (void)cb;
+            ++lines_on_page;
         } else {
             // FIXME, add images etc.
             std::abort();
@@ -100,7 +98,11 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
         TextLimits limits;
         limits.start = run_start;
         limits.end = end;
-        r.pages.emplace_back(RegularPage{limits, {}, {}});
+        if(page_section_number) {
+            r.pages.emplace_back(SectionPage{page_section_number.value(), limits});
+        } else {
+            r.pages.emplace_back(RegularPage{limits, {}, {}});
+        }
     }
     r.stats = compute_penalties(r.pages);
     if(r.stats.total_penalty < best_penalty) {

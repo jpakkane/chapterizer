@@ -50,6 +50,8 @@ const std::vector<TextCommands> &get_lines(const TextElement &e) {
         return sec->lines;
     } else if(auto *par = std::get_if<ParagraphElement>(&e)) {
         return par->lines;
+    } else if(auto *spc = std::get_if<SpecialTextElement>(&e)) {
+        return spc->lines;
     } else if(auto *empty = std::get_if<EmptyLineElement>(&e)) {
         (void)empty;
         return empty_line;
@@ -161,23 +163,8 @@ void Paginator2::render_output() {
         if(auto *reg_page = std::get_if<RegularPage>(&p)) {
             const Length line_height = styles.normal.line_height;
             Length y = m.upper + line_height;
-            for(auto it = reg_page->main_text.start; it != reg_page->main_text.end; ++it) {
-                const auto &line = it.line();
-
-                if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
-                    rend->render_line_justified(
-                        j->markup_words, styles.normal.font, j->width, textblock_left + j->x, y);
-                } else if(const auto *r = std::get_if<MarkupDrawCommand>(&line)) {
-                    rend->render_markup_as_is(r->markup.c_str(),
-                                              styles.normal.font,
-                                              textblock_left + r->x,
-                                              y,
-                                              TextAlignment::Left);
-                } else {
-                    std::abort();
-                }
-                y += line_height;
-            }
+            render_maintext_lines(
+                reg_page->main_text.start, reg_page->main_text.end, book_page_number, y);
         } else if(auto *sec_page = std::get_if<SectionPage>(&p)) {
             const size_t chapter_heading_top_whitespace = 8;
             const Length line_height = styles.normal.line_height;
@@ -193,24 +180,7 @@ void Paginator2::render_output() {
                                       y,
                                       chapter_number.alignment);
             y += line_height;
-            // FIXME, copypaste from above.
-            for(; it != sec_page->main_text.end; ++it) {
-                const auto &line = it.line();
-
-                if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
-                    rend->render_line_justified(
-                        j->markup_words, styles.normal.font, j->width, textblock_left + j->x, y);
-                } else if(const auto *r = std::get_if<MarkupDrawCommand>(&line)) {
-                    rend->render_markup_as_is(r->markup.c_str(),
-                                              styles.normal.font,
-                                              textblock_left + r->x,
-                                              y,
-                                              TextAlignment::Left);
-                } else {
-                    std::abort();
-                }
-                y += line_height;
-            }
+            render_maintext_lines(it, sec_page->main_text.end, book_page_number, y);
         } else {
             fprintf(stderr, "Not implemented yet.\n");
             std::abort();
@@ -218,6 +188,45 @@ void Paginator2::render_output() {
         // draw page numbers etc.
         draw_edge_markers(0, book_page_number);
         new_page();
+    }
+}
+
+void Paginator2::render_maintext_lines(const TextElementIterator &start_loc,
+                                       const TextElementIterator &end_loc,
+                                       size_t book_page_number,
+                                       Length y) {
+    const Length line_height = styles.normal.line_height;
+    const auto &textblock_left =
+        (book_page_number % 2) == 0 ? doc.data.pdf.margins.outer : doc.data.pdf.margins.inner;
+    for(auto it = start_loc; it != end_loc; ++it) {
+        const auto &line = it.line();
+        if(std::holds_alternative<ParagraphElement>(it.element())) {
+            if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
+                rend->render_line_justified(
+                    j->markup_words, styles.normal.font, j->width, textblock_left + j->x, y);
+            } else if(const auto *r = std::get_if<MarkupDrawCommand>(&line)) {
+                rend->render_markup_as_is(r->markup.c_str(),
+                                          styles.normal.font,
+                                          textblock_left + r->x,
+                                          y,
+                                          TextAlignment::Left);
+            } else {
+                std::abort();
+            }
+        } else if(auto *special = std::get_if<SpecialTextElement>(&it.element())) {
+            const auto mu = std::get<MarkupDrawCommand>(line);
+            rend->render_markup_as_is(mu.markup.c_str(),
+                                      styles.code.font,
+                                      textblock_left + special->extra_indent,
+                                      y,
+                                      TextAlignment::Left);
+        } else if(auto *empty = std::get_if<EmptyLineElement>(&it.element())) {
+            y += empty->num_lines * line_height;
+        } else {
+            fprintf(stderr, "ERROR is.\n");
+            std::abort();
+        }
+        y += line_height;
     }
 }
 
@@ -248,6 +257,13 @@ void Paginator2::build_main_text() {
                              first_paragraph ? styles.normal_noindent : styles.normal,
                              Length::zero());
             first_paragraph = false;
+        } else if(auto *fig = std::get_if<Figure>(&e)) {
+            (void)fig;
+            // FIXME add later.
+        } else if(auto *cb = std::get_if<CodeBlock>(&e)) {
+            elements.emplace_back(EmptyLineElement{1});
+            create_codeblock(*cb);
+            elements.emplace_back(EmptyLineElement{1});
         } else {
             fprintf(stderr, "Not supported yet.\n");
             std::abort();
@@ -255,6 +271,16 @@ void Paginator2::build_main_text() {
     }
     optimize_page_splits();
     // create_pdf();
+}
+
+void Paginator2::create_codeblock(const CodeBlock &cb) {
+    SpecialTextElement el;
+    el.extra_indent = spaces.codeblock_indent;
+    for(const auto &line : cb.raw_lines) {
+        el.lines.emplace_back(MarkupDrawCommand{
+            line.c_str(), &styles.code.font, Length::zero(), Length::zero(), TextAlignment::Left});
+    }
+    elements.emplace_back(std::move(el));
 }
 
 void Paginator2::optimize_page_splits() {
