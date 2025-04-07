@@ -39,6 +39,20 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
     size_t lines_on_page = 0;
     std::optional<size_t> page_section_number;
     for(TextElementIterator current = run_start; current != end; ++current) {
+        auto push_and_resume = [&](const TextElementIterator &startpoint,
+                                   const TextElementIterator &endpoint) {
+            TextLimits limits{startpoint, endpoint};
+            if(page_section_number) {
+                r.pages.emplace_back(SectionPage{*page_section_number, limits});
+            } else {
+                r.pages.emplace_back(RegularPage{limits, {}, {}});
+            }
+            page_section_number.reset();
+            const size_t height_validation = r.pages.size();
+            optimize_recursive(current, r, lines_on_page);
+            assert(height_validation == r.pages.size());
+            r.pages.pop_back();
+        };
         if(auto *sec = std::get_if<SectionElement>(&current.element())) {
             // There can be only one of these in a chapter and it must come first.
             assert(current == run_start);
@@ -50,52 +64,22 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
             ++lines_on_page;
         } else if(auto *par = std::get_if<ParagraphElement>(&current.element())) {
             if(lines_on_page >= target_height) {
-                TextLimits limits;
-                limits.start = run_start;
                 {
                     // Exact.
-                    limits.end = current;
-                    if(page_section_number) {
-                        r.pages.emplace_back(SectionPage{*page_section_number, limits});
-                    } else {
-                        r.pages.emplace_back(RegularPage{limits, {}, {}});
-                    }
-                    page_section_number.reset();
-                    const size_t height_validation = r.pages.size();
-                    optimize_recursive(current, r, lines_on_page);
-                    assert(height_validation == r.pages.size());
-                    r.pages.pop_back();
+                    push_and_resume(run_start, current);
                 }
                 {
                     // One line short
-                    limits.end = current;
-                    --limits.end;
-                    if(page_section_number) {
-                        r.pages.emplace_back(SectionPage{*page_section_number, limits});
-                    } else {
-                        r.pages.emplace_back(RegularPage{limits, {}, {}});
-                    }
-                    page_section_number.reset();
-                    const auto height_validation = r.pages.size();
-                    optimize_recursive(limits.end, r, lines_on_page);
-                    assert(height_validation == r.pages.size());
-                    r.pages.pop_back();
+                    auto endpoint = current;
+                    --endpoint;
+                    push_and_resume(run_start, endpoint);
                 }
                 {
                     // One line long
                     if(current != end) {
-                        limits.end = current;
-                        ++limits.end;
-                        if(page_section_number) {
-                            r.pages.emplace_back(SectionPage{*page_section_number, limits});
-                        } else {
-                            r.pages.emplace_back(RegularPage{limits, {}, {}});
-                        }
-                        page_section_number.reset();
-                        const auto height_validation = r.pages.size();
-                        optimize_recursive(limits.end, r, lines_on_page);
-                        assert(height_validation == r.pages.size());
-                        r.pages.pop_back();
+                        auto endpoint = current;
+                        ++endpoint;
+                        push_and_resume(run_start, endpoint);
                     }
                 }
                 return;
