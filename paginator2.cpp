@@ -219,7 +219,7 @@ void Paginator2::render_maintext_lines(const TextElementIterator &start_loc,
                                       *special->font,
                                       textblock_left + special->extra_indent,
                                       y,
-                                      TextAlignment::Left);
+                                      special->alignment);
         } else if(auto *empty = std::get_if<EmptyLineElement>(&it.element())) {
             y += empty->num_lines * line_height;
         } else {
@@ -276,6 +276,11 @@ void Paginator2::build_main_text() {
             create_letter(*letter);
             elements.emplace_back(EmptyLineElement{1});
             first_paragraph = true;
+        } else if(auto *sign = std::get_if<SignBlock>(&e)) {
+            elements.emplace_back(EmptyLineElement{1});
+            create_sign(*sign);
+            elements.emplace_back(EmptyLineElement{1});
+            first_paragraph = true;
         } else {
             fprintf(stderr, "Not supported yet.\n");
             std::abort();
@@ -289,9 +294,45 @@ void Paginator2::create_codeblock(const CodeBlock &cb) {
     SpecialTextElement el;
     el.extra_indent = spaces.codeblock_indent;
     el.font = &styles.code.font;
+    el.alignment = TextAlignment::Left;
     for(const auto &line : cb.raw_lines) {
         el.lines.emplace_back(MarkupDrawCommand{
-            line.c_str(), &styles.code.font, Length::zero(), Length::zero(), TextAlignment::Left});
+            line.c_str(), &styles.code.font, Length::zero(), Length::zero(), el.alignment});
+    }
+    elements.emplace_back(std::move(el));
+}
+
+void Paginator2::create_sign(const SignBlock &sign) {
+    SpecialTextElement el;
+    ExtraPenaltyAmounts extra;
+    el.extra_indent = Length::zero();
+    el.font = &styles.normal.font;
+    const auto textwidth = textblock_width();
+    for(const auto &line : sign.raw_lines) {
+        // FIXME. This should not be done here. Smallcapsness should be a
+        // font property instead.
+        if(line.empty() || line.front() != '|') {
+            std::string tmpline("|");
+            tmpline += line;
+            tmpline += '|';
+            std::vector<EnrichedWord> processed_words = text_to_formatted_words(tmpline);
+            ParagraphFormatter b(processed_words, textwidth, styles.normal, extra);
+            auto lines = b.split_formatted_lines();
+            el.extra_indent = textblock_width() / 2;
+            el.alignment = TextAlignment::Centered;
+            auto rag_lines = build_ragged_paragraph(lines, styles.normal, el.alignment);
+            assert(rag_lines.size() == 1);
+            el.lines.emplace_back(std::move(rag_lines.front()));
+        } else {
+            std::abort();
+            /*
+            el.lines.emplace_back(MarkupDrawCommand{line.c_str(),
+                                                    &styles.normal.font,
+                                                    Length::zero(),
+                                                    Length::zero(),
+                                                    TextAlignment::Centered});
+*/
+        }
     }
     elements.emplace_back(std::move(el));
 }
@@ -306,12 +347,13 @@ void Paginator2::create_letter(const Letter &letter) {
         SpecialTextElement el;
         el.extra_indent = spaces.codeblock_indent;
         el.font = &styles.letter.font;
+        el.alignment = TextAlignment::Left;
         auto paragraph_width = textblock_width() - 2 * spaces.letter_indent;
         std::vector<EnrichedWord> processed_words = text_to_formatted_words(partext);
         ParagraphFormatter b(processed_words, paragraph_width, styles.letter, extra);
         auto lines = b.split_formatted_lines();
         el.extra_indent = spaces.letter_indent;
-        el.lines = build_ragged_paragraph(lines, styles.letter, TextAlignment::Left);
+        el.lines = build_ragged_paragraph(lines, styles.letter, el.alignment);
         elements.emplace_back(std::move(el));
         ++par_number;
     }
