@@ -178,7 +178,7 @@ private:
     void render_maintext_lines(const TextElementIterator &start_loc,
                                const TextElementIterator &end_loc,
                                size_t book_page_number,
-                               Length y);
+                               Length y, int current_line=-1);
 
     const Document &doc;
     // These are just helpers to cut down on typing.

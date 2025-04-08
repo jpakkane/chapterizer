@@ -180,7 +180,7 @@ void Paginator2::render_output() {
                                       y,
                                       chapter_number.alignment);
             y += line_height;
-            render_maintext_lines(it, sec_page->main_text.end, book_page_number, y);
+            render_maintext_lines(it, sec_page->main_text.end, book_page_number, y, 0);
         } else {
             fprintf(stderr, "Not implemented yet.\n");
             std::abort();
@@ -194,11 +194,13 @@ void Paginator2::render_output() {
 void Paginator2::render_maintext_lines(const TextElementIterator &start_loc,
                                        const TextElementIterator &end_loc,
                                        size_t book_page_number,
-                                       Length y) {
+                                       Length y,
+                                       int current_line) {
     const Length line_height = styles.normal.line_height;
     const auto &textblock_left =
         (book_page_number % 2) == 0 ? doc.data.pdf.margins.outer : doc.data.pdf.margins.inner;
     for(auto it = start_loc; it != end_loc; ++it) {
+        ++current_line;
         const auto &line = it.line();
         if(std::holds_alternative<ParagraphElement>(it.element())) {
             if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
@@ -213,6 +215,7 @@ void Paginator2::render_maintext_lines(const TextElementIterator &start_loc,
             } else {
                 std::abort();
             }
+            y += line_height;
         } else if(auto *special = std::get_if<SpecialTextElement>(&it.element())) {
             const auto mu = std::get<MarkupDrawCommand>(line);
             rend->render_markup_as_is(mu.markup.c_str(),
@@ -220,13 +223,16 @@ void Paginator2::render_maintext_lines(const TextElementIterator &start_loc,
                                       textblock_left + special->extra_indent,
                                       y,
                                       special->alignment);
+            y += line_height;
         } else if(auto *empty = std::get_if<EmptyLineElement>(&it.element())) {
-            y += empty->num_lines * line_height;
+            // Empty lines at the top of the page are ignored.
+            if(current_line != 0) {
+                y += empty->num_lines * line_height;
+            }
         } else {
             fprintf(stderr, "ERROR is.\n");
             std::abort();
         }
-        y += line_height;
     }
 }
 
@@ -264,6 +270,7 @@ void Paginator2::build_main_text() {
             elements.emplace_back(EmptyLineElement{1});
             create_codeblock(*cb);
             elements.emplace_back(EmptyLineElement{1});
+            first_paragraph = true;
         } else if(auto *sc = std::get_if<SceneChange>(&e)) {
             (void)sc;
             elements.emplace_back(EmptyLineElement{1});
