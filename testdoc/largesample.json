@@ -5,8 +5,16 @@
     "dedication_": "dedication.txt",
     "credits": "credits.txt",
     "postcredits": "postcredits.txt",
+    "frontmatter": [
+        "empty",
+        "colophon.txt",
+        "dedication.txt"
+    ],
     "sources": [
         "chapter1_tmp.bd"
+    ],
+    "backmatter": [
+        "credits.txt"
     ],
     "draft2": {
         "surname": "Pakkanen",
@@ -14,7 +22,6 @@
         "phone": "040 111 1111"
     },
     "pdf": {
-        "colophon": "colophon.txt",
         "filename": "large_bookout.pdf",
         "page": {
             "width": 130,

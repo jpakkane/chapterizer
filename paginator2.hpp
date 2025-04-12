@@ -161,6 +161,9 @@ private:
     void optimize_page_splits();
 
     void render_output();
+    void render_frontmatter();
+    void render_mainmatter();
+    void render_backmatter();
 
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
                                                       bool permit_hyphenation = true);

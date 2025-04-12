@@ -30,6 +30,23 @@ const std::unordered_map<std::string, FontStyle> stylemap{{"regular", FontStyle:
                                                           {"bold", FontStyle::Bold},
                                                           {"bolditalic", FontStyle::BoldItalic}};
 
+std::vector<std::string> extract_stringarray(const nlohmann::json &data, const char *entryname) {
+    std::vector<std::string> result;
+    auto arr = data[entryname];
+    if(!arr.is_array()) {
+        printf("%s must be an array of strings.\n", entryname);
+        std::abort();
+    }
+    for(const auto &e : arr) {
+        if(!e.is_string()) {
+            printf("Source array %s entry is not a string.\n", entryname);
+            std::abort();
+        }
+        result.push_back(e.get<std::string>());
+    }
+    return result;
+}
+
 } // namespace
 
 using json = nlohmann::json;
@@ -275,18 +292,9 @@ Metadata load_book_json(const char *path) {
     }
     m.language = it->second;
 
-    auto sources = data["sources"];
-    if(!sources.is_array()) {
-        printf("Sources must be an array of strings.\n");
-        std::abort();
-    }
-    for(const auto &e : sources) {
-        if(!e.is_string()) {
-            printf("Source array entry is not a string.\n");
-            std::abort();
-        }
-        m.sources.push_back(e.get<std::string>());
-    }
+    m.frontmatter = extract_stringarray(data, "frontmatter");
+    m.sources = extract_stringarray(data, "sources");
+    m.backmatter = extract_stringarray(data, "backmatter");
 
     if(data.contains("dedication")) {
         auto dedication_path = m.top_dir / data["dedication"];

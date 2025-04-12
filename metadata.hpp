@@ -103,11 +103,14 @@ struct Metadata {
     bool is_draft = false;
     DraftData draftdata;
     Language language;
+    std::vector<std::string> frontmatter;
     std::vector<std::string> sources;
+    std::vector<std::string> backmatter;
     bool generate_pdf;
     bool generate_epub;
     PdfMetadata pdf;
     EpubMetadata epub;
+    // FIXME, remove these three.
     std::vector<std::string> dedication;
     std::vector<Credits> credits;
     std::vector<std::string> postcredits;

@@ -153,14 +153,24 @@ void Paginator2::generate_pdf(const char *outfile) {
 }
 
 void Paginator2::render_output() {
+    render_frontmatter();
+    render_mainmatter();
+    render_backmatter();
+}
+
+void Paginator2::render_frontmatter() {
+    rend->render_line_centered(
+        "Frontmatter", styles.normal.font, Length::from_pt(50), Length::from_pt(100));
+    rend->new_page();
+}
+
+void Paginator2::render_mainmatter() {
     size_t current_section = 0;
-    const size_t page_offset = 1;
+    size_t page_offset = rend->page_num();
     for(size_t current_page_number = 0; current_page_number < maintext_pages.size();
         ++current_page_number) {
-        const size_t book_page_number = current_page_number + page_offset;
+        size_t book_page_number = current_page_number + page_offset;
         const Page &p = maintext_pages[current_page_number];
-        const auto &textblock_left =
-            (book_page_number % 2) == 0 ? doc.data.pdf.margins.outer : doc.data.pdf.margins.inner;
         if(auto *reg_page = std::get_if<RegularPage>(&p)) {
             const Length line_height = styles.normal.line_height;
             Length y = m.upper + line_height;
@@ -169,6 +179,13 @@ void Paginator2::render_output() {
             draw_edge_markers(current_section, book_page_number);
             draw_page_number(book_page_number);
         } else if(auto *sec_page = std::get_if<SectionPage>(&p)) {
+            if(book_page_number % 2 == 0) {
+                new_page();
+                ++page_offset;
+                ++book_page_number;
+            }
+            const auto &textblock_left = (book_page_number % 2) == 0 ? doc.data.pdf.margins.outer
+                                                                     : doc.data.pdf.margins.inner;
             const size_t chapter_heading_top_whitespace = 8;
             const Length line_height = styles.normal.line_height;
             Length y = m.upper + chapter_heading_top_whitespace * line_height;
@@ -181,7 +198,7 @@ void Paginator2::render_output() {
             const Length hack_delta = Length::from_pt(-90);
             rend->render_markup_as_is(chapter_number.markup.c_str(),
                                       styles.section.font,
-                                      textblock_left + chapter_number.x,
+                                      textblock_left + textblock_width() / 2,
                                       y + hack_delta,
                                       chapter_number.alignment);
             y += line_height;
@@ -193,6 +210,11 @@ void Paginator2::render_output() {
         }
         new_page();
     }
+}
+
+void Paginator2::render_backmatter() {
+    rend->render_line_centered(
+        "backmatter", styles.normal.font, Length::from_pt(50), Length::from_pt(100));
 }
 
 void Paginator2::render_maintext_lines(const TextElementIterator &start_loc,
@@ -245,12 +267,12 @@ void Paginator2::new_page() { rend->new_page(); }
 void Paginator2::draw_edge_markers(size_t chapter_number, size_t page_number) {
     assert(chapter_number > 0);
     const Length stroke_width = Length::from_mm(5);
-    const Length tab_height = 2 * stroke_width;
+    const Length tab_height = 1.5 * stroke_width;
     Length x = (page_number % 2) ? page.w : Length::zero();
     // move downwards per chapter
     Length y = page.h / 2 - (5 - ((chapter_number - 1) % 10)) * tab_height + stroke_width / 2;
 
-    rend->draw_line(x, y, x, y + stroke_width, stroke_width, 0.8, CAIRO_LINE_CAP_ROUND);
+    rend->draw_line(x, y, x, y + stroke_width / 2, stroke_width, 0.8, CAIRO_LINE_CAP_ROUND);
 }
 
 void Paginator2::draw_page_number(size_t page_number) {
