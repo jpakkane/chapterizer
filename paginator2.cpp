@@ -174,10 +174,11 @@ void Paginator2::render_output() {
             it.next_element();
             assert(section_element.lines.size() == 1);
             const auto &chapter_number = std::get<MarkupDrawCommand>(section_element.lines.front());
+            const Length hack_delta = Length::from_pt(-90);
             rend->render_markup_as_is(chapter_number.markup.c_str(),
                                       styles.section.font,
                                       textblock_left + chapter_number.x,
-                                      y,
+                                      y + hack_delta,
                                       chapter_number.alignment);
             y += line_height;
             render_maintext_lines(it, sec_page->main_text.end, book_page_number, y, 0);

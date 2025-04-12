@@ -6,7 +6,7 @@
     "credits": "credits.txt",
     "postcredits": "postcredits.txt",
     "sources": [
-        "chapterlong.bd"
+        "chapter1_tmp.bd"
     ],
     "draft2": {
         "surname": "Pakkanen",
@@ -41,9 +41,9 @@
                 "line_height": 16,
                 "indent": 0,
                 "font": {
-                    "name": "Liberation Sans",
+                    "name": "URW Bookman",
                     "type": "bold",
-                    "pointsize": 14
+                    "pointsize": 120
                 }
             },
             "code": {
