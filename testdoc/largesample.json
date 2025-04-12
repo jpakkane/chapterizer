@@ -6,7 +6,9 @@
     "credits": "credits.txt",
     "postcredits": "postcredits.txt",
     "frontmatter": [
+        "firstpage",
         "empty",
+        "signing.txt",
         "colophon.txt",
         "dedication.txt"
     ],

@@ -95,6 +95,28 @@ struct DraftData {
     std::string page_number_template;
 };
 
+struct Colophon {
+    std::vector<std::string> lines;
+};
+
+struct Dedication {
+    std::vector<std::string> lines;
+};
+
+struct Empty {
+
+};
+
+struct FirstPage {
+
+};
+
+struct Signing {
+    std::vector<std::string> lines;
+};
+
+typedef std::variant<Colophon, Dedication, Empty, FirstPage, Signing> FrontMatterPage;
+
 struct Metadata {
     // All paths in metadata are relative to this (i.e. where the JSON file was)
     std::filesystem::path top_dir;
@@ -103,7 +125,7 @@ struct Metadata {
     bool is_draft = false;
     DraftData draftdata;
     Language language;
-    std::vector<std::string> frontmatter;
+    std::vector<FrontMatterPage> frontmatter;
     std::vector<std::string> sources;
     std::vector<std::string> backmatter;
     bool generate_pdf;

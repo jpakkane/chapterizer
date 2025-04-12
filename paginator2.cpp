@@ -159,9 +159,51 @@ void Paginator2::render_output() {
 }
 
 void Paginator2::render_frontmatter() {
-    rend->render_line_centered(
-        "Frontmatter", styles.normal.font, Length::from_pt(50), Length::from_pt(100));
-    rend->new_page();
+    for(const auto &f : doc.data.frontmatter) {
+        if(std::holds_alternative<Empty>(f)) {
+
+        } else if(auto *col = std::get_if<Colophon>(&f)) {
+            const Length &line_height = styles.colophon.line_height;
+            Length y = m.upper + textblock_height() - col->lines.size() * line_height;
+            const Length &left = current_left_margin();
+            for(const auto &line : col->lines) {
+                rend->render_markup_as_is(
+                    line.c_str(), styles.colophon.font, left, y, TextAlignment::Left);
+                y += line_height;
+            }
+        } else if(auto *ded = std::get_if<Dedication>(&f)) {
+            Length y = m.upper + textblock_height() / 4;
+            const Length &line_height = styles.dedication.line_height;
+            const Length &middle = current_left_margin() + textblock_width() / 2;
+            for(const auto &line : ded->lines) {
+                rend->render_line_centered(line.c_str(), styles.dedication.font, middle, y);
+                y += line_height;
+            }
+        } else if(std::holds_alternative<FirstPage>(f)) {
+            Length y = m.upper + textblock_height() / 4;
+            const Length &line_height = styles.normal.line_height;
+            const Length &middle = current_left_margin() + textblock_width() / 2;
+            rend->render_line_centered(doc.data.author.c_str(), styles.normal.font, middle, y);
+            y += line_height;
+            rend->render_line_centered(doc.data.title.c_str(), styles.normal.font, middle, y);
+        } else if(auto *signing = std::get_if<Signing>(&f)) {
+            render_signing_page(*signing);
+        } else {
+            fprintf(stderr, "Failure of fail.\n");
+            std::abort();
+        }
+        rend->new_page();
+    }
+}
+
+void Paginator2::render_signing_page(const Signing &s) {
+    Length y = m.upper + textblock_height() / 4;
+    const Length &line_height = styles.code.line_height;
+    const Length &middle = current_left_margin() + textblock_width() / 2;
+    for(const auto &line : s.lines) {
+        rend->render_line_centered(line.c_str(), styles.code.font, middle, y);
+        y += line_height;
+    }
 }
 
 void Paginator2::render_mainmatter() {
@@ -213,8 +255,32 @@ void Paginator2::render_mainmatter() {
 }
 
 void Paginator2::render_backmatter() {
-    rend->render_line_centered(
-        "backmatter", styles.normal.font, Length::from_pt(50), Length::from_pt(100));
+    if(doc.data.credits.empty()) {
+        return;
+    }
+    const auto paragraph_width = textblock_width();
+    auto y = m.upper;
+    const Length halfgap = Length::from_mm(2);
+    const auto x1 = current_left_margin() + paragraph_width / 2 - halfgap;
+    const auto x2 = x1 + 2 * halfgap;
+
+    std::string buf;
+    for(const auto &[key, value] : doc.data.credits) {
+        buf = R"(<span variant="small-caps" letter_spacing="100">)";
+        buf += key.c_str();
+        buf += "</span>";
+        if(!key.empty()) {
+            rend->render_markup_as_is(buf.c_str(), styles.normal.font, x1, y, TextAlignment::Right);
+        }
+        buf = R"(<span variant="small-caps" letter_spacing="100">)";
+        buf += value.c_str();
+        buf += "</span>";
+        if(!value.empty()) {
+            rend->render_markup_as_is(buf.c_str(), styles.normal.font, x2, y, TextAlignment::Left);
+        }
+        y += styles.normal.line_height;
+    }
+    rend->finalize_page();
 }
 
 void Paginator2::render_maintext_lines(const TextElementIterator &start_loc,

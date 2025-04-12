@@ -179,10 +179,13 @@ private:
     void draw_edge_markers(size_t chapter_number, size_t page_number);
     void draw_page_number(size_t page_number);
 
+    void render_signing_page(const Signing &s);
     void render_maintext_lines(const TextElementIterator &start_loc,
                                const TextElementIterator &end_loc,
                                size_t book_page_number,
                                Length y, int current_line=-1);
+
+    Length current_left_margin() const { return rend->page_num() % 2 ? m.inner : m.outer; }
 
     const Document &doc;
     // These are just helpers to cut down on typing.

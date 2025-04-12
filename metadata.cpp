@@ -292,13 +292,36 @@ Metadata load_book_json(const char *path) {
     }
     m.language = it->second;
 
-    m.frontmatter = extract_stringarray(data, "frontmatter");
+    auto frontmatter = extract_stringarray(data, "frontmatter");
+    for(const auto &text : frontmatter) {
+        if(text == "empty") {
+            m.frontmatter.emplace_back(Empty{});
+        } else if(text == "colophon.txt") {
+            auto cfile = m.top_dir / text;
+            m.frontmatter.emplace_back(Colophon{read_lines(cfile.c_str())});
+        } else if(text == "dedication.txt") {
+            auto dfile = m.top_dir / text;
+            m.frontmatter.emplace_back(Dedication{read_lines(dfile.c_str())});
+        } else if(text == "firstpage") {
+            m.frontmatter.emplace_back(FirstPage{});
+        } else if(text == "signing.txt") {
+            auto sfile = m.top_dir / text;
+            m.frontmatter.emplace_back(Signing{read_lines(sfile.c_str())});
+        } else {
+            fprintf(stderr, "Not supported yet.\n");
+            std::abort();
+        }
+    }
     m.sources = extract_stringarray(data, "sources");
-    m.backmatter = extract_stringarray(data, "backmatter");
-
-    if(data.contains("dedication")) {
-        auto dedication_path = m.top_dir / data["dedication"];
-        m.dedication = read_paragraphs(dedication_path.c_str());
+    auto backmatter = extract_stringarray(data, "backmatter");
+    for(const auto &text : backmatter) {
+        if(text == "credits.txt") {
+            auto credits_path = m.top_dir / data["credits"];
+            m.credits = load_credits(credits_path.c_str());
+        } else {
+            fprintf(stderr, "Backmatter not yet supported.\n");
+            std::abort();
+        }
     }
 
     if(data.contains("pdf")) {
@@ -308,10 +331,6 @@ Metadata load_book_json(const char *path) {
         m.generate_pdf = false;
     }
 
-    if(data.contains("credits")) {
-        auto credits_path = m.top_dir / data["credits"];
-        m.credits = load_credits(credits_path.c_str());
-    }
     if(data.contains("epub")) {
         m.generate_epub = true;
         load_epub_element(m, data["epub"]);
@@ -319,10 +338,6 @@ Metadata load_book_json(const char *path) {
         m.generate_epub = false;
     }
 
-    if(data.contains("postcredits")) {
-        auto post_path = m.top_dir / data["postcredits"];
-        m.postcredits = read_lines(post_path.c_str());
-    }
     return m;
 }
 

@@ -378,6 +378,7 @@ void PdfRenderer::render_line_centered(const char *line,
                                        Length y) {
     PangoRectangle r;
 
+    setup_pango(par);
     pango_layout_set_attributes(layout, nullptr);
     pango_layout_set_text(layout, line, -1);
     pango_layout_get_extents(layout, nullptr, &r);
