@@ -153,6 +153,7 @@ void Paginator2::generate_pdf(const char *outfile) {
 }
 
 void Paginator2::render_output() {
+    size_t current_section = 0;
     const size_t page_offset = 1;
     for(size_t current_page_number = 0; current_page_number < maintext_pages.size();
         ++current_page_number) {
@@ -174,6 +175,7 @@ void Paginator2::render_output() {
             it.next_element();
             assert(section_element.lines.size() == 1);
             const auto &chapter_number = std::get<MarkupDrawCommand>(section_element.lines.front());
+            current_section = sec_page->section;
             const Length hack_delta = Length::from_pt(-90);
             rend->render_markup_as_is(chapter_number.markup.c_str(),
                                       styles.section.font,
@@ -187,7 +189,7 @@ void Paginator2::render_output() {
             std::abort();
         }
         // draw page numbers etc.
-        draw_edge_markers(0, book_page_number);
+        draw_edge_markers(current_section, book_page_number);
         new_page();
     }
 }
@@ -240,11 +242,14 @@ void Paginator2::render_maintext_lines(const TextElementIterator &start_loc,
 void Paginator2::new_page() { rend->new_page(); }
 
 void Paginator2::draw_edge_markers(size_t chapter_number, size_t page_number) {
+    assert(chapter_number > 0);
     const Length stroke_width = Length::from_mm(5);
+    const Length tab_height = 2 * stroke_width;
     Length x = (page_number % 2) ? page.w : Length::zero();
-    Length y = m.upper;
     // move downwards per chapter
-    rend->draw_line(x, y, x, y + 0.5 * stroke_width, stroke_width, 0.5, CAIRO_LINE_CAP_ROUND);
+    Length y = page.h / 2 - (5 - ((chapter_number - 1) % 10)) * tab_height + stroke_width / 2;
+
+    rend->draw_line(x, y, x, y + stroke_width, stroke_width, 0.8, CAIRO_LINE_CAP_ROUND);
 }
 
 void Paginator2::build_main_text() {
