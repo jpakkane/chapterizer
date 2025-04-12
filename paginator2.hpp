@@ -174,6 +174,7 @@ private:
     void new_page();
 
     void draw_edge_markers(size_t chapter_number, size_t page_number);
+    void draw_page_number(size_t page_number);
 
     void render_maintext_lines(const TextElementIterator &start_loc,
                                const TextElementIterator &end_loc,

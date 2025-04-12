@@ -166,6 +166,8 @@ void Paginator2::render_output() {
             Length y = m.upper + line_height;
             render_maintext_lines(
                 reg_page->main_text.start, reg_page->main_text.end, book_page_number, y);
+            draw_edge_markers(current_section, book_page_number);
+            draw_page_number(book_page_number);
         } else if(auto *sec_page = std::get_if<SectionPage>(&p)) {
             const size_t chapter_heading_top_whitespace = 8;
             const Length line_height = styles.normal.line_height;
@@ -184,12 +186,11 @@ void Paginator2::render_output() {
                                       chapter_number.alignment);
             y += line_height;
             render_maintext_lines(it, sec_page->main_text.end, book_page_number, y, 0);
+        } else if(std::holds_alternative<EmptyPage>(p)) {
         } else {
             fprintf(stderr, "Not implemented yet.\n");
             std::abort();
         }
-        // draw page numbers etc.
-        draw_edge_markers(current_section, book_page_number);
         new_page();
     }
 }
@@ -250,6 +251,15 @@ void Paginator2::draw_edge_markers(size_t chapter_number, size_t page_number) {
     Length y = page.h / 2 - (5 - ((chapter_number - 1) % 10)) * tab_height + stroke_width / 2;
 
     rend->draw_line(x, y, x, y + stroke_width, stroke_width, 0.8, CAIRO_LINE_CAP_ROUND);
+}
+
+void Paginator2::draw_page_number(size_t page_number) {
+    const Length x = (page_number % 2) ? page.w - m.outer : m.outer;
+    const Length y = styles.normal.line_height * 2;
+    const TextAlignment align = (page_number % 2) ? TextAlignment::Right : TextAlignment::Left;
+    char buf[10];
+    snprintf(buf, 10, "%d", (int)page_number);
+    rend->render_markup_as_is(buf, styles.normal.font, x, y, align);
 }
 
 void Paginator2::build_main_text() {
