@@ -241,20 +241,18 @@ std::vector<Credits> load_credits(const char *credits_path) {
     std::vector<Credits> c;
     std::string key, val;
     for(const auto &l : read_lines(credits_path)) {
-        if(l.empty()) {
-            continue;
-        }
         const auto p = l.find('+');
         if(p == std::string::npos) {
-            key = "";
             val = l;
+            strip(val);
+            c.emplace_back(CreditsTitle{std::move(val)});
         } else {
             key = l.substr(0, p);
             val = l.substr(p + 1, std::string::npos);
+            strip(key);
+            strip(val);
+            c.emplace_back(CreditsEntry{std::move(key), std::move(val)});
         }
-        strip(key);
-        strip(val);
-        c.emplace_back(Credits{std::move(key), std::move(val)});
     }
     return c;
 }
@@ -316,7 +314,7 @@ Metadata load_book_json(const char *path) {
     auto backmatter = extract_stringarray(data, "backmatter");
     for(const auto &text : backmatter) {
         if(text == "credits.txt") {
-            auto credits_path = m.top_dir / data["credits"];
+            auto credits_path = m.top_dir / text;
             m.credits = load_credits(credits_path.c_str());
         } else {
             fprintf(stderr, "Backmatter not yet supported.\n");

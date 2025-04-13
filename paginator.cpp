@@ -903,22 +903,38 @@ void Paginator::create_credits() {
     const auto paragraph_width = page.w - m.inner - m.outer;
     auto y = m.upper;
     const Length halfgap = Length::from_mm(2);
-    const auto x1 = current_left_margin() + paragraph_width / 2 - halfgap;
+    const auto xmiddle = current_left_margin() + paragraph_width / 2;
+    const auto x1 = xmiddle - halfgap;
     const auto x2 = x1 + 2 * halfgap;
 
     std::string buf;
-    for(const auto &[key, value] : doc.data.credits) {
-        buf = R"(<span variant="small-caps" letter_spacing="100">)";
-        buf += key.c_str();
-        buf += "</span>";
-        if(!key.empty()) {
-            rend->render_markup_as_is(buf.c_str(), styles.normal.font, x1, y, TextAlignment::Right);
-        }
-        buf = R"(<span variant="small-caps" letter_spacing="100">)";
-        buf += value.c_str();
-        buf += "</span>";
-        if(!value.empty()) {
-            rend->render_markup_as_is(buf.c_str(), styles.normal.font, x2, y, TextAlignment::Left);
+    for(const auto &centry : doc.data.credits) {
+        if(const auto *regular = std::get_if<CreditsEntry>(&centry)) {
+            const auto &key = regular->key;
+            const auto &value = regular->value;
+            buf = R"(<span variant="small-caps" letter_spacing="100">)";
+            buf += key.c_str();
+            buf += "</span>";
+            if(!key.empty()) {
+                rend->render_markup_as_is(
+                    buf.c_str(), styles.normal.font, x1, y, TextAlignment::Right);
+            }
+            buf = R"(<span variant="small-caps" letter_spacing="100">)";
+            buf += value.c_str();
+            buf += "</span>";
+            if(!value.empty()) {
+                rend->render_markup_as_is(
+                    buf.c_str(), styles.normal.font, x2, y, TextAlignment::Left);
+            }
+        } else {
+            const auto &line = std::get<CreditsTitle>(centry).line;
+            if(!line.empty()) {
+                buf = R"(<span variant="small-caps" letter_spacing="100">)";
+                buf += line;
+                buf += "</span>";
+                rend->render_markup_as_is(
+                    buf.c_str(), styles.normal.font, xmiddle, y, TextAlignment::Centered);
+            }
         }
         y += styles.normal.line_height;
     }

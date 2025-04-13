@@ -42,10 +42,16 @@ struct PageSize {
     Length h;
 };
 
-struct Credits {
+struct CreditsTitle {
+    std::string line;
+};
+
+struct CreditsEntry {
     std::string key;
     std::string value;
 };
+
+typedef std::variant<CreditsTitle, CreditsEntry> Credits;
 
 struct ChapterStyles {
     ChapterParameters normal;
