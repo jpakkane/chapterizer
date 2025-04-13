@@ -203,11 +203,11 @@ void Paginator2::render_signing_page(const Signing &s) {
     std::array<Length, NUM_ENTRIES> xdelta;
     std::array<double, NUM_ENTRIES> tilt;
     std::default_random_engine e(66);
-    std::uniform_real_distribution<double> shiftdist(-0.1, 0.1);
+    std::normal_distribution<double> shiftdist(0.0, 0.05);
     std::string feeder{"X"};
     for(size_t i = 0; i < NUM_ENTRIES; ++i) {
         ydelta[i] = 2 * Length::from_pt(shiftdist(e));
-        xdelta[i] = 5 * Length::from_pt(shiftdist(e));
+        xdelta[i] = 3 * Length::from_pt(shiftdist(e));
         tilt[i] = shiftdist(e) / 2;
     }
     Length y = m.upper + textblock_height() / 4;
