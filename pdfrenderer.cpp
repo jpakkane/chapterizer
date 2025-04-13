@@ -385,6 +385,22 @@ void PdfRenderer::render_line_centered(const char *line,
     render_text_as_is(line, par, x - Length::from_pt(r.width / (2 * PANGO_SCALE)), y);
 }
 
+void PdfRenderer::render_wonky_text(const char *text,
+                                    const FontParameters &par,
+                                    Length raise,
+                                    Length shift,
+                                    double tilt,
+                                    double color,
+                                    Length x,
+                                    Length y) {
+    cairo_save(cr);
+    cairo_set_source_rgb(cr, color, color, color);
+    cairo_translate(cr, (x + shift).pt(), (y + raise).pt());
+    cairo_rotate(cr, tilt);
+    render_text_as_is(text, par, Length::zero(), Length::zero());
+    cairo_restore(cr);
+}
+
 void PdfRenderer::new_page() {
     finalize_page();
     cairo_surface_show_page(surf);

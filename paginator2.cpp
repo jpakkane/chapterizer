@@ -18,6 +18,7 @@
 #include <paragraphformatter.hpp>
 #include <chapterformatter.hpp>
 #include <cassert>
+#include <random>
 
 namespace {
 
@@ -197,11 +198,43 @@ void Paginator2::render_frontmatter() {
 }
 
 void Paginator2::render_signing_page(const Signing &s) {
+    const size_t NUM_ENTRIES = 128;
+    std::array<Length, NUM_ENTRIES> ydelta;
+    std::array<Length, NUM_ENTRIES> xdelta;
+    std::array<double, NUM_ENTRIES> tilt;
+    std::default_random_engine e(66);
+    std::uniform_real_distribution<double> shiftdist(-0.1, 0.1);
+    std::string feeder{"X"};
+    for(size_t i = 0; i < NUM_ENTRIES; ++i) {
+        ydelta[i] = 2 * Length::from_pt(shiftdist(e));
+        xdelta[i] = 5 * Length::from_pt(shiftdist(e));
+        tilt[i] = shiftdist(e) / 2;
+    }
     Length y = m.upper + textblock_height() / 4;
+    const Length letter_width = Length::from_pt(6);
     const Length &line_height = styles.code.line_height;
     const Length &middle = current_left_margin() + textblock_width() / 2;
+
     for(const auto &line : s.lines) {
-        rend->render_line_centered(line.c_str(), styles.code.font, middle, y);
+        const auto num_letters = line.size();
+        Length x = middle - double(num_letters) / 2 * letter_width;
+        for(size_t i = 0; i < num_letters; ++i) {
+            const auto current_char = line[i];
+            if((const unsigned char)current_char >= NUM_ENTRIES) {
+                fprintf(stderr, "Ääkköset ovat vielä ongelma.\n");
+                std::abort();
+            }
+            feeder[0] = current_char;
+            rend->render_wonky_text(feeder.c_str(),
+                                    styles.code.font,
+                                    ydelta[current_char],
+                                    xdelta[current_char],
+                                    tilt[current_char],
+                                    0.2,
+                                    x,
+                                    y);
+            x += letter_width;
+        }
         y += line_height;
     }
 }

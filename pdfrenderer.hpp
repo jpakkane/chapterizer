@@ -75,6 +75,8 @@ public:
                              TextAlignment alignment);
     void render_line_centered(const char *line, const FontParameters &par, Length x, Length y);
 
+    void render_wonky_text(const char *text, const FontParameters &par, Length raise, Length shift, double tilt, double color, Length x, Length y);
+
     void new_page();
     int page_num() const { return pages; }
 
