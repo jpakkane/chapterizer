@@ -75,9 +75,15 @@ int main(int argc, char **argv) {
     }
     auto doc = load_document(argv[1]);
     if(doc.data.generate_pdf) {
-        Paginator2 p(doc);
-        auto ofile = doc.data.top_dir / doc.data.pdf.ofname;
-        p.generate_pdf(ofile.c_str());
+        if(doc.data.is_draft) {
+            Paginator p(doc);
+            auto ofile = doc.data.top_dir / doc.data.pdf.ofname;
+            p.generate_pdf(ofile.c_str());
+        } else {
+            Paginator2 p(doc);
+            auto ofile = doc.data.top_dir / doc.data.pdf.ofname;
+            p.generate_pdf(ofile.c_str());
+        }
     }
     if(doc.data.generate_epub) {
         Epub epub(doc);

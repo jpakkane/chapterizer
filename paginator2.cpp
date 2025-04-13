@@ -240,50 +240,50 @@ void Paginator2::render_signing_page(const Signing &s) {
 }
 
 void Paginator2::render_mainmatter() {
-    size_t current_section = 0;
-    size_t page_offset = rend->page_num();
-    for(size_t current_page_number = 0; current_page_number < maintext_pages.size();
-        ++current_page_number) {
-        size_t book_page_number = current_page_number + page_offset;
-        const Page &p = maintext_pages[current_page_number];
-        if(auto *reg_page = std::get_if<RegularPage>(&p)) {
-            const Length line_height = styles.normal.line_height;
-            Length y = m.upper + line_height;
-            render_maintext_lines(
-                reg_page->main_text.start, reg_page->main_text.end, book_page_number, y);
-            draw_edge_markers(current_section, book_page_number);
-            draw_page_number(book_page_number);
-        } else if(auto *sec_page = std::get_if<SectionPage>(&p)) {
-            if(book_page_number % 2 == 0) {
-                new_page();
-                ++page_offset;
-                ++book_page_number;
+    size_t current_section_number = 0;
+    for(const auto &current_section : maintext_sections) {
+        for(const auto &p : current_section) {
+            ++current_section_number;
+            size_t book_page_number = rend->page_num();
+            if(auto *reg_page = std::get_if<RegularPage>(&p)) {
+                const Length line_height = styles.normal.line_height;
+                Length y = m.upper + line_height;
+                render_maintext_lines(
+                    reg_page->main_text.start, reg_page->main_text.end, book_page_number, y);
+                draw_edge_markers(current_section_number, book_page_number);
+                draw_page_number(book_page_number);
+            } else if(auto *sec_page = std::get_if<SectionPage>(&p)) {
+                if(book_page_number % 2 == 0) {
+                    new_page();
+                    ++book_page_number;
+                }
+                const auto &textblock_left = (book_page_number % 2) == 0
+                                                 ? doc.data.pdf.margins.outer
+                                                 : doc.data.pdf.margins.inner;
+                const size_t chapter_heading_top_whitespace = 8;
+                const Length line_height = styles.normal.line_height;
+                Length y = m.upper + chapter_heading_top_whitespace * line_height;
+                auto it = sec_page->main_text.start;
+                const auto &section_element = std::get<SectionElement>(it.element());
+                it.next_element();
+                assert(section_element.lines.size() == 1);
+                const auto &chapter_number =
+                    std::get<MarkupDrawCommand>(section_element.lines.front());
+                const Length hack_delta = Length::from_pt(-90);
+                rend->render_markup_as_is(chapter_number.markup.c_str(),
+                                          styles.section.font,
+                                          textblock_left + textblock_width() / 2,
+                                          y + hack_delta,
+                                          chapter_number.alignment);
+                y += line_height;
+                render_maintext_lines(it, sec_page->main_text.end, book_page_number, y, 0);
+            } else if(std::holds_alternative<EmptyPage>(p)) {
+            } else {
+                fprintf(stderr, "Not implemented yet.\n");
+                std::abort();
             }
-            const auto &textblock_left = (book_page_number % 2) == 0 ? doc.data.pdf.margins.outer
-                                                                     : doc.data.pdf.margins.inner;
-            const size_t chapter_heading_top_whitespace = 8;
-            const Length line_height = styles.normal.line_height;
-            Length y = m.upper + chapter_heading_top_whitespace * line_height;
-            auto it = sec_page->main_text.start;
-            const auto &section_element = std::get<SectionElement>(it.element());
-            it.next_element();
-            assert(section_element.lines.size() == 1);
-            const auto &chapter_number = std::get<MarkupDrawCommand>(section_element.lines.front());
-            current_section = sec_page->section;
-            const Length hack_delta = Length::from_pt(-90);
-            rend->render_markup_as_is(chapter_number.markup.c_str(),
-                                      styles.section.font,
-                                      textblock_left + textblock_width() / 2,
-                                      y + hack_delta,
-                                      chapter_number.alignment);
-            y += line_height;
-            render_maintext_lines(it, sec_page->main_text.end, book_page_number, y, 0);
-        } else if(std::holds_alternative<EmptyPage>(p)) {
-        } else {
-            fprintf(stderr, "Not implemented yet.\n");
-            std::abort();
+            new_page();
         }
-        new_page();
     }
 }
 
@@ -447,6 +447,7 @@ void Paginator2::build_main_text() {
             std::abort();
         }
     }
+    printf("Optimizing page splits.\n");
     optimize_page_splits();
     // create_pdf();
 }
@@ -525,10 +526,22 @@ void Paginator2::optimize_page_splits() {
     TextElementIterator end(start);
     end.element_id = elements.size();
     end.line_id = 0;
-    ChapterFormatter chf(start, end, elements);
-    auto optimized_chapter = chf.optimize_pages();
-    print_stats(optimized_chapter);
-    maintext_pages = std::move(optimized_chapter.pages);
+    maintext_sections.reserve(100);
+    assert(maintext_sections.empty());
+    size_t section_number = 1;
+    while(start != end) {
+        printf("Optimizing section %d.\n", (int)section_number);
+        auto next = start;
+        do {
+            next.next_element();
+        } while(!(next == end || std::holds_alternative<SectionElement>(next.element())));
+        ChapterFormatter chf(start, next, elements);
+        auto optimized_chapter = chf.optimize_pages();
+        print_stats(optimized_chapter, section_number);
+        maintext_sections.emplace_back(std::move(optimized_chapter.pages));
+        ++section_number;
+        start = next;
+    }
 }
 
 void Paginator2::create_section(const Section &s, const ExtraPenaltyAmounts &extras) {
@@ -670,32 +683,37 @@ void Paginator2::dump_text(const char *path) {
     std::unique_ptr<FILE, int (*)(FILE *)> fcloser(f, fclose);
 
     size_t page_num = 0;
-    for(const auto &p : maintext_pages) {
-        ++page_num;
-        fprintf(f, "%s -- PAGE %d --\n\n", (page_num != 1) ? "\n" : "", (int)page_num);
-        if(auto *reg = std::get_if<RegularPage>(&p)) {
-            TextElementIterator previous = reg->main_text.start;
-            for(TextElementIterator it = reg->main_text.start; it != reg->main_text.end; ++it) {
-                if(previous.element_id != it.element_id) {
+    size_t section_num = 0;
+    for(const auto &s : maintext_sections) {
+        ++section_num;
+        fprintf(f, "\n -- SECTION %d --\n\n", (int)section_num);
+        for(const auto &p : s) {
+            ++page_num;
+            fprintf(f, "%s -- PAGE %d --\n\n", (page_num != 1) ? "\n" : "", (int)page_num);
+            if(auto *reg = std::get_if<RegularPage>(&p)) {
+                TextElementIterator previous = reg->main_text.start;
+                for(TextElementIterator it = reg->main_text.start; it != reg->main_text.end; ++it) {
+                    if(previous.element_id != it.element_id) {
+                        fprintf(f, "\n");
+                    }
+                    plaintextprinter(f, it.line());
                     fprintf(f, "\n");
+                    previous = it;
                 }
-                plaintextprinter(f, it.line());
-                fprintf(f, "\n");
-                previous = it;
-            }
-        } else if(auto *sec = std::get_if<SectionPage>(&p)) {
-            fprintf(f, "Chapter %d\n", (int)sec->section);
-            TextElementIterator previous = sec->main_text.start;
-            for(TextElementIterator it = sec->main_text.start; it != sec->main_text.end; ++it) {
-                if(previous.element_id != it.element_id) {
+            } else if(auto *sec = std::get_if<SectionPage>(&p)) {
+                fprintf(f, "Chapter %d\n", (int)sec->section);
+                TextElementIterator previous = sec->main_text.start;
+                for(TextElementIterator it = sec->main_text.start; it != sec->main_text.end; ++it) {
+                    if(previous.element_id != it.element_id) {
+                        fprintf(f, "\n");
+                    }
+                    plaintextprinter(f, it.line());
                     fprintf(f, "\n");
+                    previous = it;
                 }
-                plaintextprinter(f, it.line());
-                fprintf(f, "\n");
-                previous = it;
+            } else {
+                std::abort();
             }
-        } else {
-            std::abort();
         }
     }
     /*
@@ -721,7 +739,8 @@ void Paginator2::dump_text(const char *path) {
 */
 }
 
-void Paginator2::print_stats(const PageLayoutResult &res) {
+void Paginator2::print_stats(const PageLayoutResult &res, size_t section_number) {
+    fprintf(stats, "-- Section %d --\n\n", (int)section_number);
     const size_t page_number_offset = 1;
     for(size_t page_num = 0; page_num < res.pages.size(); ++page_num) {
         fprintf(stats, "-- Page %d --\n\n", (int)(page_num + page_number_offset));

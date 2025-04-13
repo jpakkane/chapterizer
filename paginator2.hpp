@@ -172,7 +172,7 @@ private:
     Length textblock_height() const { return page.h - m.upper - m.lower; }
 
     void dump_text(const char *path);
-    void print_stats(const PageLayoutResult &res);
+    void print_stats(const PageLayoutResult &res, size_t section_number);
 
     void new_page();
 
@@ -199,7 +199,7 @@ private:
     int chapter_start_page = -1;
 
     // Add frontmatter
-    std::vector<Page> maintext_pages;
+    std::vector<std::vector<Page>> maintext_sections;
     // Add backmatter
     std::vector<TextElement> elements;
     FILE *stats;
