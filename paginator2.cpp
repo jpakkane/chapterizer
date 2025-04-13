@@ -524,6 +524,7 @@ void Paginator2::create_letter(const Letter &letter) {
 void Paginator2::optimize_page_splits() {
     TextElementIterator start(elements);
     TextElementIterator end(start);
+    size_t target_height = textblock_height().mm() / styles.normal.line_height.mm();
     end.element_id = elements.size();
     end.line_id = 0;
     maintext_sections.reserve(100);
@@ -535,7 +536,7 @@ void Paginator2::optimize_page_splits() {
         do {
             next.next_element();
         } while(!(next == end || std::holds_alternative<SectionElement>(next.element())));
-        ChapterFormatter chf(start, next, elements);
+        ChapterFormatter chf(start, next, elements, target_height);
         auto optimized_chapter = chf.optimize_pages();
         print_stats(optimized_chapter, section_number);
         maintext_sections.emplace_back(std::move(optimized_chapter.pages));

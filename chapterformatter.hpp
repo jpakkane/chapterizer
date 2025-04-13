@@ -24,7 +24,7 @@ class ChapterFormatter {
 public:
     ChapterFormatter(const TextElementIterator &start,
                      const TextElementIterator &end,
-                     const std::vector<TextElement> &elms);
+                     const std::vector<TextElement> &elms, size_t target_height);
 
     PageLayoutResult optimize_pages();
 
@@ -48,7 +48,7 @@ private:
 
     size_t best_penalty = size_t(-1);
     PageLayoutResult best_layout;
-    size_t target_height = 25;
+    const size_t target_height;
 
     std::unordered_map<TextElementIterator, std::vector<std::size_t>> best_reaches;
 };
