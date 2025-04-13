@@ -84,6 +84,14 @@ struct TextElementIterator {
     std::vector<TextElement> *elems;
 };
 
+template<> struct std::hash<TextElementIterator> {
+    std::size_t operator()(const TextElementIterator &s) const noexcept {
+        auto h1 = std::hash<size_t>{}(s.element_id);
+        auto h2 = std::hash<size_t>{}(s.line_id);
+        return ((h1 * 13) + h2);
+    }
+};
+
 struct TextLimits {
     TextElementIterator start;
     TextElementIterator end;

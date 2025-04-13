@@ -15,6 +15,7 @@
  */
 
 #include <chapterformatter.hpp>
+#include <algorithm>
 #include <cassert>
 
 ChapterFormatter::ChapterFormatter(const TextElementIterator &start_,
@@ -33,11 +34,30 @@ PageLayoutResult ChapterFormatter::optimize_pages() {
     return std::move(best_layout);
 }
 
+bool ChapterFormatter::stop_recursing(TextElementIterator loc, const PageLayoutResult &r) {
+    size_t max_reaches = 5;
+    auto current_penalty = compute_penalties(r.pages).total_penalty;
+    auto &reaches = best_reaches[loc];
+    if(reaches.size() >= max_reaches) {
+        if(current_penalty >= reaches.back()) {
+            return true;
+        }
+        reaches.pop_back();
+    }
+    auto insertion_point = std::lower_bound(reaches.begin(), reaches.end(), current_penalty);
+    reaches.insert(insertion_point, current_penalty);
+
+    return false;
+}
+
 void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
                                           PageLayoutResult &r,
                                           size_t previous_page_height) {
     size_t lines_on_page = 0;
     std::optional<size_t> page_section_number;
+    if(compute_penalties(r.pages).total_penalty > best_penalty) {
+        return;
+    }
     for(TextElementIterator current = run_start; current != end; ++current) {
         auto push_and_resume = [&](const TextElementIterator &startpoint,
                                    const TextElementIterator &endpoint) {

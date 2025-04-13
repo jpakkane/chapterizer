@@ -242,8 +242,8 @@ void Paginator2::render_signing_page(const Signing &s) {
 void Paginator2::render_mainmatter() {
     size_t current_section_number = 0;
     for(const auto &current_section : maintext_sections) {
+        ++current_section_number;
         for(const auto &p : current_section) {
-            ++current_section_number;
             size_t book_page_number = rend->page_num();
             if(auto *reg_page = std::get_if<RegularPage>(&p)) {
                 const Length line_height = styles.normal.line_height;

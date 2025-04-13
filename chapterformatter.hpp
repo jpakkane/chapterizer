@@ -40,6 +40,8 @@ private:
                             PageLayoutResult &r,
                             size_t previous_page_height);
 
+    bool stop_recursing(TextElementIterator loc, const PageLayoutResult &r);
+
     const TextElementIterator start;
     const TextElementIterator end;
     const std::vector<TextElement> elements;
@@ -47,4 +49,6 @@ private:
     size_t best_penalty = size_t(-1);
     PageLayoutResult best_layout;
     size_t target_height = 25;
+
+    std::unordered_map<TextElementIterator, std::vector<std::size_t>> best_reaches;
 };
