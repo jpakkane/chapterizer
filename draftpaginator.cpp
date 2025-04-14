@@ -756,5 +756,3 @@ void DraftPaginator::create_draft_title_page() {
 
     new_page(false);
 }
-
-

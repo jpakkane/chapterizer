@@ -25,7 +25,7 @@ l = static_library('chap',
     'bookparser.cpp',
     'epub.cpp',
     'draftpaginator.cpp',
-    'paginator2.cpp',
+    'printpaginator.cpp',
     'chapterformatter.cpp',
     'metadata.cpp',
     dependencies: [hyphen_dep, pangocairo_dep, cairo_dep, fc_dep, voikko_dep]

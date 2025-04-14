@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <paginator2.hpp>
+#include <printpaginator.hpp>
 #include <paragraphformatter.hpp>
 #include <chapterformatter.hpp>
 #include <cassert>
@@ -124,15 +124,19 @@ const TextElement &TextElementIterator::element() { return elems->at(element_id)
 
 const TextCommands &TextElementIterator::line() { return get_lines(element()).at(line_id); }
 
-Paginator2::Paginator2(const Document &d)
+PrintPaginator::PrintPaginator(const Document &d)
     : doc(d), page(doc.data.pdf.page), styles(d.data.pdf.styles), spaces(d.data.pdf.spaces),
       m(doc.data.pdf.margins) {
     stats = nullptr;
+    if(doc.data.is_draft) {
+        fprintf(stderr, "Tried to generate final print when in draft mode.\n");
+        std::abort();
+    }
 }
 
-Paginator2::~Paginator2() { fclose(stats); }
+PrintPaginator::~PrintPaginator() { fclose(stats); }
 
-void Paginator2::generate_pdf(const char *outfile) {
+void PrintPaginator::generate_pdf(const char *outfile) {
     std::filesystem::path statfile(outfile);
     statfile.replace_extension(".stats.txt");
     stats = fopen(statfile.string().c_str(), "w");
@@ -146,20 +150,20 @@ void Paginator2::generate_pdf(const char *outfile) {
     rend.reset(new PdfRenderer(outfile,
                                page.w,
                                page.h,
-                               doc.data.is_draft ? Length::zero() : doc.data.pdf.bleed,
+                               doc.data.pdf.bleed,
                                doc.data.title.c_str(),
                                doc.data.author.c_str()));
     // rend->init_page();
     render_output();
 }
 
-void Paginator2::render_output() {
+void PrintPaginator::render_output() {
     render_frontmatter();
     render_mainmatter();
     render_backmatter();
 }
 
-void Paginator2::render_frontmatter() {
+void PrintPaginator::render_frontmatter() {
     for(const auto &f : doc.data.frontmatter) {
         if(std::holds_alternative<Empty>(f)) {
 
@@ -197,7 +201,7 @@ void Paginator2::render_frontmatter() {
     }
 }
 
-void Paginator2::render_signing_page(const Signing &s) {
+void PrintPaginator::render_signing_page(const Signing &s) {
     const size_t NUM_ENTRIES = 128;
     std::array<Length, NUM_ENTRIES> ydelta;
     std::array<Length, NUM_ENTRIES> xdelta;
@@ -239,7 +243,7 @@ void Paginator2::render_signing_page(const Signing &s) {
     }
 }
 
-void Paginator2::render_mainmatter() {
+void PrintPaginator::render_mainmatter() {
     size_t current_section_number = 0;
     for(const auto &current_section : maintext_sections) {
         ++current_section_number;
@@ -287,7 +291,7 @@ void Paginator2::render_mainmatter() {
     }
 }
 
-void Paginator2::render_backmatter() {
+void PrintPaginator::render_backmatter() {
     if(doc.data.credits.empty()) {
         return;
     }
@@ -333,11 +337,11 @@ void Paginator2::render_backmatter() {
     rend->finalize_page();
 }
 
-void Paginator2::render_maintext_lines(const TextElementIterator &start_loc,
-                                       const TextElementIterator &end_loc,
-                                       size_t book_page_number,
-                                       Length y,
-                                       int current_line) {
+void PrintPaginator::render_maintext_lines(const TextElementIterator &start_loc,
+                                           const TextElementIterator &end_loc,
+                                           size_t book_page_number,
+                                           Length y,
+                                           int current_line) {
     const Length line_height = styles.normal.line_height;
     const auto &textblock_left =
         (book_page_number % 2) == 0 ? doc.data.pdf.margins.outer : doc.data.pdf.margins.inner;
@@ -378,9 +382,9 @@ void Paginator2::render_maintext_lines(const TextElementIterator &start_loc,
     }
 }
 
-void Paginator2::new_page() { rend->new_page(); }
+void PrintPaginator::new_page() { rend->new_page(); }
 
-void Paginator2::draw_edge_markers(size_t chapter_number, size_t page_number) {
+void PrintPaginator::draw_edge_markers(size_t chapter_number, size_t page_number) {
     assert(chapter_number > 0);
     const Length stroke_width = Length::from_mm(5);
     const Length tab_height = 1.5 * stroke_width;
@@ -392,7 +396,7 @@ void Paginator2::draw_edge_markers(size_t chapter_number, size_t page_number) {
     rend->draw_line(x, y, x, y + stroke_width / 2, stroke_width, 0.8, CAIRO_LINE_CAP_ROUND);
 }
 
-void Paginator2::draw_page_number(size_t page_number) {
+void PrintPaginator::draw_page_number(size_t page_number) {
     const Length x = (page_number % 2) ? page.w - m.outer : m.outer;
     const Length y = styles.normal.line_height * 2;
     const TextAlignment align = (page_number % 2) ? TextAlignment::Right : TextAlignment::Left;
@@ -401,7 +405,7 @@ void Paginator2::draw_page_number(size_t page_number) {
     rend->render_markup_as_is(buf, styles.normal.font, x, y, align);
 }
 
-void Paginator2::build_main_text() {
+void PrintPaginator::build_main_text() {
     ExtraPenaltyAmounts extras;
     bool first_paragraph = true;
 
@@ -453,7 +457,7 @@ void Paginator2::build_main_text() {
     // create_pdf();
 }
 
-void Paginator2::create_codeblock(const CodeBlock &cb) {
+void PrintPaginator::create_codeblock(const CodeBlock &cb) {
     SpecialTextElement el;
     el.extra_indent = spaces.codeblock_indent;
     el.font = &styles.code.font;
@@ -465,7 +469,7 @@ void Paginator2::create_codeblock(const CodeBlock &cb) {
     elements.emplace_back(std::move(el));
 }
 
-void Paginator2::create_sign(const SignBlock &sign) {
+void PrintPaginator::create_sign(const SignBlock &sign) {
     SpecialTextElement el;
     ExtraPenaltyAmounts extra;
     el.extra_indent = Length::zero();
@@ -500,7 +504,7 @@ void Paginator2::create_sign(const SignBlock &sign) {
     elements.emplace_back(std::move(el));
 }
 
-void Paginator2::create_letter(const Letter &letter) {
+void PrintPaginator::create_letter(const Letter &letter) {
     ExtraPenaltyAmounts extra;
     size_t par_number = 0;
     for(const auto &partext : letter.paragraphs) {
@@ -522,7 +526,7 @@ void Paginator2::create_letter(const Letter &letter) {
     }
 }
 
-void Paginator2::optimize_page_splits() {
+void PrintPaginator::optimize_page_splits() {
     TextElementIterator start(elements);
     TextElementIterator end(start);
     size_t target_height = textblock_height().mm() / styles.normal.line_height.mm();
@@ -546,7 +550,7 @@ void Paginator2::optimize_page_splits() {
     }
 }
 
-void Paginator2::create_section(const Section &s, const ExtraPenaltyAmounts &extras) {
+void PrintPaginator::create_section(const Section &s, const ExtraPenaltyAmounts &extras) {
     SectionElement selem;
     const auto paragraph_width = page.w - m.inner - m.outer;
     const auto section_width = 0.8 * paragraph_width;
@@ -559,24 +563,14 @@ void Paginator2::create_section(const Section &s, const ExtraPenaltyAmounts &ext
     std::string title_string;
     TextAlignment section_alignment = TextAlignment::Centered;
     Length rel_y = Length::zero();
-    if(doc.data.is_draft) {
-        title_string = std::to_string(s.number);
-        title_string += ". ";
-        title_string += s.text;
-        section_alignment = TextAlignment::Left;
-    } else {
-        title_string = "·";
-        title_string += std::to_string(s.number);
-        title_string += "·";
-        selem.lines.emplace_back(MarkupDrawCommand{title_string,
-                                                   &styles.section.font,
-                                                   textblock_width() / 2,
-                                                   rel_y,
-                                                   TextAlignment::Centered});
-        title_string = s.text;
-    }
+    title_string = "·";
+    title_string += std::to_string(s.number);
+    title_string += "·";
+    selem.lines.emplace_back(MarkupDrawCommand{
+        title_string, &styles.section.font, textblock_width() / 2, rel_y, TextAlignment::Centered});
+    title_string = s.text;
     // The title. Hyphenation is prohibited.
-    const bool only_number_in_chapter_heading = !doc.data.is_draft;
+    const bool only_number_in_chapter_heading = true;
     if(!only_number_in_chapter_heading) {
         std::vector<EnrichedWord> processed_words = text_to_formatted_words(title_string, false);
         ParagraphFormatter b(processed_words, section_width, styles.section, extras);
@@ -590,29 +584,25 @@ void Paginator2::create_section(const Section &s, const ExtraPenaltyAmounts &ext
     elements.emplace_back(EmptyLineElement{1});
 }
 
-void Paginator2::create_paragraph(const Paragraph &p,
-                                  const ExtraPenaltyAmounts &extras,
-                                  const ChapterParameters &chpar,
-                                  Length extra_indent) {
+void PrintPaginator::create_paragraph(const Paragraph &p,
+                                      const ExtraPenaltyAmounts &extras,
+                                      const ChapterParameters &chpar,
+                                      Length extra_indent) {
     ParagraphElement pelem;
     pelem.paragraph_width = textblock_width() - 2 * extra_indent;
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
     ParagraphFormatter b(processed_words, pelem.paragraph_width, chpar, extras);
     auto lines = b.split_formatted_lines();
     pelem.params = chpar;
-    if(doc.data.is_draft) {
-        pelem.lines = build_ragged_paragraph(lines, chpar, TextAlignment::Left);
-    } else {
-        pelem.lines = build_justified_paragraph(lines, chpar, pelem.paragraph_width);
-    }
+    pelem.lines = build_justified_paragraph(lines, chpar, pelem.paragraph_width);
     // Shift sideways
     elements.emplace_back(std::move(pelem));
 }
 
 std::vector<TextCommands>
-Paginator2::build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
-                                      const ChapterParameters &text_par,
-                                      const Length target_width) {
+PrintPaginator::build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
+                                          const ChapterParameters &text_par,
+                                          const Length target_width) {
     Length rel_y = Length::zero();
     std::vector<TextCommands> line_commands;
     line_commands.reserve(lines.size());
@@ -640,9 +630,9 @@ Paginator2::build_justified_paragraph(const std::vector<std::vector<std::string>
 }
 
 std::vector<TextCommands>
-Paginator2::build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
-                                   const ChapterParameters &text_par,
-                                   const TextAlignment alignment) {
+PrintPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
+                                       const ChapterParameters &text_par,
+                                       const TextAlignment alignment) {
     std::vector<TextCommands> line_commands;
     const auto rel_x =
         alignment == TextAlignment::Centered ? textblock_width() / 2 : Length::zero();
@@ -660,8 +650,8 @@ Paginator2::build_ragged_paragraph(const std::vector<std::vector<std::string>> &
     return line_commands;
 }
 
-std::vector<EnrichedWord> Paginator2::text_to_formatted_words(const std::string &text,
-                                                              bool permit_hyphenation) {
+std::vector<EnrichedWord> PrintPaginator::text_to_formatted_words(const std::string &text,
+                                                                  bool permit_hyphenation) {
     StyleStack current_style(styles.code.font);
     auto plain_words = split_to_words(std::string_view(text));
     std::vector<EnrichedWord> processed_words;
@@ -680,7 +670,7 @@ std::vector<EnrichedWord> Paginator2::text_to_formatted_words(const std::string 
     return processed_words;
 }
 
-void Paginator2::dump_text(const char *path) {
+void PrintPaginator::dump_text(const char *path) {
     FILE *f = fopen(path, "w");
     std::unique_ptr<FILE, int (*)(FILE *)> fcloser(f, fclose);
 
@@ -741,7 +731,7 @@ void Paginator2::dump_text(const char *path) {
 */
 }
 
-void Paginator2::print_stats(const PageLayoutResult &res, size_t section_number) {
+void PrintPaginator::print_stats(const PageLayoutResult &res, size_t section_number) {
     fprintf(stats, "-- Section %d --\n\n", (int)section_number);
     const size_t page_number_offset = 1;
     for(size_t page_num = 0; page_num < res.pages.size(); ++page_num) {

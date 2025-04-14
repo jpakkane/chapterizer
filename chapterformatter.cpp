@@ -21,8 +21,8 @@
 ChapterFormatter::ChapterFormatter(const TextElementIterator &start_,
                                    const TextElementIterator &end_,
                                    const std::vector<TextElement> &elms,
-                                   size_t target_height)
-    : start{start_}, end{end_}, elements{elms}, target_height{target_height} {}
+                                   size_t target_height_)
+    : start{start_}, end{end_}, elements{elms}, target_height{target_height_} {}
 
 PageLayoutResult ChapterFormatter::optimize_pages() {
     PageLayoutResult r;

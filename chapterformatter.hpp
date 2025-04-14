@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <paginator2.hpp>
+#include <printpaginator.hpp>
 
 struct OptimalResultFound {};
 

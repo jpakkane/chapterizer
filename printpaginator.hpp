@@ -137,10 +137,10 @@ struct PageLayoutResult {
 const std::vector<TextCommands> &get_lines(const TextElement &e);
 size_t lines_on_page(const Page &p);
 
-class Paginator2 {
+class PrintPaginator {
 public:
-    Paginator2(const Document &d);
-    ~Paginator2();
+    PrintPaginator(const Document &d);
+    ~PrintPaginator();
 
     void generate_pdf(const char *outfile);
 

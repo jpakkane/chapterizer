@@ -64,6 +64,13 @@ bool line_ends_in_dash(const std::string &line) {
 
 bool line_ends_in_dash(const LineStats &line) { return line.ends_in_dash; }
 
+static double compute_dash_penalty(size_t num_dashes, const double base_amount) {
+    if(num_dashes < 2) {
+        return 0;
+    }
+    return base_amount * (num_dashes - 1) * (num_dashes - 1);
+}
+
 template<typename T>
 std::vector<ExtraPenaltyStatistics>
 compute_multihyphen_penalties(const std::vector<T> &lines, const ExtraPenaltyAmounts &amounts) {
@@ -75,17 +82,19 @@ compute_multihyphen_penalties(const std::vector<T> &lines, const ExtraPenaltyAmo
             ++dashes;
         } else {
             if(dashes >= 3) {
-                penalties.emplace_back(ExtraPenaltyStatistics{ExtraPenaltyTypes::ConsecutiveDashes,
-                                                              int(i) - dashes,
-                                                              dashes * amounts.multiple_dashes});
+                penalties.emplace_back(
+                    ExtraPenaltyStatistics{ExtraPenaltyTypes::ConsecutiveDashes,
+                                           int(i) - dashes,
+                                           compute_dash_penalty(dashes, amounts.multiple_dashes)});
             }
             dashes = 0;
         }
     }
     if(dashes >= 3) {
-        penalties.emplace_back(ExtraPenaltyStatistics{ExtraPenaltyTypes::ConsecutiveDashes,
-                                                      int(lines.size()) - 1 - dashes,
-                                                      dashes * amounts.multiple_dashes});
+        penalties.emplace_back(
+            ExtraPenaltyStatistics{ExtraPenaltyTypes::ConsecutiveDashes,
+                                   int(lines.size()) - 1 - dashes,
+                                   compute_dash_penalty(dashes, amounts.multiple_dashes)});
     }
     return penalties;
 }
@@ -325,6 +334,7 @@ void ParagraphFormatter::global_split_recursive(const TextStats &shaper,
         // printf("Total penalty: %.1f\n", current_penalty);
         // FIXME: change to include extra penalties here.
         if(current_penalty < best_penalty) {
+            const auto do_it_again = total_penalty(line_stats, true);
             best_penalty = current_penalty;
             best_split = line_stats;
         }
@@ -369,11 +379,11 @@ double ParagraphFormatter::total_penalty(const std::vector<LineStats> &lines,
                                          bool is_complete) const {
     double total = 0;
     double last_line_penalty = 0;
-    Length indent = params.indent;
+    size_t line_number = 0;
     for(const auto &l : lines) {
-        last_line_penalty = line_penalty(l, paragraph_width - indent);
-        indent = Length::zero();
+        last_line_penalty = line_penalty(l, current_line_width(line_number));
         total += last_line_penalty;
+        ++line_number;
     }
     const auto line_penalty = params.indent_last_line ? total : total - last_line_penalty;
     const auto extra_penalties = compute_multihyphen_penalties(lines, extras);

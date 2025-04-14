@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <paginator2.hpp>
+#include <printpaginator.hpp>
 #include <epub.hpp>
 #include <utils.hpp>
 
@@ -73,14 +73,14 @@ int main(int argc, char **argv) {
         printf("%s <bookdef.json>\n", argv[0]);
         return 1;
     }
-    auto doc = load_document(argv[1]);
+    auto doc = load_document("/home/jpakkane/kirjat/kakkonen/text/kakkonen.json"); // argv[1]);
     if(doc.data.generate_pdf) {
         if(doc.data.is_draft) {
             DraftPaginator p(doc);
             auto ofile = doc.data.top_dir / doc.data.pdf.ofname;
             p.generate_pdf(ofile.c_str());
         } else {
-            Paginator2 p(doc);
+            PrintPaginator p(doc);
             auto ofile = doc.data.top_dir / doc.data.pdf.ofname;
             p.generate_pdf(ofile.c_str());
         }
