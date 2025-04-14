@@ -261,6 +261,7 @@ void PrintPaginator::render_mainmatter() {
                     new_page();
                     ++book_page_number;
                 }
+                rend->add_section_outline(sec_page->section, "luku");
                 const auto &textblock_left = (book_page_number % 2) == 0
                                                  ? doc.data.pdf.margins.outer
                                                  : doc.data.pdf.margins.inner;
