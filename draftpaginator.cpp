@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <paginator.hpp>
+#include <draftpaginator.hpp>
 #include <utils.hpp>
 #include <chaptercommon.hpp>
 #include <paragraphformatter.hpp>
@@ -130,11 +130,16 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
     return changes;
 }
 
-Paginator::Paginator(const Document &d)
+DraftPaginator::DraftPaginator(const Document &d)
     : doc(d), page(doc.data.pdf.page), styles(d.data.pdf.styles), spaces(d.data.pdf.spaces),
-      m(doc.data.pdf.margins) {}
+      m(doc.data.pdf.margins) {
+    if(!doc.data.is_draft) {
+        fprintf(stderr, "Tried to create draft output in non-draft mode.\n");
+        std::abort();
+    }
+}
 
-void Paginator::generate_pdf(const char *outfile) {
+void DraftPaginator::generate_pdf(const char *outfile) {
     rend.reset(new PdfRenderer(outfile,
                                page.w,
                                page.h,
@@ -145,16 +150,7 @@ void Paginator::generate_pdf(const char *outfile) {
     const bool only_maintext = false;
 
     if(!only_maintext) {
-        if(doc.data.is_draft) {
-            create_draft_title_page();
-        } else {
-            if(!doc.data.dedication.empty()) {
-                create_title_page();
-                create_colophon();
-                create_dedication();
-                new_page(false);
-            }
-        }
+        create_draft_title_page();
     }
 
     create_maintext();
@@ -168,19 +164,11 @@ void Paginator::generate_pdf(const char *outfile) {
             new_page(true);
         }
     }
-    if(!only_maintext) {
-        if(!doc.data.is_draft) {
-            create_credits();
-            new_page(false);
-            create_postcredits();
-            flush_draw_commands();
-        }
-    }
     rend->finalize_page();
     rend.reset(nullptr);
 }
 
-void Paginator::create_maintext() {
+void DraftPaginator::create_maintext() {
     ExtraPenaltyAmounts extras;
     const Length bottom_watermark = page.h - m.lower - m.upper;
     Length rel_y;
@@ -205,13 +193,8 @@ void Paginator::create_maintext() {
             }
             create_footnote(std::get<Footnote>(e), extras, bottom_watermark);
         } else if(std::holds_alternative<SceneChange>(e)) {
-            if(doc.data.is_draft) {
-                layout.text.emplace_back(MarkupDrawCommand{"#",
-                                                           &styles.normal.font,
-                                                           textblock_width() / 2,
-                                                           rel_y,
-                                                           TextAlignment::Centered});
-            }
+            layout.text.emplace_back(MarkupDrawCommand{
+                "#", &styles.normal.font, textblock_width() / 2, rel_y, TextAlignment::Centered});
             rel_y += styles.normal.line_height;
             heights.whitespace_height += styles.normal.line_height;
             if(rel_y >= bottom_watermark) {
@@ -309,19 +292,16 @@ void Paginator::create_maintext() {
     }
 }
 
-void Paginator::create_section(const Section &s,
-                               const ExtraPenaltyAmounts &extras,
-                               Length &rel_y,
-                               bool &first_section,
-                               bool &first_paragraph) {
+void DraftPaginator::create_section(const Section &s,
+                                    const ExtraPenaltyAmounts &extras,
+                                    Length &rel_y,
+                                    bool &first_section,
+                                    bool &first_paragraph) {
     const auto paragraph_width = page.w - m.inner - m.outer;
     const auto section_width = 0.8 * paragraph_width;
     printf("Processing section: %s\n", s.text.c_str());
     if(!first_section) {
         new_page(true);
-        if(!doc.data.is_draft && current_page % 2 == 0) {
-            new_page(false);
-        }
     }
     chapter_start_page = rend->page_num();
     rend->add_section_outline(s.number, s.text);
@@ -333,23 +313,10 @@ void Paginator::create_section(const Section &s,
     // Fancy stuff above the text.
     std::string title_string;
     TextAlignment section_alignment = TextAlignment::Centered;
-    if(doc.data.is_draft) {
-        title_string = std::to_string(s.number);
-        title_string += ". ";
-        title_string += s.text;
-        section_alignment = TextAlignment::Left;
-    } else {
-        title_string = "§ ";
-        title_string += std::to_string(s.number);
-        layout.text.emplace_back(MarkupDrawCommand{title_string,
-                                                   &styles.section.font,
-                                                   textblock_width() / 2,
-                                                   rel_y,
-                                                   TextAlignment::Centered});
-        rel_y += 2 * styles.section.line_height;
-        heights.text_height += 2 * styles.section.line_height;
-        title_string = s.text;
-    }
+    title_string = std::to_string(s.number);
+    title_string += ". ";
+    title_string += s.text;
+    section_alignment = TextAlignment::Left;
     // The title. Hyphenation is prohibited.
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(title_string, false);
     ParagraphFormatter b(processed_words, section_width, styles.section, extras);
@@ -360,43 +327,32 @@ void Paginator::create_section(const Section &s,
         rel_y += styles.section.line_height;
         heights.text_height += styles.section.line_height;
     }
-    // FIXME: assume all headings have one line of text,
-    // so that the following paragraph always starts at the
-    // same height.
-    if(!doc.data.is_draft) {
-        assert(!lines.empty());
-        rel_y -= styles.section.line_height * (lines.size() - 1);
-    }
     rel_y += spaces.below_section;
     heights.text_height += spaces.below_section;
     first_paragraph = true;
 }
 
-void Paginator::create_paragraph(const Paragraph &p,
-                                 const ExtraPenaltyAmounts &extras,
-                                 Length &rel_y,
-                                 const Length &bottom_watermark,
-                                 const ChapterParameters &chpar,
-                                 Length extra_indent) {
+void DraftPaginator::create_paragraph(const Paragraph &p,
+                                      const ExtraPenaltyAmounts &extras,
+                                      Length &rel_y,
+                                      const Length &bottom_watermark,
+                                      const ChapterParameters &chpar,
+                                      Length extra_indent) {
     const auto paragraph_width = textblock_width() - 2 * extra_indent;
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
     ParagraphFormatter b(processed_words, paragraph_width, chpar, extras);
     auto lines = b.split_formatted_lines();
     std::vector<TextCommands> built_lines;
-    if(doc.data.is_draft) {
-        built_lines = build_ragged_paragraph(lines, chpar, TextAlignment::Left, Length::zero());
-        if(!built_lines.empty()) {
-            auto &first_line = built_lines[0];
-            if(std::holds_alternative<MarkupDrawCommand>(first_line)) {
-                std::get<MarkupDrawCommand>(first_line).x += chpar.indent;
-            } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(first_line)) {
-                std::get<JustifiedMarkupDrawCommand>(first_line).x += chpar.indent;
-            } else {
-                std::abort();
-            }
+    built_lines = build_ragged_paragraph(lines, chpar, TextAlignment::Left, Length::zero());
+    if(!built_lines.empty()) {
+        auto &first_line = built_lines[0];
+        if(std::holds_alternative<MarkupDrawCommand>(first_line)) {
+            std::get<MarkupDrawCommand>(first_line).x += chpar.indent;
+        } else if(std::holds_alternative<JustifiedMarkupDrawCommand>(first_line)) {
+            std::get<JustifiedMarkupDrawCommand>(first_line).x += chpar.indent;
+        } else {
+            std::abort();
         }
-    } else {
-        built_lines = build_justified_paragraph(lines, chpar, paragraph_width);
     }
     // Shift sideways
     for(auto &line : built_lines) {
@@ -424,9 +380,9 @@ void Paginator::create_paragraph(const Paragraph &p,
     }
 }
 
-void Paginator::create_footnote(const Footnote &f,
-                                const ExtraPenaltyAmounts &extras,
-                                const Length &bottom_watermark) {
+void DraftPaginator::create_footnote(const Footnote &f,
+                                     const ExtraPenaltyAmounts &extras,
+                                     const Length &bottom_watermark) {
     const auto paragraph_width = page.w - m.inner - m.outer;
     heights.whitespace_height += spaces.footnote_separation;
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text);
@@ -451,9 +407,9 @@ void Paginator::create_footnote(const Footnote &f,
     }
 }
 
-void Paginator::create_numberlist(const NumberList &nl,
-                                  Length &rel_y,
-                                  const ExtraPenaltyAmounts &extras) {
+void DraftPaginator::create_numberlist(const NumberList &nl,
+                                       Length &rel_y,
+                                       const ExtraPenaltyAmounts &extras) {
     const auto paragraph_width = page.w - m.inner - m.outer;
 
     const Length number_area = Length::from_mm(5);
@@ -486,7 +442,7 @@ void Paginator::create_numberlist(const NumberList &nl,
     heights.whitespace_height += spaces.different_paragraphs;
 }
 
-void Paginator::add_top_image(const ImageInfo &image) {
+void DraftPaginator::add_top_image(const ImageInfo &image) {
     ImageCommand cmd;
     cmd.i = image;
     cmd.display_width = Length::from_mm(double(image.w) / image_dpi * 25.4);
@@ -506,36 +462,24 @@ void Paginator::add_top_image(const ImageInfo &image) {
     //   heights.figure_height += display_height;
 }
 
-void Paginator::render_page_num(const FontParameters &par) {
-    if(doc.data.is_draft) {
-        // In the official draft style the first page does not have a number
-        // so logical page numbers are offset from physical pages by one.
-        std::string text =
-            doc.data.draftdata.page_number_template + std::to_string(current_page - 1);
-        auto quoted = escape_pango_chars(text);
-        rend->render_markup_as_is(quoted.c_str(),
-                                  styles.normal.font,
-                                  current_left_margin() + textblock_width(),
-                                  m.upper - 2 * styles.normal.line_height,
-                                  TextAlignment::Right);
-    } else {
-        if(current_page == 204) { // MAGIC!
-            return;
-        }
-        char buf[128];
-        snprintf(buf, 128, "%d", current_page);
-        const Length yloc = page.h - m.lower + styles.normal.line_height;
-        const Length xloc = current_left_margin() + (page.w - m.inner - m.outer) / 2;
-        rend->render_line_centered(buf, par, xloc, yloc);
-    }
+void DraftPaginator::render_page_num(const FontParameters &par) {
+    // In the official draft style the first page does not have a number
+    // so logical page numbers are offset from physical pages by one.
+    std::string text = doc.data.draftdata.page_number_template + std::to_string(current_page - 1);
+    auto quoted = escape_pango_chars(text);
+    rend->render_markup_as_is(quoted.c_str(),
+                              styles.normal.font,
+                              current_left_margin() + textblock_width(),
+                              m.upper - 2 * styles.normal.line_height,
+                              TextAlignment::Right);
 }
 
 std::vector<TextCommands>
-Paginator::build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
-                                     const ChapterParameters &text_par,
-                                     const Length target_width,
-                                     const Length x_off,
-                                     const Length y_off) {
+DraftPaginator::build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
+                                          const ChapterParameters &text_par,
+                                          const Length target_width,
+                                          const Length x_off,
+                                          const Length y_off) {
     Length rel_y;
     const Length x;
     std::vector<TextCommands> line_commands;
@@ -567,10 +511,10 @@ Paginator::build_justified_paragraph(const std::vector<std::vector<std::string>>
 }
 
 std::vector<TextCommands>
-Paginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
-                                  const ChapterParameters &text_par,
-                                  const TextAlignment alignment,
-                                  Length rel_y) {
+DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
+                                       const ChapterParameters &text_par,
+                                       const TextAlignment alignment,
+                                       Length rel_y) {
     std::vector<TextCommands> line_commands;
     const auto rel_x =
         alignment == TextAlignment::Centered ? textblock_width() / 2 : Length::zero();
@@ -588,8 +532,8 @@ Paginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &l
     return line_commands;
 }
 
-std::vector<EnrichedWord> Paginator::text_to_formatted_words(const std::string &text,
-                                                             bool permit_hyphenation) {
+std::vector<EnrichedWord> DraftPaginator::text_to_formatted_words(const std::string &text,
+                                                                  bool permit_hyphenation) {
     StyleStack current_style(styles.code.font);
     auto plain_words = split_to_words(std::string_view(text));
     std::vector<EnrichedWord> processed_words;
@@ -608,7 +552,7 @@ std::vector<EnrichedWord> Paginator::text_to_formatted_words(const std::string &
     return processed_words;
 }
 
-void Paginator::new_page(bool draw_page_num) {
+void DraftPaginator::new_page(bool draw_page_num) {
     flush_draw_commands();
     if(draw_page_num) {
         render_page_num(styles.normal.font);
@@ -637,7 +581,7 @@ void Paginator::new_page(bool draw_page_num) {
     }
 }
 
-void Paginator::draw_debug_bars(int num_bars, const Length bar_start_y) {
+void DraftPaginator::draw_debug_bars(int num_bars, const Length bar_start_y) {
     const Length boxheight = styles.section.line_height;
     const Length chaffwidth = Length::from_mm(6);
     for(int i = 0; i < num_bars; ++i) {
@@ -688,7 +632,7 @@ void Paginator::draw_debug_bars(int num_bars, const Length bar_start_y) {
     }
 }
 
-void Paginator::flush_draw_commands() {
+void DraftPaginator::flush_draw_commands() {
     const bool draw_cut_guide = false;
     const bool draw_textarea_box = false;
     Length footnote_block_start = page.h - m.lower - heights.footnote_height;
@@ -763,9 +707,9 @@ void Paginator::flush_draw_commands() {
     heights.clear();
 }
 
-void Paginator::add_pending_figure(const ImageInfo &f) { pending_figures.push_back(f); }
+void DraftPaginator::add_pending_figure(const ImageInfo &f) { pending_figures.push_back(f); }
 
-int Paginator::count_words() {
+int DraftPaginator::count_words() {
     int num_words = 0;
     for(const auto &f : doc.data.sources) {
         const auto full_path = doc.data.top_dir / f;
@@ -776,7 +720,7 @@ int Paginator::count_words() {
     return ((num_words + 500) / 1000) * 1000;
 }
 
-void Paginator::create_draft_title_page() {
+void DraftPaginator::create_draft_title_page() {
     const int num_words = count_words();
     const auto middle = current_left_margin() + textblock_width() / 2;
     auto textblock_center = m.upper + textblock_height() / 2;
@@ -813,141 +757,4 @@ void Paginator::create_draft_title_page() {
     new_page(false);
 }
 
-void Paginator::create_title_page() {
-    const auto middle = current_left_margin() + textblock_width() / 2;
-    const auto text_top = m.upper + textblock_height() / 2 - 3 * styles.title.line_height;
-    auto y = text_top;
-    const Length gap = Length::from_mm(5);
-    rend->render_markup_as_is(
-        doc.data.title.c_str(), styles.title.font, middle, y, TextAlignment::Centered);
-    y += styles.title.line_height;
-    rend->render_markup_as_is(
-        doc.data.author.c_str(), styles.author.font, middle, y, TextAlignment::Centered);
-    y += styles.author.line_height;
-    const auto text_bottom = y;
-    const auto donut_outer = 0.8 * textblock_width() / 2;
-    const auto donut_inner = 0.6 * donut_outer;
 
-    // Fancy stuff here.
-    y = text_top;
-    rend->draw_arc(middle, text_top - gap, donut_outer, 0, M_PI, Length::from_pt(2));
-    rend->draw_arc(middle, text_top - gap, donut_inner, 0, M_PI, Length::from_pt(2));
-    rend->draw_arc(middle, text_bottom + gap, donut_outer, M_PI, 0, Length::from_pt(2));
-    rend->draw_arc(middle, text_bottom + gap, donut_inner, M_PI, 0, Length::from_pt(2));
-
-    auto series_logo = rend->get_image("print_img/sahkolammas.png");
-    Length display_width = Length::from_mm(15);
-    Length display_height = display_width / series_logo.w * series_logo.h;
-
-    rend->draw_image(series_logo,
-                     middle - display_width / 2 - Length::from_mm(1),
-                     doc.data.pdf.page.h - Length::from_mm(48),
-                     display_width,
-                     display_height);
-    auto pub_logo = rend->get_image("print_img/kustantaja.png");
-    display_width = Length::from_mm(40);
-    display_height = display_width / pub_logo.w * pub_logo.h;
-
-    rend->draw_image(pub_logo,
-                     middle - display_width / 2,
-                     doc.data.pdf.page.h - Length::from_mm(30),
-                     display_width,
-                     display_height);
-    new_page(false);
-}
-
-void Paginator::create_colophon() {
-    const auto x = current_left_margin();
-    auto y = page.h - m.lower - (doc.data.pdf.colophon.size() + 1) * styles.colophon.line_height;
-    for(const auto &line : doc.data.pdf.colophon) {
-        if(!line.empty()) {
-            // I was feeling super lazy when writing this. I admit it.
-            if(line.starts_with("https://")) {
-                rend->render_text_as_is(line.c_str(), styles.code.font, x, y);
-            } else {
-                rend->render_text_as_is(line.c_str(), styles.colophon.font, x, y);
-            }
-        }
-        y += styles.colophon.line_height;
-    }
-
-    new_page(false);
-}
-
-void Paginator::create_dedication() {
-    ExtraPenaltyAmounts extras;
-    const auto paragraph_width = page.w - m.inner - m.outer;
-    const auto dedication_width = 2 * paragraph_width / 3;
-    // FIXME, ragged_paragraph should take this as an argument.
-    // const auto x = current_left_margin() + paragraph_width / 2;
-    auto y = m.upper + (page.h - m.upper - m.lower) / 8;
-
-    for(const auto &text : doc.data.dedication) {
-        const auto processed_words = text_to_formatted_words(text, false);
-        ParagraphFormatter b(processed_words, dedication_width, styles.dedication, extras);
-        auto lines = b.split_formatted_lines();
-        auto built_lines =
-            build_ragged_paragraph(lines, styles.dedication, TextAlignment::Centered, y);
-        for(auto &line : built_lines) {
-            layout.text.emplace_back(std::move(line));
-            y += styles.dedication.line_height;
-            heights.text_height += styles.dedication.line_height;
-        }
-        y += styles.dedication.line_height;
-        heights.text_height += styles.dedication.line_height;
-    }
-    new_page(false);
-}
-
-void Paginator::create_credits() {
-    const auto paragraph_width = page.w - m.inner - m.outer;
-    auto y = m.upper;
-    const Length halfgap = Length::from_mm(2);
-    const auto xmiddle = current_left_margin() + paragraph_width / 2;
-    const auto x1 = xmiddle - halfgap;
-    const auto x2 = x1 + 2 * halfgap;
-
-    std::string buf;
-    for(const auto &centry : doc.data.credits) {
-        if(const auto *regular = std::get_if<CreditsEntry>(&centry)) {
-            const auto &key = regular->key;
-            const auto &value = regular->value;
-            buf = R"(<span variant="small-caps" letter_spacing="100">)";
-            buf += key.c_str();
-            buf += "</span>";
-            if(!key.empty()) {
-                rend->render_markup_as_is(
-                    buf.c_str(), styles.normal.font, x1, y, TextAlignment::Right);
-            }
-            buf = R"(<span variant="small-caps" letter_spacing="100">)";
-            buf += value.c_str();
-            buf += "</span>";
-            if(!value.empty()) {
-                rend->render_markup_as_is(
-                    buf.c_str(), styles.normal.font, x2, y, TextAlignment::Left);
-            }
-        } else {
-            const auto &line = std::get<CreditsTitle>(centry).line;
-            if(!line.empty()) {
-                buf = R"(<span variant="small-caps" letter_spacing="100">)";
-                buf += line;
-                buf += "</span>";
-                rend->render_markup_as_is(
-                    buf.c_str(), styles.normal.font, xmiddle, y, TextAlignment::Centered);
-            }
-        }
-        y += styles.normal.line_height;
-    }
-}
-
-void Paginator::create_postcredits() {
-    const Length bar_start_y = m.upper;
-
-    draw_debug_bars(17, bar_start_y);
-    const auto x = current_left_margin() + Length::from_mm(2);
-    Length y = m.upper + styles.section.line_height + Length::from_mm(0.5);
-    for(const auto &l : doc.data.postcredits) {
-        rend->render_text_as_is(l.c_str(), styles.code.font, x, y);
-        y += styles.section.line_height;
-    }
-}

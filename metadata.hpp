@@ -109,13 +109,9 @@ struct Dedication {
     std::vector<std::string> lines;
 };
 
-struct Empty {
+struct Empty {};
 
-};
-
-struct FirstPage {
-
-};
+struct FirstPage {};
 
 struct Signing {
     std::vector<std::string> lines;

@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <paginator.hpp>
+#include <draftpaginator.hpp>
 
 struct SectionElement {
     std::vector<TextCommands> lines;
@@ -191,7 +191,8 @@ private:
     void render_maintext_lines(const TextElementIterator &start_loc,
                                const TextElementIterator &end_loc,
                                size_t book_page_number,
-                               Length y, int current_line=-1);
+                               Length y,
+                               int current_line = -1);
 
     Length current_left_margin() const { return rend->page_num() % 2 ? m.inner : m.outer; }
 

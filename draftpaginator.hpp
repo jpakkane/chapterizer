@@ -81,9 +81,9 @@ struct Heights {
 
 std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::string &word);
 
-class Paginator {
+class DraftPaginator {
 public:
-    Paginator(const Document &d);
+    DraftPaginator(const Document &d);
 
     void generate_pdf(const char *outfile);
 
@@ -118,11 +118,6 @@ private:
     void add_top_image(const ImageInfo &image);
 
     void create_draft_title_page();
-    void create_title_page();
-    void create_colophon();
-    void create_dedication();
-    void create_credits();
-    void create_postcredits();
     void create_maintext();
 
     void create_section(const Section &s,

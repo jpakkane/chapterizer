@@ -479,9 +479,9 @@ private:
     double best_penalty = 1e100;
 };
 
-class Paginator {
+class DraftPaginator {
 public:
-    Paginator() {
+    DraftPaginator() {
         w = mm2pt(135);
         h = mm2pt(210);
         inner = mm2pt(20);
@@ -503,7 +503,7 @@ public:
         cr = cairo_create(surf);
     }
 
-    ~Paginator() {
+    ~DraftPaginator() {
         cairo_destroy(cr);
         cairo_surface_destroy(surf);
     }
@@ -778,7 +778,7 @@ private:
 };
 
 int main() {
-    Paginator p;
+    DraftPaginator p;
     p.create();
     return 0;
 }
