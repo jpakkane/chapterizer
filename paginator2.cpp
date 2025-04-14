@@ -386,7 +386,8 @@ void Paginator2::draw_edge_markers(size_t chapter_number, size_t page_number) {
     const Length tab_height = 1.5 * stroke_width;
     Length x = (page_number % 2) ? page.w : Length::zero();
     // move downwards per chapter
-    Length y = page.h / 2 - (5 - ((chapter_number - 1) % 10)) * tab_height + stroke_width / 2;
+    Length y =
+        page.h / 2 - (5 - (((int64_t)chapter_number - 1) % 10)) * tab_height + stroke_width / 2;
 
     rend->draw_line(x, y, x, y + stroke_width / 2, stroke_width, 0.8, CAIRO_LINE_CAP_ROUND);
 }
@@ -504,7 +505,7 @@ void Paginator2::create_letter(const Letter &letter) {
     size_t par_number = 0;
     for(const auto &partext : letter.paragraphs) {
         if(par_number > 0) {
-            elements.push_back(EmptyLineElement{1});
+            elements.emplace_back(EmptyLineElement{1});
         }
         SpecialTextElement el;
         el.extra_indent = spaces.codeblock_indent;
