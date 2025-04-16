@@ -214,7 +214,7 @@ void PrintPaginator::render_signing_page(const Signing &s) {
         xdelta[i] = 3 * Length::from_pt(shiftdist(e));
         tilt[i] = shiftdist(e) / 2;
     }
-    Length y = m.upper + textblock_height() / 4;
+    Length y = m.upper + textblock_height() / 5;
     const Length letter_width = Length::from_pt(6);
     const Length &line_height = styles.code.line_height;
     const Length &middle = current_left_margin() + textblock_width() / 2;
