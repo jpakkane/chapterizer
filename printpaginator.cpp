@@ -401,9 +401,18 @@ void PrintPaginator::draw_page_number(size_t page_number) {
     const Length x = (page_number % 2) ? page.w - m.outer : m.outer;
     const Length y = styles.normal.line_height * 2;
     const TextAlignment align = (page_number % 2) ? TextAlignment::Right : TextAlignment::Left;
-    char buf[10];
-    snprintf(buf, 10, "%d", (int)page_number);
-    rend->render_markup_as_is(buf, styles.normal.font, x, y, align);
+    const bool use_oldstyle_nums = false;
+    if(use_oldstyle_nums) {
+        char buf[80];
+        snprintf(buf, 80, "<span font_features=\"onum=1\">%d</span>", (int)page_number);
+        auto hack = styles.normal.font;
+        hack.name = "TeX Gyre Schola";
+        rend->render_markup_as_is(buf, hack, x, y, align);
+    } else {
+        char buf[20];
+        snprintf(buf, 20, "%d", (int)page_number);
+        rend->render_markup_as_is(buf, styles.normal.font, x, y, align);
+    }
 }
 
 void PrintPaginator::build_main_text() {
