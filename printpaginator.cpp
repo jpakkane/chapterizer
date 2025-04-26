@@ -383,7 +383,21 @@ void PrintPaginator::render_maintext_lines(const TextElementIterator &start_loc,
     }
 }
 
-void PrintPaginator::new_page() { rend->new_page(); }
+void PrintPaginator::new_page() {
+    const int pages_per_foil = 16;
+    const auto foil_num = rend->page_num() / pages_per_foil;
+    const auto foil_page_num = rend->page_num() % pages_per_foil;
+    if(foil_page_num == 1 && foil_num > 0) {
+        const int bufsize = 128;
+        char buf[bufsize];
+        snprintf(buf, bufsize, "Bookname — %d", foil_num + 1);
+        auto style = styles.normal.font;
+        style.size = Length::from_pt(7);
+        auto printloc = page.h - m.lower + 3 * styles.normal.line_height;
+        rend->render_text_as_is(buf, style, current_left_margin(), printloc);
+    }
+    rend->new_page();
+}
 
 void PrintPaginator::draw_edge_markers(size_t chapter_number, size_t page_number) {
     assert(chapter_number > 0);
