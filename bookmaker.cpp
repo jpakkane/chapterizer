@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
         printf("%s <bookdef.json>\n", argv[0]);
         return 1;
     }
-    auto doc = load_document("/home/jpakkane/kirjat/kakkonen/text/kakkonen.json"); // argv[1]);
+    auto doc = load_document(argv[1]);
     if(doc.data.generate_pdf) {
         if(doc.data.is_draft) {
             DraftPaginator p(doc);
