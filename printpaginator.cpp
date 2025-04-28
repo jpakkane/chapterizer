@@ -302,7 +302,7 @@ void PrintPaginator::render_backmatter() {
     const auto xmiddle = current_left_margin() + paragraph_width / 2;
     const auto x1 = xmiddle - halfgap;
     const auto x2 = x1 + 2 * halfgap;
-    const char stylespan[] = R"(<span variant="small-caps" letter_spacing="1000">)";
+    const char stylespan[] = R"(<span variant="small-caps" letter_spacing="1500">)";
 
     std::string buf;
     for(const auto &centry : doc.data.credits) {
