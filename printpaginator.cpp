@@ -390,7 +390,10 @@ void PrintPaginator::new_page() {
     if(foil_page_num == 1 && foil_num > 0) {
         const int bufsize = 128;
         char buf[bufsize];
-        snprintf(buf, bufsize, "Bookname — %d", foil_num + 1);
+        auto loc = doc.data.title.find(":");
+        assert(loc != std::string::npos);
+        auto titletxt = doc.data.title.substr(0, loc - 2);
+        snprintf(buf, bufsize, "%s — %d", titletxt.c_str(), foil_num + 1);
         auto style = styles.normal.font;
         style.size = Length::from_pt(7);
         auto printloc = page.h - m.lower + 3 * styles.normal.line_height;
