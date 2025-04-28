@@ -183,6 +183,43 @@ void PdfRenderer::fill_box(Length x, Length y, Length w, Length h, double color)
     cairo_restore(cr);
 }
 
+void PdfRenderer::fill_rounded_corner_box(Length x, Length y, Length w, Length h, double color) {
+    const double round_fraction = 0.5;
+    const auto round_distance = round_fraction * w;
+
+    cairo_save(cr);
+    cairo_set_source_rgb(cr, color, color, color);
+
+    cairo_move_to(cr, (x + round_fraction * w).pt(), y.pt());
+    cairo_line_to(cr, (x + w - round_distance).pt(), y.pt());
+    cairo_curve_to(
+        cr, (x + w).pt(), y.pt(), (x + w).pt(), y.pt(), (x + w).pt(), (y + round_distance).pt());
+
+    cairo_line_to(cr, (x + w).pt(), (y + h - round_distance).pt());
+    cairo_curve_to(cr,
+                   (x + w).pt(),
+                   (y + h).pt(),
+                   (x + w).pt(),
+                   (y + h).pt(),
+                   (x + w - round_distance).pt(),
+                   (y + h).pt());
+
+    cairo_line_to(cr, (x + round_distance).pt(), (y + h).pt());
+    cairo_curve_to(cr,
+                   (x).pt(),
+                   (y + h).pt(),
+                   (x).pt(),
+                   (y + h).pt(),
+                   (x).pt(),
+                   (y + h - round_distance).pt());
+
+    cairo_line_to(cr, x.pt(), (y + round_distance).pt());
+    cairo_curve_to(cr, x.pt(), y.pt(), x.pt(), y.pt(), (x + round_distance).pt(), y.pt());
+    cairo_close_path(cr);
+    cairo_fill(cr);
+    cairo_restore(cr);
+}
+
 void PdfRenderer::draw_dash_line(const std::vector<Coord> &points, double line_width) {
     if(points.size() < 2) {
         return;

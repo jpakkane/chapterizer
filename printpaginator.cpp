@@ -408,7 +408,7 @@ void PrintPaginator::draw_edge_markers(size_t chapter_number, size_t page_number
     Length y =
         page.h / 2 - (5 - (((int64_t)chapter_number - 1) % 10)) * tab_height + stroke_width / 2;
 
-    rend->draw_line(x, y, x, y + stroke_width / 2, stroke_width, 0.8, CAIRO_LINE_CAP_ROUND);
+    rend->fill_rounded_corner_box(x - stroke_width / 2, y, stroke_width, tab_height, 0.8);
 }
 
 void PrintPaginator::draw_page_number(size_t page_number) {

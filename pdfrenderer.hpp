@@ -90,6 +90,8 @@ public:
     void draw_box(Length x, Length y, Length w, Length h, Length thickness);
     void fill_box(Length x, Length y, Length w, Length h, double color);
 
+    void fill_rounded_corner_box(Length x, Length y, Length w, Length h, double color);
+
     void draw_line(Length x0, Length y0, Length x1, Length y1, Length thickness);
 
     void draw_line(Length x0,
