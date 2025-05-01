@@ -51,22 +51,33 @@ bool ChapterFormatter::stop_recursing(TextElementIterator loc, const PageLayoutR
     return false;
 }
 
-void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
-                                          PageLayoutResult &r,
-                                          size_t previous_page_height) {
+void ChapterFormatter::optimize_recursive(
+    TextElementIterator run_start,
+    PageLayoutResult &r,
+    size_t previous_page_height,
+    const std::optional<ImageElement> incoming_pending_image) {
     size_t lines_on_page = 0;
     std::optional<size_t> page_section_number;
+    std::optional<ImageElement> current_page_image;
+    std::optional<ImageElement> outgoing_pending_image;
     if(compute_penalties(r.pages).total_penalty > best_penalty) {
         return;
+    }
+
+    if(incoming_pending_image) {
+        // FIXME, check for full page images.
+        current_page_image = incoming_pending_image;
+        lines_on_page = current_page_image->height_in_lines;
     }
     for(TextElementIterator current = run_start; current != end; ++current) {
         auto push_and_resume = [&](const TextElementIterator &startpoint,
                                    const TextElementIterator &endpoint) {
             TextLimits limits{startpoint, endpoint};
             if(page_section_number) {
+                assert(!current_page_image);
                 r.pages.emplace_back(SectionPage{*page_section_number, limits});
             } else {
-                r.pages.emplace_back(RegularPage{limits, {}, {}});
+                r.pages.emplace_back(RegularPage{limits, {}, current_page_image});
             }
             const size_t height_validation = r.pages.size();
             optimize_recursive(endpoint, r, lines_on_page);
@@ -100,6 +111,7 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
             page_section_number = sec->chapter_number;
             ++lines_on_page;
         } else if(auto *par = std::get_if<ParagraphElement>(&current.element())) {
+            (void)par;
             ++lines_on_page;
         } else if(const auto *empty = std::get_if<EmptyLineElement>(&current.element())) {
             if(lines_on_page != 0) {
@@ -109,6 +121,15 @@ void ChapterFormatter::optimize_recursive(TextElementIterator run_start,
         } else if(const auto *cb = std::get_if<SpecialTextElement>(&current.element())) {
             (void)cb;
             ++lines_on_page;
+        } else if(const auto *imel = std::get_if<ImageElement>(&current.element())) {
+            if(lines_on_page + imel->height_in_lines > target_height) {
+                assert(!outgoing_pending_image);
+                outgoing_pending_image = *imel;
+            } else {
+                assert(!current_page_image);
+                lines_on_page += imel->height_in_lines;
+                current_page_image = *imel;
+            }
         } else {
             // FIXME, add images etc.
             std::abort();

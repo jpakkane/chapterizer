@@ -40,11 +40,22 @@ struct SpecialTextElement {
     TextAlignment alignment;
 };
 
+struct ImageElement {
+    std::filesystem::path path;
+    double ppi;
+    size_t height_in_lines;
+    ImageInfo info;
+};
+
 struct FootnoteElement {};
 
-typedef std::
-    variant<SectionElement, ParagraphElement, SpecialTextElement, EmptyLineElement, FootnoteElement>
-        TextElement;
+typedef std::variant<SectionElement,
+                     ParagraphElement,
+                     SpecialTextElement,
+                     EmptyLineElement,
+                     FootnoteElement,
+                     ImageElement>
+    TextElement;
 
 struct TextElementIterator {
     TextElementIterator() {
@@ -104,8 +115,8 @@ struct SectionPage {
 
 struct RegularPage {
     TextLimits main_text;
-    std::optional<size_t> image_id;
     std::optional<TextLimits> footnotes;
+    std::optional<ImageElement> image;
 };
 
 struct ImagePage {
@@ -172,6 +183,8 @@ private:
     void render_frontmatter();
     void render_mainmatter();
     void render_backmatter();
+
+    void render_floating_image(const ImageElement &imel);
 
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
                                                       bool permit_hyphenation = true);

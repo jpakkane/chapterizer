@@ -61,9 +61,12 @@ const std::vector<TextCommands> &get_lines(const TextElement &e) {
     }
 };
 
-size_t get_num_lines(const TextElement &e) {
+size_t get_num_logical_lines(const TextElement &e) {
     if(auto *empty = std::get_if<EmptyLineElement>(&e)) {
         return empty->num_lines;
+    } else if(auto *image = std::get_if<ImageElement>(&e)) {
+        (void)image;
+        return 1;
     } else {
         return get_lines(e).size();
     }
@@ -76,6 +79,9 @@ size_t lines_on_page(const Page &p) {
             if(num_lines > 0 || !std::holds_alternative<EmptyLineElement>(it.element())) {
                 ++num_lines;
             }
+        }
+        if(reg->image) {
+            num_lines += reg->image->height_in_lines;
         }
     } else if(auto *sec = std::get_if<SectionPage>(&p)) {
         const size_t chapter_heading_top_whitespace = 8;
@@ -98,7 +104,7 @@ void TextElementIterator::operator++() {
         return;
     }
 
-    auto num_lines = get_num_lines((*elems)[element_id]);
+    auto num_lines = get_num_logical_lines((*elems)[element_id]);
     ++line_id;
     if(line_id >= num_lines) {
         ++element_id;
@@ -141,18 +147,18 @@ void PrintPaginator::generate_pdf(const char *outfile) {
     statfile.replace_extension(".stats.txt");
     stats = fopen(statfile.string().c_str(), "w");
     fprintf(stats, "Statistics\n\n");
-    build_main_text();
-    if(true) {
-        std::filesystem::path dumpfile(outfile);
-        dumpfile.replace_extension(".dump.txt");
-        dump_text(dumpfile.string().c_str());
-    }
     rend.reset(new PdfRenderer(outfile,
                                page.w,
                                page.h,
                                doc.data.pdf.bleed,
                                doc.data.title.c_str(),
                                doc.data.author.c_str()));
+    build_main_text();
+    if(true) {
+        std::filesystem::path dumpfile(outfile);
+        dumpfile.replace_extension(".dump.txt");
+        dump_text(dumpfile.string().c_str());
+    }
     // rend->init_page();
     render_output();
 }
@@ -243,6 +249,14 @@ void PrintPaginator::render_signing_page(const Signing &s) {
     }
 }
 
+void PrintPaginator::render_floating_image(const ImageElement &imel) {
+    Length y = m.upper;
+    Length imw = Length::from_mm(double(imel.info.w) / imel.ppi * 25.4);
+    Length imh = Length::from_mm(double(imel.info.h) / imel.ppi * 25.4);
+    Length x = current_left_margin() + textblock_width() / 2 - imw / 2;
+    rend->draw_image(imel.info, x, y, imw, imh);
+}
+
 void PrintPaginator::render_mainmatter() {
     size_t current_section_number = 0;
     for(const auto &current_section : maintext_sections) {
@@ -252,6 +266,10 @@ void PrintPaginator::render_mainmatter() {
             if(auto *reg_page = std::get_if<RegularPage>(&p)) {
                 const Length line_height = styles.normal.line_height;
                 Length y = m.upper + line_height;
+                if(reg_page->image) {
+                    render_floating_image(reg_page->image.value());
+                    y += line_height * reg_page->image->height_in_lines;
+                }
                 render_maintext_lines(
                     reg_page->main_text.start, reg_page->main_text.end, book_page_number, y);
                 draw_edge_markers(current_section_number, book_page_number);
@@ -348,8 +366,8 @@ void PrintPaginator::render_maintext_lines(const TextElementIterator &start_loc,
         (book_page_number % 2) == 0 ? doc.data.pdf.margins.outer : doc.data.pdf.margins.inner;
     for(auto it = start_loc; it != end_loc; ++it) {
         ++current_line;
-        const auto &line = it.line();
         if(std::holds_alternative<ParagraphElement>(it.element())) {
+            const auto &line = it.line();
             if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
                 rend->render_line_justified(
                     j->markup_words, styles.normal.font, j->width, textblock_left + j->x, y);
@@ -364,6 +382,7 @@ void PrintPaginator::render_maintext_lines(const TextElementIterator &start_loc,
             }
             y += line_height;
         } else if(auto *special = std::get_if<SpecialTextElement>(&it.element())) {
+            const auto &line = it.line();
             const auto mu = std::get<MarkupDrawCommand>(line);
             rend->render_markup_as_is(mu.markup.c_str(),
                                       *special->font,
@@ -376,6 +395,8 @@ void PrintPaginator::render_maintext_lines(const TextElementIterator &start_loc,
             if(current_line != 0) {
                 y += empty->num_lines * line_height;
             }
+        } else if(std::holds_alternative<ImageElement>(it.element())) {
+            // Images are rendered at the start of the page.
         } else {
             fprintf(stderr, "ERROR is.\n");
             std::abort();
@@ -391,13 +412,14 @@ void PrintPaginator::new_page() {
         const int bufsize = 128;
         char buf[bufsize];
         auto loc = doc.data.title.find(":");
-        assert(loc != std::string::npos);
-        auto titletxt = doc.data.title.substr(0, loc - 2);
-        snprintf(buf, bufsize, "%s — %d", titletxt.c_str(), foil_num + 1);
-        auto style = styles.normal.font;
-        style.size = Length::from_pt(7);
-        auto printloc = page.h - m.lower + 3 * styles.normal.line_height;
-        rend->render_text_as_is(buf, style, current_left_margin(), printloc);
+        if(loc != std::string::npos) {
+            auto titletxt = doc.data.title.substr(0, loc - 2);
+            snprintf(buf, bufsize, "%s — %d", titletxt.c_str(), foil_num + 1);
+            auto style = styles.normal.font;
+            style.size = Length::from_pt(7);
+            auto printloc = page.h - m.lower + 3 * styles.normal.line_height;
+            rend->render_text_as_is(buf, style, current_left_margin(), printloc);
+        }
     }
     rend->new_page();
 }
@@ -450,8 +472,13 @@ void PrintPaginator::build_main_text() {
                              Length::zero());
             first_paragraph = false;
         } else if(auto *fig = std::get_if<Figure>(&e)) {
-            (void)fig;
-            // FIXME add later.
+            const auto fullpath = doc.data.top_dir / fig->file;
+            ImageElement imel;
+            imel.info = rend->get_image(fullpath.c_str());
+            imel.ppi = 300;
+            auto display_height = Length::from_mm(double(imel.info.h) / imel.ppi * 25.4);
+            imel.height_in_lines = display_height.pt() / styles.normal.line_height.pt() + 1;
+            elements.emplace_back(std::move(imel));
         } else if(auto *cb = std::get_if<CodeBlock>(&e)) {
             elements.emplace_back(EmptyLineElement{1});
             create_codeblock(*cb);
@@ -715,7 +742,11 @@ void PrintPaginator::dump_text(const char *path) {
                     if(previous.element_id != it.element_id) {
                         fprintf(f, "\n");
                     }
-                    plaintextprinter(f, it.line());
+                    if(std::holds_alternative<ImageElement>(it.element())) {
+                        fprintf(f, "-- IMAGE --");
+                    } else {
+                        plaintextprinter(f, it.line());
+                    }
                     fprintf(f, "\n");
                     previous = it;
                 }
