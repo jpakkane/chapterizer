@@ -475,7 +475,7 @@ void PrintPaginator::build_main_text() {
             const auto fullpath = doc.data.top_dir / fig->file;
             ImageElement imel;
             imel.info = rend->get_image(fullpath.c_str());
-            imel.ppi = 300;
+            imel.ppi = 1200;
             auto display_height = Length::from_mm(double(imel.info.h) / imel.ppi * 25.4);
             imel.height_in_lines = display_height.pt() / styles.normal.line_height.pt() + 1;
             elements.emplace_back(std::move(imel));
