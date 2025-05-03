@@ -191,12 +191,53 @@ void PrintPaginator::render_frontmatter() {
                 y += line_height;
             }
         } else if(std::holds_alternative<FirstPage>(f)) {
-            Length y = m.upper + textblock_height() / 4;
+            const char stylespan_start[] = R"(<span variant="small-caps" letter_spacing="1500">)";
+            const char stylespan_end[] = "</span>";
+            std::string buf;
+            Length y = m.upper + textblock_height() / 8;
             const Length &line_height = styles.normal.line_height;
             const Length &middle = current_left_margin() + textblock_width() / 2;
-            rend->render_line_centered(doc.data.author.c_str(), styles.normal.font, middle, y);
-            y += line_height;
-            rend->render_line_centered(doc.data.title.c_str(), styles.normal.font, middle, y);
+            auto tempfont = styles.normal.font;
+            // tempfont.name = "TeX Gyre Schola";
+            tempfont.size = Length::from_pt(20);
+            buf = stylespan_start;
+            buf += doc.data.author;
+            buf += stylespan_end;
+            rend->render_markup_as_is(buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
+            tempfont.size = Length::from_pt(24);
+            y += 8 * line_height;
+            auto colon = doc.data.title.find(':');
+            if(colon == std::string::npos) {
+                buf = stylespan_start;
+                buf += doc.data.title;
+                buf += stylespan_end;
+                rend->render_markup_as_is(
+                    buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
+            } else {
+                auto part1 = doc.data.title.substr(0, colon + 1);
+                auto part2 = doc.data.title.substr(colon + 2);
+                auto space = part2.find(' ');
+                auto part2_1 = part2.substr(0, space);
+                auto part2_2 = part2.substr(space + 1);
+                buf = stylespan_start;
+                buf += part1;
+                buf += stylespan_end;
+                rend->render_markup_as_is(
+                    buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
+                y += 4 * line_height;
+                buf = stylespan_start;
+                buf += part2_1;
+                buf += stylespan_end;
+                tempfont.size = Length::from_pt(28);
+                rend->render_markup_as_is(
+                    buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
+                y += 2 * line_height;
+                buf = stylespan_start;
+                buf += part2_2;
+                buf += stylespan_end;
+                rend->render_markup_as_is(
+                    buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
+            }
         } else if(auto *signing = std::get_if<Signing>(&f)) {
             render_signing_page(*signing);
         } else {
