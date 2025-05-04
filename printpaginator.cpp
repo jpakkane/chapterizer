@@ -481,19 +481,9 @@ void PrintPaginator::draw_page_number(size_t page_number) {
     const Length x = (page_number % 2) ? page.w - m.outer : m.outer;
     const Length y = styles.normal.line_height * 2;
     const TextAlignment align = (page_number % 2) ? TextAlignment::Right : TextAlignment::Left;
-    const bool use_oldstyle_nums = true;
-    if(use_oldstyle_nums) {
-        // https://gitlab.gnome.org/GNOME/pango/-/issues/852
-        char buf[80];
-        snprintf(buf, 80, "<span font_features=\"onum=1\">%d</span>", (int)page_number);
-        auto hack = styles.normal.font;
-        hack.name = "TeX Gyre Schola";
-        rend->render_markup_as_is(buf, hack, x, y, align);
-    } else {
-        char buf[20];
-        snprintf(buf, 20, "%d", (int)page_number);
-        rend->render_markup_as_is(buf, styles.normal.font, x, y, align);
-    }
+    char buf[20];
+    snprintf(buf, 20, "%d", (int)page_number);
+    rend->render_markup_as_is(buf, styles.normal.font, x, y, align);
 }
 
 void PrintPaginator::build_main_text() {
@@ -585,11 +575,6 @@ void PrintPaginator::create_sign(const SignBlock &sign) {
             el.alignment = TextAlignment::Centered;
             auto rag_lines = build_ragged_paragraph(lines, styles.normal, el.alignment);
             assert(rag_lines.size() == 1);
-            // FIXME! Delete this once the following issue has been fixed.
-            // https://gitlab.gnome.org/GNOME/pango/-/issues/852
-            auto &textline = std::get<MarkupDrawCommand>(rag_lines.front());
-            textline.markup.insert(0, "<span font_features=\"onum=1\">");
-            textline.markup.append("</span>");
             el.lines.emplace_back(std::move(rag_lines.front()));
         } else {
             std::abort();
