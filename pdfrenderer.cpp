@@ -31,28 +31,6 @@ namespace {
 
 const char *workname = "turbotempfile.pdf";
 
-// Gentium does not have an interrobang and Pango's default substitution
-// turns it into Noto Sans.
-void interrobang_fix(const std::string_view &markup_word, std::string &fixed) {
-    const gunichar interrobang = 0x203D;
-    fixed.clear();
-    char tmp[10];
-    const char *iterator = markup_word.data();
-    while(iterator != markup_word.data() + markup_word.size()) {
-        const gunichar c = g_utf8_get_char(iterator);
-        if(c == interrobang) {
-            fixed += R"(<span font="Noto Serif">)";
-        }
-        const int bytes_written = g_unichar_to_utf8(c, tmp);
-        tmp[bytes_written] = '\0';
-        fixed += tmp;
-        iterator = g_utf8_next_char(iterator);
-        if(c == interrobang) {
-            fixed += "</span>";
-        }
-    }
-}
-
 std::vector<std::string> hack_split(const std::string &in_text) {
     std::string text;
     text.reserve(in_text.size());
@@ -323,14 +301,12 @@ void PdfRenderer::render_line_justified(const std::vector<std::string> &markup_w
     const Length space_extra_width =
         num_spaces > 0 ? (target_width - text_width + overhang_right) / num_spaces : Length::zero();
 
-    std::string tmp;
     for(const auto &markup_word : markup_words) {
         cairo_move_to(cr, x.pt(), y.pt());
         PangoRectangle r;
 
-        interrobang_fix(markup_word, tmp);
         pango_layout_set_attributes(layout, nullptr);
-        pango_layout_set_markup(layout, tmp.c_str(), -1);
+        pango_layout_set_markup(layout, markup_word.c_str(), -1);
         const auto current_baseline = pango_layout_get_baseline(layout) / PANGO_SCALE;
 
         cairo_rel_move_to(cr, 0, desired_baseline - current_baseline);
@@ -375,9 +351,7 @@ void PdfRenderer::render_markup_as_is(
     const char *line, const FontParameters &par, Length x, Length y, TextAlignment alignment) {
     setup_pango(par);
     pango_layout_set_attributes(layout, nullptr);
-    std::string tmp;
-    interrobang_fix(line, tmp);
-    pango_layout_set_markup(layout, tmp.c_str(), -1);
+    pango_layout_set_markup(layout, line, -1);
 
     switch(alignment) {
     case TextAlignment::Left:
