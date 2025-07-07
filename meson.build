@@ -11,6 +11,7 @@ glib_dep = dependency('glib-2.0')
 tixml_dep = dependency('tinyxml2')
 nljson_dep = dependency('nlohmann_json')
 voikko_dep = dependency('libvoikko')
+hb_dep = dependency('harfbuzz')
 
 add_project_arguments('-Wshadow', language: 'cpp')
 
@@ -57,3 +58,6 @@ executable('blocktest', 'blocktest.cpp')
 
 executable('paginationtest', 'paginationtest.cpp',
     dependencies: cairo_dep)
+
+executable('hbtesting', 'hbtesting.cpp',
+    dependencies: hb_dep)
