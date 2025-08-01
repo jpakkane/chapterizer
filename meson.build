@@ -61,3 +61,6 @@ executable('paginationtest', 'paginationtest.cpp',
 
 executable('hbtesting', 'hbtesting.cpp',
     dependencies: hb_dep)
+
+executable('hbtest', 'hbtest.cpp',
+    dependencies: hb_dep)

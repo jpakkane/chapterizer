@@ -446,7 +446,7 @@ void PrintPaginator::render_maintext_lines(const TextElementIterator &start_loc,
 }
 
 void PrintPaginator::new_page() {
-    const int pages_per_foil = 16;
+    const int pages_per_foil = 32;
     const auto foil_num = rend->page_num() / pages_per_foil;
     const auto foil_page_num = rend->page_num() % pages_per_foil;
     if(foil_page_num == 1 && foil_num > 0) {
