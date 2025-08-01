@@ -59,8 +59,5 @@ executable('blocktest', 'blocktest.cpp')
 executable('paginationtest', 'paginationtest.cpp',
     dependencies: cairo_dep)
 
-executable('hbtesting', 'hbtesting.cpp',
-    dependencies: hb_dep)
-
 executable('hbtest', 'hbtest.cpp',
     dependencies: hb_dep)
