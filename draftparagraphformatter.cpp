@@ -127,9 +127,9 @@ std::string wordfragment2markup(StyleStack &current_style,
 } // namespace
 
 DraftParagraphFormatter::DraftParagraphFormatter(const std::vector<EnrichedWord> &words_,
-                                       const Length target_width,
-                                       const ChapterParameters &in_params,
-                                       HBFontCache &hbfc)
+                                                 const Length target_width,
+                                                 const ChapterParameters &in_params,
+                                                 HBFontCache &hbfc)
     : paragraph_width(target_width), words{words_}, params{in_params}, fc(hbfc) {}
 
 std::vector<std::vector<std::string>> DraftParagraphFormatter::split_formatted_lines() {
@@ -168,7 +168,8 @@ Length DraftParagraphFormatter::current_line_width(size_t line_num) const {
     return paragraph_width;
 }
 
-WordsOnLine DraftParagraphFormatter::words_for_splits(size_t from_split_ind, size_t to_split_ind) const {
+WordsOnLine DraftParagraphFormatter::words_for_splits(size_t from_split_ind,
+                                                      size_t to_split_ind) const {
     WordsOnLine w;
     const auto &from_split = split_points[from_split_ind];
     const auto &to_split = split_points[to_split_ind];
@@ -195,7 +196,7 @@ WordsOnLine DraftParagraphFormatter::words_for_splits(size_t from_split_ind, siz
 }
 
 std::string DraftParagraphFormatter::build_line_text_debug(size_t from_split_ind,
-                                                      size_t to_split_ind) const {
+                                                           size_t to_split_ind) const {
     const auto w = words_for_splits(from_split_ind, to_split_ind);
     std::string result;
     if(w.first) {
@@ -225,7 +226,7 @@ std::string DraftParagraphFormatter::build_line_text_debug(size_t from_split_ind
 }
 
 std::string DraftParagraphFormatter::build_line_markup(size_t from_split_ind,
-                                                  size_t to_split_ind) const {
+                                                       size_t to_split_ind) const {
     std::string line;
     const auto markup_words = build_line_words_markup(from_split_ind, to_split_ind);
     for(const auto &w : markup_words) {
@@ -234,8 +235,8 @@ std::string DraftParagraphFormatter::build_line_markup(size_t from_split_ind,
     return line;
 }
 
-std::vector<std::string> DraftParagraphFormatter::build_line_words_markup(size_t from_split_ind,
-                                                                     size_t to_split_ind) const {
+std::vector<std::string>
+DraftParagraphFormatter::build_line_words_markup(size_t from_split_ind, size_t to_split_ind) const {
     assert(to_split_ind >= from_split_ind);
     std::vector<std::string> line;
     std::vector<std::string> markup_words;
@@ -301,15 +302,15 @@ TextLocation DraftParagraphFormatter::point_to_location(const SplitPoint &p) con
 }
 
 LineStats DraftParagraphFormatter::get_closest_line_end(size_t start_split,
-                                                   const TextStats &shaper,
-                                                   size_t line_num) const {
+                                                        const TextStats &shaper,
+                                                        size_t line_num) const {
     auto val = compute_closest_line_end(start_split, shaper, line_num);
     return val;
 }
 
 LineStats DraftParagraphFormatter::compute_closest_line_end(size_t start_split,
-                                                       const TextStats &shaper,
-                                                       size_t line_num) const {
+                                                            const TextStats &shaper,
+                                                            size_t line_num) const {
     assert(start_split < split_points.size() - 1);
     const Length target_line_width_mm = current_line_width(line_num);
     size_t chosen_point = -1;

@@ -3,7 +3,9 @@
 
 #pragma once
 
+#include <units.hpp>
 #include <hb.h>
+#include <cmath>
 
 #include <filesystem>
 #include <optional>
@@ -53,6 +55,28 @@ enum class TextExtra : uint8_t {
     SmallCaps,
 };
 
+struct HBFontProperties {
+    TextCategory cat = TextCategory::Serif;
+    TextStyle style = TextStyle::Regular;
+    TextExtra extra = TextExtra::None;
+
+    bool operator==(const HBFontProperties &o) const noexcept {
+        return cat == o.cat && style == o.style && extra == o.extra;
+    }
+};
+
+template<> struct std::hash<HBFontProperties> {
+    std::size_t operator()(HBFontProperties const &fp) const noexcept {
+        const size_t shuffle = 13;
+        auto h1 = std::hash<size_t>{}((size_t)fp.cat);
+        auto h2 = std::hash<size_t>{}((size_t)fp.style);
+        auto h3 = std::hash<size_t>{}((size_t)fp.extra);
+        size_t hashvalue = (h1 * shuffle) + h2;
+        hashvalue = hashvalue * shuffle + h3;
+        return hashvalue;
+    }
+};
+
 struct FontInfo {
     FontInfo() = default;
     FontInfo(const FontOwner &o) {
@@ -67,7 +91,7 @@ class HBFontCache {
 public:
     HBFontCache();
 
-    std::optional<FontInfo> get_font(TextCategory cat, TextStyle style);
+    std::optional<FontInfo> get_font(TextCategory cat, TextStyle style) const;
 
 private:
     static constexpr double NUM_STEPS = 64;

@@ -68,6 +68,8 @@ double width_test(HBFontCache &fc,
         // const hb_glyph_info_t *current = glyph_info + i;
         const hb_glyph_position_t *curpos = glyph_pos + i;
         const auto advance = curpos->x_advance / hbscale;
+        // Glyph's plain advance can be obtained with
+        // hb_font_get_glyph_h_advance(font, current->codepoint);
         total_width += advance;
     }
 

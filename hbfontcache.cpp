@@ -81,8 +81,8 @@ uint32_t HBFontCache::get_em_units(const std::filesystem::path &fontfile) {
     return units;
 }
 
-std::optional<FontInfo> HBFontCache::get_font(TextCategory cat, TextStyle style) {
-    FontPtrs *p;
+std::optional<FontInfo> HBFontCache::get_font(TextCategory cat, TextStyle style) const {
+    const FontPtrs *p;
     FontInfo result;
     switch(cat) {
     case TextCategory::Serif:

@@ -27,9 +27,9 @@ class HBFontCache;
 class DraftParagraphFormatter {
 public:
     DraftParagraphFormatter(const std::vector<EnrichedWord> &words,
-                       const Length target_width,
-                       const ChapterParameters &in_params,
-                       HBFontCache &hbfc);
+                            const Length target_width,
+                            const ChapterParameters &in_params,
+                            HBFontCache &hbfc);
 
     std::vector<std::vector<std::string>> split_formatted_lines();
 
