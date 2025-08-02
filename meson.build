@@ -18,6 +18,7 @@ add_project_arguments('-Wshadow', language: 'cpp')
 l = static_library('chap',
     'wordhyphenator.cpp',
     'paragraphformatter.cpp',
+    'draftparagraphformatter.cpp',
     'textstats.cpp',
     'pdfrenderer.cpp',
     'utils.cpp',
@@ -29,7 +30,8 @@ l = static_library('chap',
     'printpaginator.cpp',
     'chapterformatter.cpp',
     'metadata.cpp',
-    dependencies: [hyphen_dep, pangocairo_dep, cairo_dep, fc_dep, voikko_dep]
+    'hbfontcache.cpp',
+    dependencies: [hyphen_dep, pangocairo_dep, cairo_dep, fc_dep, voikko_dep, hb_dep]
 )
 
 executable('pangotest', 'pangotest.cpp', dependencies: pangocairo_dep)
@@ -59,5 +61,5 @@ executable('blocktest', 'blocktest.cpp')
 executable('paginationtest', 'paginationtest.cpp',
     dependencies: cairo_dep)
 
-executable('hbtest', 'hbtest.cpp',
+executable('hbtest', 'hbtest.cpp', 'hbfontcache.cpp',
     dependencies: [ft_dep, hb_dep])
