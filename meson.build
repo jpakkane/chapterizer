@@ -1,4 +1,4 @@
-project('chapterizer', 'cpp', default_options : ['cpp_std=c++20'])
+project('chapterizer', 'cpp', default_options : ['cpp_std=c++20', 'warning_level=2'])
 
 cpp = meson.get_compiler('cpp')
 hyphen_dep = cpp.find_library('hyphen')
@@ -60,4 +60,4 @@ executable('paginationtest', 'paginationtest.cpp',
     dependencies: cairo_dep)
 
 executable('hbtest', 'hbtest.cpp',
-    dependencies: hb_dep)
+    dependencies: [ft_dep, hb_dep])

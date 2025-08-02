@@ -2,10 +2,15 @@
 // Copyright 2025 Jussi Pakkanen
 
 #include <hb.h>
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 #include <cassert>
 
 #include <filesystem>
 #include <memory>
+#include <optional>
 
 struct HBFontCloser {
     void operator()(hb_font_t *f) const noexcept { hb_font_destroy(f); }
@@ -22,11 +27,16 @@ struct FontFiles {
     std::string bolditalic;
 };
 
+struct FontOwner {
+    std::unique_ptr<hb_font_t, HBFontCloser> handle;
+    uint32_t units_per_em;
+};
+
 struct FontPtrs {
-    std::unique_ptr<hb_font_t, HBFontCloser> regular;
-    std::unique_ptr<hb_font_t, HBFontCloser> italic;
-    std::unique_ptr<hb_font_t, HBFontCloser> bold;
-    std::unique_ptr<hb_font_t, HBFontCloser> bolditalic;
+    FontOwner regular;
+    FontOwner italic;
+    FontOwner bold;
+    FontOwner bolditalic;
 };
 
 enum class TextCategory : uint8_t {
@@ -47,11 +57,21 @@ enum class TextExtra : uint8_t {
     SmallCaps,
 };
 
+struct FontInfo {
+    FontInfo() = default;
+    FontInfo(const FontOwner &o) {
+        f = o.handle.get();
+        units_per_em = o.units_per_em;
+    }
+    hb_font_t *f;
+    uint32_t units_per_em;
+};
+
 class FontCache {
 public:
     FontCache();
 
-    hb_font_t *get_font(TextCategory cat, TextStyle style);
+    std::optional<FontInfo> get_font(TextCategory cat, TextStyle style);
 
 private:
     static constexpr double NUM_STEPS = 64;
@@ -59,7 +79,9 @@ private:
     void
     open_files(FontPtrs &ptrs, const std::filesystem::path &font_root, const FontFiles &fnames);
 
-    hb_font_t *open_file(const std::filesystem::path &font_file);
+    FontOwner open_file(const std::filesystem::path &font_file);
+
+    uint32_t get_em_units(const std::filesystem::path &fontfile);
 
     FontPtrs serif;
     FontPtrs sansserif;
@@ -86,20 +108,20 @@ void FontCache::open_files(FontPtrs &ptrs,
                            const std::filesystem::path &font_root,
                            const FontFiles &fnames) {
     if(!fnames.regular.empty()) {
-        ptrs.regular.reset(open_file(font_root / fnames.regular));
+        ptrs.regular = open_file(font_root / fnames.regular);
     }
     if(!fnames.italic.empty()) {
-        ptrs.italic.reset(open_file(font_root / fnames.italic));
+        ptrs.italic = open_file(font_root / fnames.italic);
     }
     if(!fnames.bold.empty()) {
-        ptrs.bold.reset(open_file(font_root / fnames.bold));
+        ptrs.bold = open_file(font_root / fnames.bold);
     }
     if(!fnames.bolditalic.empty()) {
-        ptrs.bolditalic.reset(open_file(font_root / fnames.bolditalic));
+        ptrs.bolditalic = open_file(font_root / fnames.bolditalic);
     }
 }
 
-hb_font_t *FontCache::open_file(const std::filesystem::path &fontfile) {
+FontOwner FontCache::open_file(const std::filesystem::path &fontfile) {
     hb_blob_t *blob = hb_blob_create_from_file(fontfile.string().c_str());
     if(!blob) {
         throw std::runtime_error("HB file open failed.");
@@ -115,11 +137,35 @@ hb_font_t *FontCache::open_file(const std::filesystem::path &fontfile) {
         throw std::runtime_error("HB font creation failed.\n");
     }
     // hb_font_set_scale(font, hbscale, hbscale);
-    return font;
+    std::unique_ptr<hb_font_t, HBFontCloser> h{font};
+    FontOwner result{std::move(h), get_em_units(fontfile)};
+
+    return result;
 }
 
-hb_font_t *FontCache::get_font(TextCategory cat, TextStyle style) {
+uint32_t FontCache::get_em_units(const std::filesystem::path &fontfile) {
+    // HB does not seem to expose this value to end users, but it
+    // is required to make PDF kerning work.
+    FT_Library ft;
+    FT_Face ftface;
+    FT_Error fte;
+    fte = FT_Init_FreeType(&ft);
+    if(fte != 0) {
+        std::abort();
+    }
+    fte = FT_New_Face(ft, fontfile.string().c_str(), 0, &ftface);
+    if(fte != 0) {
+        std::abort();
+    }
+    uint32_t units = ftface->units_per_EM;
+    FT_Done_Face(ftface);
+    FT_Done_FreeType(ft);
+    return units;
+}
+
+std::optional<FontInfo> FontCache::get_font(TextCategory cat, TextStyle style) {
     FontPtrs *p;
+    FontInfo result;
     switch(cat) {
     case TextCategory::Serif:
         p = &serif;
@@ -133,15 +179,22 @@ hb_font_t *FontCache::get_font(TextCategory cat, TextStyle style) {
     }
     switch(style) {
     case TextStyle::Regular:
-        return p->regular.get();
+        result = FontInfo(p->regular);
+        break;
     case TextStyle::Italic:
-        return p->italic.get();
+        result = FontInfo(p->italic);
+        break;
     case TextStyle::Bold:
-        return p->bold.get();
+        result = FontInfo(p->bold);
+        break;
     case TextStyle::BoldItalic:
-        return p->bolditalic.get();
+        result = FontInfo(p->bolditalic);
+        break;
     }
-    std::abort();
+    if(!result.f) {
+        return {};
+    }
+    return result;
 }
 
 double width_test(FontCache &fc,
@@ -150,6 +203,7 @@ double width_test(FontCache &fc,
                   TextExtra extra,
                   double pointsize,
                   const char *u8text) {
+    const char *language = "en";
     double total_width = 0;
     hb_buffer_t *buf;
     const double num_steps = 64;
@@ -157,29 +211,32 @@ double width_test(FontCache &fc,
     buf = hb_buffer_create();
     assert(buf);
     std::unique_ptr<hb_buffer_t, HBBufferCloser> bc(buf);
+    // If we start reusing buffers in the future.
+    // hb_buffer_clear_contents(buf):
     hb_buffer_add_utf8(buf, u8text, -1, 0, -1);
     hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
     hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
-    hb_buffer_set_language(buf, hb_language_from_string("en", -1));
+    hb_buffer_set_language(buf, hb_language_from_string(language, -1));
 
     hb_buffer_guess_segment_properties(buf);
 
-    hb_font_t *font = fc.get_font(cat, style);
-    if(!font) {
+    auto font_o = fc.get_font(cat, style);
+    if(!font_o) {
         printf("Requested font does not exist.\n");
         std::abort();
     }
-    hb_font_set_scale(font, hbscale, hbscale);
+    auto &font = font_o.value();
+    hb_font_set_scale(font.f, hbscale, hbscale);
 
     if(extra == TextExtra::None) {
-        hb_shape(font, buf, nullptr, 0);
+        hb_shape(font.f, buf, nullptr, 0);
     } else if(extra == TextExtra::SmallCaps) {
         hb_feature_t userfeatures[1];
         userfeatures[0].tag = HB_TAG('s', 'm', 'c', 'p');
         userfeatures[0].value = 1;
         userfeatures[0].start = HB_FEATURE_GLOBAL_START;
         userfeatures[0].end = HB_FEATURE_GLOBAL_END;
-        hb_shape(font, buf, userfeatures, 1);
+        hb_shape(font.f, buf, userfeatures, 1);
     } else {
         std::abort();
     }
