@@ -141,7 +141,7 @@ DraftPaginator::DraftPaginator(const Document &d)
 }
 
 void DraftPaginator::generate_pdf(const char *outfile) {
-    rend.reset(new PdfRenderer(outfile,
+    rend.reset(new PangoPdfRenderer(outfile,
                                page.w,
                                page.h,
                                doc.data.is_draft ? Length::zero() : doc.data.pdf.bleed,

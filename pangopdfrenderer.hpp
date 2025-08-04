@@ -42,15 +42,15 @@ struct Coord {
     Length y;
 };
 
-class PdfRenderer {
+class PangoPdfRenderer {
 public:
-    explicit PdfRenderer(const char *ofname,
+    explicit PangoPdfRenderer(const char *ofname,
                          Length pagew,
                          Length pageh,
                          Length bleed,
                          const char *title,
                          const char *author);
-    ~PdfRenderer();
+    ~PangoPdfRenderer();
 
     void render_line_justified(const std::string &text,
                                const FontParameters &par,

@@ -147,7 +147,7 @@ void PrintPaginator::generate_pdf(const char *outfile) {
     statfile.replace_extension(".stats.txt");
     stats = fopen(statfile.string().c_str(), "w");
     fprintf(stats, "Statistics\n\n");
-    rend.reset(new PdfRenderer(outfile,
+    rend.reset(new PangoPdfRenderer(outfile,
                                page.w,
                                page.h,
                                doc.data.pdf.bleed,

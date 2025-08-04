@@ -215,7 +215,7 @@ private:
     const ChapterStyles &styles;
     const Spaces &spaces;
     const Margins &m;
-    std::unique_ptr<PdfRenderer> rend;
+    std::unique_ptr<PangoPdfRenderer> rend;
     WordHyphenator hyphen;
     int current_page = 1;
     int chapter_start_page = -1;
