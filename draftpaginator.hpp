@@ -21,6 +21,7 @@
 #include <bookparser.hpp>
 #include <pdfrenderer.hpp>
 #include <formatting.hpp>
+#include <hbfontcache.hpp>
 
 #include <memory>
 
@@ -154,4 +155,5 @@ private:
     Heights heights;
     std::vector<ImageInfo> pending_figures;
     std::vector<TextCommands> pending_footnotes;
+    HBFontCache fc;
 };

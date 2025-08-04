@@ -34,6 +34,7 @@ public:
     std::vector<std::vector<std::string>> split_formatted_lines();
 
 private:
+    void precompute();
     TextLocation point_to_location(const SplitPoint &p) const;
     LineStats
     get_closest_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const;

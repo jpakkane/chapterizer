@@ -18,6 +18,7 @@
 #include <utils.hpp>
 #include <chaptercommon.hpp>
 #include <paragraphformatter.hpp>
+#include <draftparagraphformatter.hpp>
 #include <wordhyphenator.hpp>
 #include <bookparser.hpp>
 
@@ -340,7 +341,7 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
                                       Length extra_indent) {
     const auto paragraph_width = textblock_width() - 2 * extra_indent;
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
-    ParagraphFormatter b(processed_words, paragraph_width, chpar, extras);
+    DraftParagraphFormatter b(processed_words, paragraph_width, chpar, fc);
     auto lines = b.split_formatted_lines();
     std::vector<TextCommands> built_lines;
     built_lines = build_ragged_paragraph(lines, chpar, TextAlignment::Left, Length::zero());

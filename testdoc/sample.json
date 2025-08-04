@@ -5,11 +5,13 @@
     "dedication_": "dedication.txt",
     "credits": "credits.txt",
     "postcredits": "postcredits.txt",
+    "frontmatter": [],
+    "backmatter": [],
     "sources": [
         "chapter1.bd",
         "chapter2.bd"
     ],
-    "draft2": {
+    "draft": {
         "surname": "Pakkanen",
         "email": "jpakkane@gmail.com",
         "phone": "040 222 2222"

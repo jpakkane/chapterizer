@@ -134,7 +134,30 @@ DraftParagraphFormatter::DraftParagraphFormatter(const std::vector<EnrichedWord>
 
 std::vector<std::vector<std::string>> DraftParagraphFormatter::split_formatted_lines() {
     TextStats shaper;
+    precompute();
     return stats_to_markup_lines(simple_split(shaper));
+}
+
+void DraftParagraphFormatter::precompute() {
+    split_points.clear();
+    split_points.reserve(words.size() * 3);
+    for(size_t word_index = 0; word_index < words.size(); ++word_index) {
+        split_points.emplace_back(BetweenWordSplit{word_index});
+        for(size_t hyphen_index = 0; hyphen_index < words[word_index].hyphen_points.size();
+            ++hyphen_index) {
+            split_points.emplace_back(WithinWordSplit{word_index, hyphen_index});
+        }
+    }
+    split_points.emplace_back(BetweenWordSplit{words.size()}); // The end sentinel
+    // printf("The text has a total of %d words and %d split points.\n\n",
+    //        (int)words.size(),
+    //        (int)split_points.size());
+    split_locations.clear();
+    split_locations.reserve(split_points.size());
+    for(const auto &i : split_points) {
+        split_locations.emplace_back(point_to_location(i));
+    }
+    assert(split_points.size() == split_locations.size());
 }
 
 std::vector<LineStats> DraftParagraphFormatter::simple_split(TextStats &shaper) {
