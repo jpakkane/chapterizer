@@ -12,6 +12,7 @@ tixml_dep = dependency('tinyxml2')
 nljson_dep = dependency('nlohmann_json')
 voikko_dep = dependency('libvoikko')
 hb_dep = dependency('harfbuzz')
+capy_dep = dependency('capypdf')
 
 add_project_arguments('-Wshadow', language: 'cpp')
 
@@ -22,6 +23,7 @@ l = static_library('chap',
     'textstats.cpp',
     'hbmeasurer.cpp',
     'pangopdfrenderer.cpp',
+    'capypdfrenderer.cpp',
     'utils.cpp',
     'fchelpers.cpp',
     'formatting.cpp',
@@ -32,7 +34,7 @@ l = static_library('chap',
     'chapterformatter.cpp',
     'metadata.cpp',
     'hbfontcache.cpp',
-    dependencies: [hyphen_dep, pangocairo_dep, cairo_dep, fc_dep, voikko_dep, hb_dep]
+    dependencies: [hyphen_dep, pangocairo_dep, cairo_dep, fc_dep, voikko_dep, hb_dep, capy_dep]
 )
 
 executable('pangotest', 'pangotest.cpp', dependencies: pangocairo_dep)

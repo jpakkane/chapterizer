@@ -1,0 +1,7 @@
+[wrap-git]
+directory=capypdf
+url=https://github.com/jpakkane/capypdf.git
+revision=head
+
+[provide]
+capypdf = capypdf_dep

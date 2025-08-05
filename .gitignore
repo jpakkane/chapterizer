@@ -5,4 +5,5 @@
 .pydevproject
 /build*
 *.user
-
+/subprojects/.wraplock
+/subprojects/capypdf
