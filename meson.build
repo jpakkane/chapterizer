@@ -41,7 +41,7 @@ executable('pangotest', 'pangotest.cpp', dependencies: pangocairo_dep)
 
 executable('bookmaker', 'bookmaker.cpp',
     link_with: l,
-    dependencies: [pangocairo_dep, tixml_dep])
+    dependencies: [pangocairo_dep, tixml_dep, capy_dep])
 
 if gtk4_dep.found()
     executable('guitool', 'guitool.cpp',

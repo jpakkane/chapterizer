@@ -15,6 +15,7 @@
  */
 
 #include <printpaginator.hpp>
+#include <draftpaginator.hpp>
 #include <epub.hpp>
 #include <utils.hpp>
 

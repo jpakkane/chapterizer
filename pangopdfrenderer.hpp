@@ -45,11 +45,11 @@ struct Coord {
 class PangoPdfRenderer {
 public:
     explicit PangoPdfRenderer(const char *ofname,
-                         Length pagew,
-                         Length pageh,
-                         Length bleed,
-                         const char *title,
-                         const char *author);
+                              Length pagew,
+                              Length pageh,
+                              Length bleed,
+                              const char *title,
+                              const char *author);
     ~PangoPdfRenderer();
 
     void render_line_justified(const std::string &text,

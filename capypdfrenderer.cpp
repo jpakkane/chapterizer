@@ -76,7 +76,8 @@ CapyPdfRenderer::CapyPdfRenderer(const char *ofname,
                                  Length pageh,
                                  Length bleed_,
                                  const capypdf::DocumentProperties &docprop)
-    : capygen{ofname, docprop}, capyctx{capygen.new_page_context()}, bleed{bleed_.pt()}, mediaw{pagew.pt() + 2 * bleed}, mediah{pageh.pt() + 2 * bleed} {
+    : capygen{ofname, docprop}, capyctx{capygen.new_page_context()}, bleed{bleed_.pt()},
+      mediaw{pagew.pt() + 2 * bleed}, mediah{pageh.pt() + 2 * bleed} {
 
     init_page();
 
@@ -125,7 +126,7 @@ void CapyPdfRenderer::draw_box(Length x, Length y, Length w, Length h, Length th
     capyctx.cmd_q();
     capyctx.cmd_w(thickness.pt());
     capyctx.cmd_G(0.0);
-    capyctx.cmd_re(x.pt(), y.pt(), (x+w).pt(), (y+h).pt());
+    capyctx.cmd_re(x.pt(), y.pt(), (x + w).pt(), (y + h).pt());
     capyctx.cmd_S();
     capyctx.cmd_Q();
 }
@@ -133,7 +134,7 @@ void CapyPdfRenderer::draw_box(Length x, Length y, Length w, Length h, Length th
 void CapyPdfRenderer::fill_box(Length x, Length y, Length w, Length h, double color) {
     capyctx.cmd_q();
     capyctx.cmd_g(color);
-    capyctx.cmd_re(x.pt(), y.pt(), (x+w).pt(), (y+h).pt());
+    capyctx.cmd_re(x.pt(), y.pt(), (x + w).pt(), (y + h).pt());
     capyctx.cmd_f();
     capyctx.cmd_Q();
 }
@@ -231,10 +232,10 @@ void CapyPdfRenderer::draw_arc(
 }
 
 void CapyPdfRenderer::render_line_justified(const std::string &line_text,
-                                             const FontParameters &par,
-                                             Length line_width,
-                                             Length x,
-                                             Length y) {
+                                            const FontParameters &par,
+                                            Length line_width,
+                                            Length x,
+                                            Length y) {
     /*
     assert(line_text.find('\n') == std::string::npos);
     setup_pango(par);
@@ -264,10 +265,10 @@ void CapyPdfRenderer::render_line_justified(const std::string &line_text,
 }
 
 void CapyPdfRenderer::render_line_justified(const std::vector<std::string> &markup_words,
-                                             const FontParameters &par,
-                                             Length line_width,
-                                             Length x,
-                                             Length y) {
+                                            const FontParameters &par,
+                                            Length line_width,
+                                            Length x,
+                                            Length y) {
     /*
     if(markup_words.empty()) {
         return;
@@ -313,9 +314,9 @@ void CapyPdfRenderer::render_line_justified(const std::vector<std::string> &mark
 }
 
 void CapyPdfRenderer::render_text_as_is(const char *line,
-                                         const FontParameters &par,
-                                         Length x,
-                                         Length y) {
+                                        const FontParameters &par,
+                                        Length x,
+                                        Length y) {
     /*
     cairo_move_to(cr, x.pt(), y.pt());
     pango_layout_set_attributes(layout, nullptr);
@@ -351,10 +352,10 @@ void CapyPdfRenderer::render_markup_as_is(
 }
 
 void CapyPdfRenderer::render_markup_as_is(const std::vector<std::string> markup_words,
-                                           const FontParameters &par,
-                                           Length x,
-                                           Length y,
-                                           TextAlignment alignment) {
+                                          const FontParameters &par,
+                                          Length x,
+                                          Length y,
+                                          TextAlignment alignment) {
     std::string full_line;
     for(const auto &w : markup_words) {
         full_line += w;
@@ -363,9 +364,9 @@ void CapyPdfRenderer::render_markup_as_is(const std::vector<std::string> markup_
 }
 
 void CapyPdfRenderer::render_line_centered(const char *line,
-                                            const FontParameters &par,
-                                            Length x,
-                                            Length y) {
+                                           const FontParameters &par,
+                                           Length x,
+                                           Length y) {
     /*
     PangoRectangle r;
 
@@ -379,13 +380,13 @@ void CapyPdfRenderer::render_line_centered(const char *line,
 }
 
 void CapyPdfRenderer::render_wonky_text(const char *text,
-                                         const FontParameters &par,
-                                         Length raise,
-                                         Length shift,
-                                         double tilt,
-                                         double color,
-                                         Length x,
-                                         Length y) {
+                                        const FontParameters &par,
+                                        Length raise,
+                                        Length shift,
+                                        double tilt,
+                                        double color,
+                                        Length x,
+                                        Length y) {
     /*
     capyctx.cmd_q();
     cairo_set_source_rgb(cr, color, color, color);
@@ -502,7 +503,7 @@ void CapyPdfRenderer::draw_image(const ImageInfo &image, Length x, Length y, Len
     capyctx.cmd_re(x.pt(), y.pt(), w.pt(), h.pt());
     capyctx.cmd_cm(1, 0, 0, 1, x.pt(), y.pt());
     capyctx.cmd_cm(w.pt() / image.w, 0, 0, h.pt() / image.h, 0, 0);
-    //capyctx.cmd_Do(image.id);
+    // capyctx.cmd_Do(image.id);
     std::abort();
     capyctx.cmd_Q();
 }

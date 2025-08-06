@@ -16,7 +16,41 @@
 
 #pragma once
 
-#include <draftpaginator.hpp>
+#include <pangopdfrenderer.hpp>
+#include <metadata.hpp>
+#include <formatting.hpp>
+#include <units.hpp>
+#include <vector>
+#include <string>
+#include <optional>
+#include <variant>
+#include <filesystem>
+
+struct MarkupDrawCommand {
+    std::string markup;
+    const FontParameters *font;
+    Length x;
+    Length y;
+    TextAlignment alignment;
+};
+
+struct JustifiedMarkupDrawCommand {
+    std::vector<std::string> markup_words;
+    const FontParameters *font;
+    Length x;
+    Length y;
+    Length width;
+};
+
+struct ImageCommand {
+    ImageInfo i;
+    Length x; // Relative to left edge of text block.
+    Length y;
+    Length display_height;
+    Length display_width;
+};
+
+typedef std::variant<MarkupDrawCommand, JustifiedMarkupDrawCommand> TextCommands;
 
 struct SectionElement {
     std::vector<TextCommands> lines;
@@ -48,6 +82,8 @@ struct ImageElement {
 };
 
 struct FootnoteElement {};
+
+std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::string &word);
 
 typedef std::variant<SectionElement,
                      ParagraphElement,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Jussi Pakkanen
+ * Copyright 2022-2025 Jussi Pakkanen
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,16 @@
 #include <pangopdfrenderer.hpp>
 #include <formatting.hpp>
 #include <hbfontcache.hpp>
+#include <capypdf.hpp>
 
 #include <memory>
 
-struct MarkupDrawCommand {
+struct CapyImageInfo {
+    CapyPDF_ImageId id;
+    int w, h;
+};
+
+struct HBMarkupDrawCommand {
     std::string markup;
     const FontParameters *font;
     Length x;
@@ -33,7 +39,7 @@ struct MarkupDrawCommand {
     TextAlignment alignment;
 };
 
-struct JustifiedMarkupDrawCommand {
+struct HBJustifiedMarkupDrawCommand {
     std::vector<std::string> markup_words;
     const FontParameters *font;
     Length x;
@@ -41,20 +47,20 @@ struct JustifiedMarkupDrawCommand {
     Length width;
 };
 
-struct ImageCommand {
-    ImageInfo i;
+struct CapyImageCommand {
+    CapyImageInfo i;
     Length x; // Relative to left edge of text block.
     Length y;
     Length display_height;
     Length display_width;
 };
 
-typedef std::variant<MarkupDrawCommand, JustifiedMarkupDrawCommand> TextCommands;
+typedef std::variant<HBMarkupDrawCommand, HBJustifiedMarkupDrawCommand> HBTextCommands;
 
 struct PageLayout {
-    std::vector<ImageCommand> images;
-    std::vector<TextCommands> text;
-    std::vector<TextCommands> footnote;
+    std::vector<CapyImageCommand> images;
+    std::vector<HBTextCommands> text;
+    std::vector<HBTextCommands> footnote;
 
     bool empty() const { return text.empty() && footnote.empty() && images.empty(); }
 
@@ -92,13 +98,13 @@ public:
 
 private:
     void render_page_num(const FontParameters &par);
-    std::vector<TextCommands>
+    std::vector<HBTextCommands>
     build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
                               const ChapterParameters &text_par,
                               const Length target_width,
                               const Length x_off = Length::zero(),
                               const Length y_off = Length::zero());
-    std::vector<TextCommands>
+    std::vector<HBTextCommands>
     build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
                            const ChapterParameters &text_par,
                            const TextAlignment alignment,
@@ -115,8 +121,8 @@ private:
     Length textblock_width() const { return page.w - m.inner - m.outer; }
     Length textblock_height() const { return page.h - m.upper - m.lower; }
 
-    void add_pending_figure(const ImageInfo &f);
-    void add_top_image(const ImageInfo &image);
+    void add_pending_figure(const CapyImageInfo &f);
+    void add_top_image(const CapyImageInfo &image);
 
     void create_draft_title_page();
     void create_maintext();
@@ -153,7 +159,7 @@ private:
     // These keep track of the current page stats.
     PageLayout layout;
     Heights heights;
-    std::vector<ImageInfo> pending_figures;
-    std::vector<TextCommands> pending_footnotes;
+    std::vector<CapyImageInfo> pending_figures;
+    std::vector<HBTextCommands> pending_footnotes;
     HBFontCache fc;
 };

@@ -23,7 +23,7 @@
 #include <pango/pangocairo.h>
 #include <capypdf.hpp>
 
-#include<filesystem>
+#include <filesystem>
 #include <vector>
 #include <string>
 
@@ -47,10 +47,10 @@ struct Coord {
 class CapyPdfRenderer {
 public:
     explicit CapyPdfRenderer(const char *ofname,
-                         Length pagew,
-                         Length pageh,
-                         Length bleed,
-                        const capypdf::DocumentProperties &docprop);
+                             Length pagew,
+                             Length pageh,
+                             Length bleed,
+                             const capypdf::DocumentProperties &docprop);
     ~CapyPdfRenderer();
 
     void render_line_justified(const std::string &text,

@@ -148,11 +148,11 @@ void PrintPaginator::generate_pdf(const char *outfile) {
     stats = fopen(statfile.string().c_str(), "w");
     fprintf(stats, "Statistics\n\n");
     rend.reset(new PangoPdfRenderer(outfile,
-                               page.w,
-                               page.h,
-                               doc.data.pdf.bleed,
-                               doc.data.title.c_str(),
-                               doc.data.author.c_str()));
+                                    page.w,
+                                    page.h,
+                                    doc.data.pdf.bleed,
+                                    doc.data.title.c_str(),
+                                    doc.data.author.c_str()));
     build_main_text();
     if(true) {
         std::filesystem::path dumpfile(outfile);
