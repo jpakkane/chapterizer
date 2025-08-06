@@ -17,7 +17,6 @@
 #include <draftpaginator.hpp>
 #include <utils.hpp>
 #include <chaptercommon.hpp>
-#include <paragraphformatter.hpp>
 #include <draftparagraphformatter.hpp>
 #include <wordhyphenator.hpp>
 #include <bookparser.hpp>
@@ -330,7 +329,7 @@ void DraftPaginator::create_section(const Section &s,
     section_alignment = CapyTextAlignment::Left;
     // The title. Hyphenation is prohibited.
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(title_string, false);
-    ParagraphFormatter b(processed_words, section_width, styles.section, extras);
+    DraftParagraphFormatter b(processed_words, section_width, styles.section, fc);
     auto lines = b.split_formatted_lines();
     auto built_lines = build_ragged_paragraph(lines, styles.section, section_alignment, rel_y);
     for(auto &line : built_lines) {
@@ -397,7 +396,7 @@ void DraftPaginator::create_footnote(const Footnote &f,
     const auto paragraph_width = page.w - m.inner - m.outer;
     heights.whitespace_height += spaces.footnote_separation;
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text);
-    ParagraphFormatter b(processed_words, paragraph_width, styles.footnote, extras);
+    DraftParagraphFormatter b(processed_words, paragraph_width, styles.footnote, fc);
     auto lines = b.split_formatted_lines();
     std::string fnum = std::to_string(f.number);
     fnum += '.';
@@ -435,7 +434,7 @@ void DraftPaginator::create_numberlist(const NumberList &nl,
             heights.whitespace_height += item_separator;
         }
         std::vector<EnrichedWord> processed_words = text_to_formatted_words(nl.items[i]);
-        ParagraphFormatter b(processed_words, text_width, styles.lists, extras);
+        DraftParagraphFormatter b(processed_words, text_width, styles.lists, fc);
         auto lines = b.split_formatted_lines();
         std::string fnum = std::to_string(i + 1);
         fnum += '.';
