@@ -22,13 +22,14 @@
 #include <capypdfrenderer.hpp>
 #include <formatting.hpp>
 #include <hbfontcache.hpp>
+#include <draftparagraphformatter.hpp>
 #include <capypdf.hpp>
 
 #include <memory>
 
 struct HBMarkupDrawCommand {
     std::string markup;
-    const FontParameters *font;
+    const HBTextParameters *font;
     Length x;
     Length y;
     CapyTextAlignment alignment;
@@ -36,7 +37,7 @@ struct HBMarkupDrawCommand {
 
 struct HBJustifiedMarkupDrawCommand {
     std::vector<std::string> markup_words;
-    const FontParameters *font;
+    const HBTextParameters *font;
     Length x;
     Length y;
     Length width;
@@ -92,16 +93,16 @@ public:
     void draw_debug_bars(int num_bars, const Length bar_start_y);
 
 private:
-    void render_page_num(const FontParameters &par);
+    void render_page_num(const HBTextParameters &par);
     std::vector<HBTextCommands>
     build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
-                              const ChapterParameters &text_par,
+                              const HBChapterParameters &text_par,
                               const Length target_width,
                               const Length x_off = Length::zero(),
                               const Length y_off = Length::zero());
     std::vector<HBTextCommands>
     build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
-                           const ChapterParameters &text_par,
+                           const HBChapterParameters &text_par,
                            const CapyTextAlignment alignment,
                            Length rel_y);
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
@@ -131,7 +132,7 @@ private:
                           const ExtraPenaltyAmounts &extras,
                           Length &rel_y,
                           const Length &bottom_watermark,
-                          const ChapterParameters &chpar,
+                          const HBChapterParameters &chpar,
                           Length extra_indent);
     void create_footnote(const Footnote &f,
                          const ExtraPenaltyAmounts &extras,
@@ -143,7 +144,7 @@ private:
     const Document &doc;
     // These are just helpers to cut down on typing.
     const PageSize &page;
-    const ChapterStyles &styles;
+    HBChapterStyles styles;
     const Spaces &spaces;
     const Margins &m;
     std::unique_ptr<CapyPdfRenderer> rend;

@@ -17,6 +17,7 @@
 #pragma once
 
 #include <paragraphformatter.hpp>
+#include <hbmeasurer.hpp>
 #include <chaptercommon.hpp>
 #include <wordhyphenator.hpp>
 #include <formatting.hpp>
@@ -24,11 +25,39 @@
 
 class HBFontCache;
 
+struct HBChapterParameters {
+    Length line_height;
+    Length indent; // Of first line.
+    HBTextParameters font;
+    bool indent_last_line = false;
+};
+
+struct HBFontStyles {
+    HBTextParameters basic;
+    HBTextParameters heading;
+    HBTextParameters code;
+    HBTextParameters footnote;
+};
+
+struct HBChapterStyles {
+    HBChapterParameters normal;
+    HBChapterParameters normal_noindent;
+    HBChapterParameters code;
+    HBChapterParameters section;
+    HBChapterParameters letter;
+    HBChapterParameters footnote;
+    HBChapterParameters lists;
+    HBChapterParameters title;
+    HBChapterParameters author;
+    HBChapterParameters colophon;
+    HBChapterParameters dedication;
+};
+
 class DraftParagraphFormatter {
 public:
     DraftParagraphFormatter(const std::vector<EnrichedWord> &words,
                             const Length target_width,
-                            const ChapterParameters &in_params,
+                            const HBChapterParameters &in_params,
                             HBFontCache &hbfc);
 
     std::vector<std::vector<std::string>> split_formatted_lines();
@@ -37,11 +66,11 @@ private:
     void precompute();
     TextLocation point_to_location(const SplitPoint &p) const;
     LineStats
-    get_closest_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const;
+    get_closest_line_end(size_t start_split, const HBMeasurer &shaper, size_t line_num) const;
     LineStats
-    compute_closest_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const;
+    compute_closest_line_end(size_t start_split, const HBMeasurer &shaper, size_t line_num) const;
 
-    std::vector<LineStats> simple_split(TextStats &shaper);
+    std::vector<LineStats> simple_split(HBMeasurer &shaper);
     std::vector<std::vector<std::string>>
     stats_to_markup_lines(const std::vector<LineStats> &linestats) const;
     Length current_line_width(size_t line_num) const;
@@ -61,7 +90,7 @@ private:
 
     // Cached results of best states we have achieved thus far.
     SplitStates state_cache;
-    ChapterParameters params;
+    HBChapterParameters params;
     ExtraPenaltyAmounts extras;
     HBFontCache &fc;
 };

@@ -73,6 +73,43 @@ std::string escape_pango_chars(const std::string &txt) {
     return quoted;
 }
 
+// FIXME, move to setup_draft_settings.
+HBChapterStyles build_default_styles() {
+    HBChapterStyles def;
+    HBTextParameters basic_font{
+        Length::from_pt(12),
+        HBFontProperties{TextCategory::Serif, TextStyle::Regular, TextExtra::None}};
+    HBTextParameters code_font{
+        Length::from_pt(10),
+        HBFontProperties{TextCategory::Monospace, TextStyle::Regular, TextExtra::None}};
+    HBTextParameters section_font{
+        Length::from_pt(14),
+        HBFontProperties{TextCategory::SansSerif, TextStyle::Bold, TextExtra::None}};
+
+    def.normal = HBChapterParameters{Length::from_pt(20), Length::from_mm(10), basic_font};
+    def.normal_noindent = def.normal;
+    def.normal_noindent.indent = Length::zero();
+
+    def.code = def.normal;
+    def.code.font = code_font;
+
+    def.colophon = def.normal;
+    def.dedication = def.normal;
+    def.footnote = def.normal;
+    def.lists = def.normal;
+    def.letter = def.normal;
+    def.letter.font.par.style = TextStyle::Italic;
+
+    def.section.font = section_font;
+    def.section.line_height = Length::from_pt(25);
+
+    def.title = def.section;
+    def.author = def.section;
+    def.author.font.par.style = TextStyle::Regular;
+
+    return def;
+}
+
 } // namespace
 
 // NOTE: mutates the input words.
@@ -131,7 +168,7 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
 }
 
 DraftPaginator::DraftPaginator(const Document &d)
-    : doc(d), page(doc.data.pdf.page), styles(d.data.pdf.styles), spaces(d.data.pdf.spaces),
+    : doc(d), page(doc.data.pdf.page), styles(build_default_styles()), spaces(d.data.pdf.spaces),
       m(doc.data.pdf.margins) {
     if(!doc.data.is_draft) {
         fprintf(stderr, "Tried to create draft output in non-draft mode.\n");
@@ -143,7 +180,12 @@ void DraftPaginator::generate_pdf(const char *outfile) {
     capypdf::DocumentProperties dprop;
     capypdf::PageProperties pprop;
 
+    pprop.set_pagebox(CAPY_BOX_MEDIA, 0, 0, page.w.pt(), page.h.pt());
     dprop.set_default_page_properties(pprop);
+    dprop.set_title(doc.data.title);
+    dprop.set_author(doc.data.author);
+    dprop.set_creator("SuperPDF from outer space!");
+
     rend.reset(new CapyPdfRenderer(outfile,
                                    page.w,
                                    page.h,
@@ -307,6 +349,8 @@ void DraftPaginator::create_section(const Section &s,
                                     Length &rel_y,
                                     bool &first_section,
                                     bool &first_paragraph) {
+    std::abort();
+#if 0
     const auto paragraph_width = page.w - m.inner - m.outer;
     const auto section_width = 0.8 * paragraph_width;
     printf("Processing section: %s\n", s.text.c_str());
@@ -340,14 +384,17 @@ void DraftPaginator::create_section(const Section &s,
     rel_y += spaces.below_section;
     heights.text_height += spaces.below_section;
     first_paragraph = true;
+#endif
 }
 
 void DraftPaginator::create_paragraph(const Paragraph &p,
                                       const ExtraPenaltyAmounts &extras,
                                       Length &rel_y,
                                       const Length &bottom_watermark,
-                                      const ChapterParameters &chpar,
+                                      const HBChapterParameters &chpar,
                                       Length extra_indent) {
+    std::abort();
+#if 0
     const auto paragraph_width = textblock_width() - 2 * extra_indent;
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
     DraftParagraphFormatter b(processed_words, paragraph_width, chpar, fc);
@@ -388,11 +435,13 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
         rel_y += chpar.line_height;
         heights.text_height += chpar.line_height;
     }
+#endif
 }
 
 void DraftPaginator::create_footnote(const Footnote &f,
                                      const ExtraPenaltyAmounts &extras,
                                      const Length &bottom_watermark) {
+#if 0
     const auto paragraph_width = page.w - m.inner - m.outer;
     heights.whitespace_height += spaces.footnote_separation;
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text);
@@ -415,11 +464,13 @@ void DraftPaginator::create_footnote(const Footnote &f,
         heights.footnote_height += footnote_total_height;
         layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
     }
+#endif
 }
 
 void DraftPaginator::create_numberlist(const NumberList &nl,
                                        Length &rel_y,
                                        const ExtraPenaltyAmounts &extras) {
+#if 0
     const auto paragraph_width = page.w - m.inner - m.outer;
 
     const Length number_area = Length::from_mm(5);
@@ -450,6 +501,8 @@ void DraftPaginator::create_numberlist(const NumberList &nl,
     }
     rel_y += spaces.different_paragraphs;
     heights.whitespace_height += spaces.different_paragraphs;
+#endif
+    std::abort();
 }
 
 void DraftPaginator::add_top_image(const CapyImageInfo &image) {
@@ -472,7 +525,8 @@ void DraftPaginator::add_top_image(const CapyImageInfo &image) {
     //   heights.figure_height += display_height;
 }
 
-void DraftPaginator::render_page_num(const FontParameters &par) {
+void DraftPaginator::render_page_num(const HBTextParameters &par) {
+#if 0
     // In the official draft style the first page does not have a number
     // so logical page numbers are offset from physical pages by one.
     std::string text = doc.data.draftdata.page_number_template + std::to_string(current_page - 1);
@@ -482,11 +536,13 @@ void DraftPaginator::render_page_num(const FontParameters &par) {
                               current_left_margin() + textblock_width(),
                               m.upper - 2 * styles.normal.line_height,
                               CapyTextAlignment::Right);
+#endif
+    std::abort();
 }
 
 std::vector<HBTextCommands>
 DraftPaginator::build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
-                                          const ChapterParameters &text_par,
+                                          const HBChapterParameters &text_par,
                                           const Length target_width,
                                           const Length x_off,
                                           const Length y_off) {
@@ -522,9 +578,11 @@ DraftPaginator::build_justified_paragraph(const std::vector<std::vector<std::str
 
 std::vector<HBTextCommands>
 DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
-                                       const ChapterParameters &text_par,
+                                       const HBChapterParameters &text_par,
                                        const CapyTextAlignment alignment,
                                        Length rel_y) {
+    std::abort();
+#if 0
     std::vector<HBTextCommands> line_commands;
     const auto rel_x =
         alignment == CapyTextAlignment::Centered ? textblock_width() / 2 : Length::zero();
@@ -540,10 +598,13 @@ DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string
         rel_y += text_par.line_height;
     }
     return line_commands;
+#endif
 }
 
 std::vector<EnrichedWord> DraftPaginator::text_to_formatted_words(const std::string &text,
                                                                   bool permit_hyphenation) {
+    std::abort();
+#if 0
     StyleStack current_style(styles.code.font);
     auto plain_words = split_to_words(std::string_view(text));
     std::vector<EnrichedWord> processed_words;
@@ -560,6 +621,7 @@ std::vector<EnrichedWord> DraftPaginator::text_to_formatted_words(const std::str
                                                   start_style});
     }
     return processed_words;
+#endif
 }
 
 void DraftPaginator::new_page(bool draw_page_num) {
@@ -643,6 +705,8 @@ void DraftPaginator::draw_debug_bars(int num_bars, const Length bar_start_y) {
 }
 
 void DraftPaginator::flush_draw_commands() {
+    std::abort();
+#if 0
     const bool draw_cut_guide = false;
     const bool draw_textarea_box = false;
     Length footnote_block_start = page.h - m.lower - heights.footnote_height;
@@ -716,6 +780,7 @@ void DraftPaginator::flush_draw_commands() {
     }
     layout.clear();
     heights.clear();
+#endif
 }
 
 void DraftPaginator::add_pending_figure(const CapyImageInfo &f) { pending_figures.push_back(f); }
@@ -732,6 +797,7 @@ int DraftPaginator::count_words() {
 }
 
 void DraftPaginator::create_draft_title_page() {
+#if 0
     const int num_words = count_words();
     const auto middle = current_left_margin() + textblock_width() / 2;
     auto textblock_center = m.upper + textblock_height() / 2;
@@ -770,4 +836,6 @@ void DraftPaginator::create_draft_title_page() {
         date.c_str(), styles.author.font, middle, y, CapyTextAlignment::Centered);
 
     new_page(false);
+#endif
+    std::abort();
 }

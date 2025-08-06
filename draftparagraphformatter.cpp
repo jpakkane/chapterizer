@@ -128,12 +128,12 @@ std::string wordfragment2markup(StyleStack &current_style,
 
 DraftParagraphFormatter::DraftParagraphFormatter(const std::vector<EnrichedWord> &words_,
                                                  const Length target_width,
-                                                 const ChapterParameters &in_params,
+                                                 const HBChapterParameters &in_params,
                                                  HBFontCache &hbfc)
     : paragraph_width(target_width), words{words_}, params{in_params}, fc(hbfc) {}
 
 std::vector<std::vector<std::string>> DraftParagraphFormatter::split_formatted_lines() {
-    TextStats shaper;
+    HBMeasurer shaper(fc, "fi");
     precompute();
     return stats_to_markup_lines(simple_split(shaper));
 }
@@ -160,7 +160,7 @@ void DraftParagraphFormatter::precompute() {
     assert(split_points.size() == split_locations.size());
 }
 
-std::vector<LineStats> DraftParagraphFormatter::simple_split(TextStats &shaper) {
+std::vector<LineStats> DraftParagraphFormatter::simple_split(HBMeasurer &shaper) {
     std::vector<LineStats> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
@@ -325,14 +325,14 @@ TextLocation DraftParagraphFormatter::point_to_location(const SplitPoint &p) con
 }
 
 LineStats DraftParagraphFormatter::get_closest_line_end(size_t start_split,
-                                                        const TextStats &shaper,
+                                                        const HBMeasurer &shaper,
                                                         size_t line_num) const {
     auto val = compute_closest_line_end(start_split, shaper, line_num);
     return val;
 }
 
 LineStats DraftParagraphFormatter::compute_closest_line_end(size_t start_split,
-                                                            const TextStats &shaper,
+                                                            const HBMeasurer &shaper,
                                                             size_t line_num) const {
     assert(start_split < split_points.size() - 1);
     const Length target_line_width_mm = current_line_width(line_num);
@@ -343,7 +343,7 @@ LineStats DraftParagraphFormatter::compute_closest_line_end(size_t start_split,
         [this, &shaper, start_split, target_line_width_mm](const SplitPoint &p) {
             const auto loc = &p - split_points.data();
             const auto trial_line = build_line_markup(start_split, loc);
-            const auto trial_width = shaper.markup_width(trial_line.c_str(), params.font);
+            const auto trial_width = shaper.text_width(trial_line.c_str(), params.font);
             return trial_width <= target_line_width_mm;
         });
     if(ppoint == split_points.end()) {
@@ -355,7 +355,7 @@ LineStats DraftParagraphFormatter::compute_closest_line_end(size_t start_split,
     }
 
     const auto final_line = build_line_markup(start_split, chosen_point);
-    const auto final_width = shaper.markup_width(final_line.c_str(), params.font);
+    const auto final_width = shaper.text_width(final_line.c_str(), params.font); // FIXME!
     // FIXME, check whether the word ends in a dash.
     return LineStats{chosen_point,
                      final_width,
