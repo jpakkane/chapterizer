@@ -215,7 +215,6 @@ void DraftPaginator::generate_pdf(const char *outfile) {
 }
 
 void DraftPaginator::create_maintext() {
-    ExtraPenaltyAmounts extras;
     const Length bottom_watermark = page.h - m.lower - m.upper;
     Length rel_y;
     bool first_paragraph = true;
@@ -223,10 +222,9 @@ void DraftPaginator::create_maintext() {
 
     for(const auto &e : doc.elements) {
         if(std::holds_alternative<Section>(e)) {
-            create_section(std::get<Section>(e), extras, rel_y, first_section, first_paragraph);
+            create_section(std::get<Section>(e), rel_y, first_section, first_paragraph);
         } else if(std::holds_alternative<Paragraph>(e)) {
             create_paragraph(std::get<Paragraph>(e),
-                             extras,
                              rel_y,
                              bottom_watermark,
                              first_paragraph ? styles.normal_noindent : styles.normal,
@@ -237,7 +235,7 @@ void DraftPaginator::create_maintext() {
                 printf("More than one footnote per page is not yet supported.");
                 std::abort();
             }
-            create_footnote(std::get<Footnote>(e), extras, bottom_watermark);
+            create_footnote(std::get<Footnote>(e), bottom_watermark);
         } else if(std::holds_alternative<SceneChange>(e)) {
             layout.text.emplace_back(HBMarkupDrawCommand{"#",
                                                          &styles.normal.font,
@@ -278,12 +276,8 @@ void DraftPaginator::create_maintext() {
             first_paragraph = true;
             for(const auto &partext : l.paragraphs) {
                 Paragraph p{partext};
-                create_paragraph(p,
-                                 extras,
-                                 rel_y,
-                                 bottom_watermark,
-                                 styles.letter,
-                                 doc.data.pdf.spaces.letter_indent);
+                create_paragraph(
+                    p, rel_y, bottom_watermark, styles.letter, doc.data.pdf.spaces.letter_indent);
                 first_paragraph = false;
             }
             rel_y += spaces.different_paragraphs;
@@ -315,7 +309,7 @@ FIXME! Re-enable.
         } else if(std::holds_alternative<NumberList>(e)) {
             // FIXME: expand commands like \footnote{1} to values.
             const NumberList &nl = std::get<NumberList>(e);
-            create_numberlist(nl, rel_y, extras);
+            create_numberlist(nl, rel_y);
         } else if(std::holds_alternative<SignBlock>(e)) {
             const SignBlock &sign = std::get<SignBlock>(e);
             rel_y += spaces.different_paragraphs;
@@ -345,7 +339,6 @@ FIXME! Re-enable.
 }
 
 void DraftPaginator::create_section(const Section &s,
-                                    const ExtraPenaltyAmounts &extras,
                                     Length &rel_y,
                                     bool &first_section,
                                     bool &first_paragraph) {
@@ -388,7 +381,6 @@ void DraftPaginator::create_section(const Section &s,
 }
 
 void DraftPaginator::create_paragraph(const Paragraph &p,
-                                      const ExtraPenaltyAmounts &extras,
                                       Length &rel_y,
                                       const Length &bottom_watermark,
                                       const HBChapterParameters &chpar,
@@ -438,9 +430,7 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
 #endif
 }
 
-void DraftPaginator::create_footnote(const Footnote &f,
-                                     const ExtraPenaltyAmounts &extras,
-                                     const Length &bottom_watermark) {
+void DraftPaginator::create_footnote(const Footnote &f, const Length &bottom_watermark) {
 #if 0
     const auto paragraph_width = page.w - m.inner - m.outer;
     heights.whitespace_height += spaces.footnote_separation;
@@ -467,9 +457,7 @@ void DraftPaginator::create_footnote(const Footnote &f,
 #endif
 }
 
-void DraftPaginator::create_numberlist(const NumberList &nl,
-                                       Length &rel_y,
-                                       const ExtraPenaltyAmounts &extras) {
+void DraftPaginator::create_numberlist(const NumberList &nl, Length &rel_y) {
 #if 0
     const auto paragraph_width = page.w - m.inner - m.outer;
 

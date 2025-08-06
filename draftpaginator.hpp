@@ -124,20 +124,17 @@ private:
     void create_maintext();
 
     void create_section(const Section &s,
-                        const ExtraPenaltyAmounts &extras,
                         Length &rel_y,
                         bool &first_section,
                         bool &first_paragraph);
     void create_paragraph(const Paragraph &p,
-                          const ExtraPenaltyAmounts &extras,
                           Length &rel_y,
                           const Length &bottom_watermark,
                           const HBChapterParameters &chpar,
                           Length extra_indent);
     void create_footnote(const Footnote &f,
-                         const ExtraPenaltyAmounts &extras,
                          const Length &bottom_watermark);
-    void create_numberlist(const NumberList &nl, Length &rel_y, const ExtraPenaltyAmounts &extras);
+    void create_numberlist(const NumberList &nl, Length &rel_y);
 
     int count_words();
 
