@@ -68,3 +68,8 @@ public:
 };
 
 inline Length operator*(const double d, const Length l) { return l * d; }
+
+struct Coord {
+    Length x;
+    Length y;
+};

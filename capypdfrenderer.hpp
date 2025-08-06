@@ -18,30 +18,25 @@
 
 #include <chaptercommon.hpp>
 #include <utils.hpp>
+#include <hbfontcache.hpp>
+#include <hbmeasurer.hpp>
 
-#include <cairo.h>
-#include <pango/pangocairo.h>
 #include <capypdf.hpp>
 
 #include <filesystem>
 #include <vector>
 #include <string>
 
-enum class TextAlignment : int {
+enum class CapyTextAlignment : int {
     Left,
     Centered,
     Right,
     // Justified is stored in a separate struct.
 };
 
-struct ImageInfo {
-    cairo_surface_t *surf;
+struct CapyImageInfo {
+    CapyPDF_ImageId id;
     int w, h;
-};
-
-struct Coord {
-    Length x;
-    Length y;
 };
 
 class CapyPdfRenderer {
@@ -50,7 +45,8 @@ public:
                              Length pagew,
                              Length pageh,
                              Length bleed,
-                             const capypdf::DocumentProperties &docprop);
+                             const capypdf::DocumentProperties &docprop,
+                             HBFontCache &fc_);
     ~CapyPdfRenderer();
 
     void render_line_justified(const std::string &text,
@@ -67,13 +63,16 @@ public:
 
     void render_text_as_is(const char *line, const FontParameters &par, Length x, Length y);
 
-    void render_markup_as_is(
-        const char *line, const FontParameters &par, Length x, Length y, TextAlignment alignment);
+    void render_markup_as_is(const char *line,
+                             const FontParameters &par,
+                             Length x,
+                             Length y,
+                             CapyTextAlignment alignment);
     void render_markup_as_is(const std::vector<std::string> markup_words,
                              const FontParameters &par,
                              Length x,
                              Length y,
-                             TextAlignment alignment);
+                             CapyTextAlignment alignment);
     void render_line_centered(const char *line, const FontParameters &par, Length x, Length y);
 
     void render_wonky_text(const char *text,
@@ -103,9 +102,9 @@ public:
                    double g,
                    CapyPDF_Line_Cap cap);
 
-    ImageInfo get_image(const std::string &path);
+    CapyImageInfo get_image(const std::string &path);
 
-    void draw_image(const ImageInfo &image, Length x, Length y, Length w, Length h);
+    void draw_image(const CapyImageInfo &image, Length x, Length y, Length w, Length h);
 
     void draw_dash_line(const std::vector<Coord> &points, double line_width);
 
@@ -130,4 +129,6 @@ private:
     std::unordered_map<std::filesystem::path, CapyPDF_ImageId> loaded_fonts;
     std::unordered_map<std::filesystem::path, CapyPDF_ImageId> loaded_images;
     std::string outname;
+    HBFontCache &fc;
+    HBMeasurer meas;
 };

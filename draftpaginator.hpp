@@ -19,24 +19,19 @@
 #include <metadata.hpp>
 
 #include <bookparser.hpp>
-#include <pangopdfrenderer.hpp>
+#include <capypdfrenderer.hpp>
 #include <formatting.hpp>
 #include <hbfontcache.hpp>
 #include <capypdf.hpp>
 
 #include <memory>
 
-struct CapyImageInfo {
-    CapyPDF_ImageId id;
-    int w, h;
-};
-
 struct HBMarkupDrawCommand {
     std::string markup;
     const FontParameters *font;
     Length x;
     Length y;
-    TextAlignment alignment;
+    CapyTextAlignment alignment;
 };
 
 struct HBJustifiedMarkupDrawCommand {
@@ -107,7 +102,7 @@ private:
     std::vector<HBTextCommands>
     build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
                            const ChapterParameters &text_par,
-                           const TextAlignment alignment,
+                           const CapyTextAlignment alignment,
                            Length rel_y);
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
                                                       bool permit_hyphenation = true);
@@ -151,7 +146,7 @@ private:
     const ChapterStyles &styles;
     const Spaces &spaces;
     const Margins &m;
-    std::unique_ptr<PangoPdfRenderer> rend;
+    std::unique_ptr<CapyPdfRenderer> rend;
     WordHyphenator hyphen;
     int current_page = 1;
     int chapter_start_page = -1;

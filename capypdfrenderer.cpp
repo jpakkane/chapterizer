@@ -75,9 +75,10 @@ CapyPdfRenderer::CapyPdfRenderer(const char *ofname,
                                  Length pagew,
                                  Length pageh,
                                  Length bleed_,
-                                 const capypdf::DocumentProperties &docprop)
+                                 const capypdf::DocumentProperties &docprop,
+                                 HBFontCache &fc_)
     : capygen{ofname, docprop}, capyctx{capygen.new_page_context()}, bleed{bleed_.pt()},
-      mediaw{pagew.pt() + 2 * bleed}, mediah{pageh.pt() + 2 * bleed} {
+      mediaw{pagew.pt() + 2 * bleed}, mediah{pageh.pt() + 2 * bleed}, fc{fc_}, meas(fc, "fi") {
 
     init_page();
 
@@ -328,7 +329,7 @@ void CapyPdfRenderer::render_text_as_is(const char *line,
 }
 
 void CapyPdfRenderer::render_markup_as_is(
-    const char *line, const FontParameters &par, Length x, Length y, TextAlignment alignment) {
+    const char *line, const FontParameters &par, Length x, Length y, CapyTextAlignment alignment) {
     /*
 
     switch(alignment) {
@@ -355,7 +356,7 @@ void CapyPdfRenderer::render_markup_as_is(const std::vector<std::string> markup_
                                           const FontParameters &par,
                                           Length x,
                                           Length y,
-                                          TextAlignment alignment) {
+                                          CapyTextAlignment alignment) {
     std::string full_line;
     for(const auto &w : markup_words) {
         full_line += w;
@@ -477,7 +478,7 @@ void CapyPdfRenderer::draw_line(
     capyctx.cmd_Q();
 }
 
-ImageInfo CapyPdfRenderer::get_image(const std::string &path) {
+CapyImageInfo CapyPdfRenderer::get_image(const std::string &path) {
     /*
     ImageInfo result;
     auto it = loaded_images.find(path);
@@ -498,12 +499,13 @@ ImageInfo CapyPdfRenderer::get_image(const std::string &path) {
     std::abort();
 }
 
-void CapyPdfRenderer::draw_image(const ImageInfo &image, Length x, Length y, Length w, Length h) {
+void CapyPdfRenderer::draw_image(
+    const CapyImageInfo &image, Length x, Length y, Length w, Length h) {
     capyctx.cmd_q();
     capyctx.cmd_re(x.pt(), y.pt(), w.pt(), h.pt());
     capyctx.cmd_cm(1, 0, 0, 1, x.pt(), y.pt());
     capyctx.cmd_cm(w.pt() / image.w, 0, 0, h.pt() / image.h, 0, 0);
-    // capyctx.cmd_Do(image.id);
+    capyctx.cmd_Do(image.id);
     std::abort();
     capyctx.cmd_Q();
 }

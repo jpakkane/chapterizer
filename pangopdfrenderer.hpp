@@ -37,11 +37,6 @@ struct ImageInfo {
     int w, h;
 };
 
-struct Coord {
-    Length x;
-    Length y;
-};
-
 class PangoPdfRenderer {
 public:
     explicit PangoPdfRenderer(const char *ofname,
