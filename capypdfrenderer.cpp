@@ -17,8 +17,9 @@
 #include "capypdfrenderer.hpp"
 #include <utils.hpp>
 
-#include <cairo-pdf.h>
 #include <cassert>
+
+#include <hb.h>
 
 #include <textstats.hpp>
 #include <algorithm>
@@ -28,6 +29,14 @@ static TextStats hack{};
 #include <sstream>
 
 namespace {
+
+size_t
+get_endpoint(hb_glyph_info_t *glyph_info, size_t glyph_count, size_t i, const char *sampletext) {
+    if(i + 1 < glyph_count) {
+        return glyph_info[i + 1].cluster;
+    }
+    return strlen(sampletext);
+}
 
 const char *workname = "turbotempfile.pdf";
 
@@ -320,11 +329,68 @@ void CapyPdfRenderer::render_text_as_is(const char *line,
                                         Length y) {
     auto fontinfo = std::move(fc.get_font(par.par).value());
     auto capyfont_id = hbfont2capyfont(par, fontinfo);
+    hb_buffer_t *buf = hb_buffer_create();
+    std::unique_ptr<hb_buffer_t, HBBufferCloser> bc(buf);
+
+    const double num_steps = HBFontCache::NUM_STEPS;
+    const double hbscale = par.size.pt() * num_steps;
+
+    hb_buffer_add_utf8(buf, line, -1, 0, -1);
+    hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
+    hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
+    hb_buffer_set_language(buf, hb_language_from_string("fi", -1));
+
+    hb_buffer_guess_segment_properties(buf);
+    hb_font_set_scale(fontinfo.f, hbscale, hbscale);
 
     capypdf::Text text = capyctx.text_new();
     text.cmd_Tf(capyfont_id, par.size.pt());
     text.cmd_Td(x.pt(), y.pt());
-    text.cmd_Tj(line);
+    capypdf::TextSequence ts;
+
+    if(par.par.extra == TextExtra::SmallCaps) {
+        hb_feature_t userfeatures[1];
+        userfeatures[0].tag = HB_TAG('s', 'm', 'c', 'p');
+        userfeatures[0].value = 1;
+        userfeatures[0].start = HB_FEATURE_GLOBAL_START;
+        userfeatures[0].end = HB_FEATURE_GLOBAL_END;
+        hb_shape(fontinfo.f, buf, userfeatures, 1);
+    } else {
+        hb_shape(fontinfo.f, buf, nullptr, 0);
+    }
+
+    unsigned int glyph_count;
+    hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
+    hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
+    for(unsigned int i = 0; i < glyph_count; i++) {
+        const hb_glyph_info_t *current = glyph_info + i;
+        const hb_glyph_position_t *curpos = glyph_pos + i;
+        hb_codepoint_t glyphid = current->codepoint;
+        hb_position_t x_offset = curpos->x_offset;
+        // hb_position_t y_offset = curpos->y_offset;
+        hb_position_t x_advance = curpos->x_advance;
+        // hb_position_t y_advance = curpos->y_advance;
+        std::string_view original_text(line + glyph_info[i].cluster,
+                                       line + get_endpoint(glyph_info, glyph_count, i, line));
+        auto hb_glyph_advance_in_font_units =
+            hb_font_get_glyph_h_advance(fontinfo.f, current->codepoint) / hbscale *
+            fontinfo.units_per_em;
+        const auto hb_advance_in_font_units = x_advance / hbscale * fontinfo.units_per_em;
+        const int32_t kerning_delta =
+            int32_t(hb_glyph_advance_in_font_units - hb_advance_in_font_units);
+        // FIXME, should check this better, such as if the original text consisted of only one
+        // codepoint.
+        if(original_text.size() == 1) {
+            ts.append_raw_glyph(glyphid, original_text.front());
+        } else {
+            ts.append_ligature_glyph(glyphid, original_text);
+        }
+        if(kerning_delta != 0) {
+            ts.append_kerning(kerning_delta);
+        }
+    }
+
+    text.cmd_TJ(ts);
     capyctx.render_text_obj(text);
 }
 

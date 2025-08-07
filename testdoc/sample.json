@@ -1,5 +1,5 @@
 {
-    "title": "The Super Book of Stuff",
+    "title": "The Super Böök of Stuff",
     "author": "Bob McBob",
     "language": "fi",
     "dedication_": "dedication.txt",
@@ -12,8 +12,8 @@
         "chapter2.bd"
     ],
     "draft": {
-        "surname": "Pakkanen",
-        "email": "jpakkane@gmail.com",
+        "surname": "McBob",
+        "email": "bob.mcbob@example.com",
         "phone": "040 222 2222"
     },
     "pdf": {
