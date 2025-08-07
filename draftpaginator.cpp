@@ -51,28 +51,6 @@ void adjust_y(HBTextCommands &c, Length diff) {
     }
 }
 
-std::string escape_pango_chars(const std::string &txt) {
-    std::string quoted;
-    quoted.reserve(txt.size());
-    for(auto c : txt) {
-        switch(c) {
-        case '<':
-            quoted += "&lt;";
-            break;
-        case '>':
-            quoted += "&gt;";
-            break;
-        case '&':
-            quoted += "&amp;";
-            break;
-        default:
-            quoted += c;
-            break;
-        }
-    }
-    return quoted;
-}
-
 // FIXME, move to setup_draft_settings.
 HBChapterStyles build_default_styles() {
     HBChapterStyles def;
@@ -787,8 +765,8 @@ int DraftPaginator::count_words() {
 void DraftPaginator::create_draft_title_page() {
     const int num_words = count_words();
     const auto middle = current_left_margin() + textblock_width() / 2;
-    auto textblock_center = m.upper + textblock_height() / 2;
-    auto y = m.upper;
+    auto textblock_center = page.h - (m.upper + textblock_height() / 2);
+    auto y = page.h - m.upper;
     const auto single_line_height = styles.normal.font.size * 1.5;
     const auto left_edge = current_left_margin();
     const auto right_edge = left_edge + textblock_width();
@@ -797,21 +775,20 @@ void DraftPaginator::create_draft_title_page() {
     snprintf(buf, bufsize, wordcount_str[(int)doc.data.language], num_words);
     rend->render_text_as_is(doc.data.author.c_str(), styles.normal.font, left_edge, y);
     rend->render_text(buf, styles.normal.font, right_edge, y, CapyTextAlignment::Right);
-    y += single_line_height;
+    y -= single_line_height;
 
     rend->render_text_as_is(doc.data.draftdata.phone.c_str(), styles.normal.font, left_edge, y);
-    y += single_line_height;
+    y -= single_line_height;
     rend->render_text_as_is(doc.data.draftdata.email.c_str(), styles.code.font, left_edge, y);
 
-    y = textblock_center - 3 * styles.title.line_height;
-    auto escaped_title = escape_pango_chars(doc.data.title);
+    y = textblock_center + 3 * styles.title.line_height;
     rend->render_text(
-        escaped_title.c_str(), styles.title.font, middle, y, CapyTextAlignment::Centered);
-    y += 2 * styles.title.line_height;
+        doc.data.title.c_str(), styles.title.font, middle, y, CapyTextAlignment::Centered);
+    y -= 2 * styles.title.line_height;
     rend->render_text(
         doc.data.author.c_str(), styles.author.font, middle, y, CapyTextAlignment::Centered);
 
-    y += styles.title.line_height;
+    y -= styles.title.line_height;
     const std::string date = current_date();
     rend->render_text(date.c_str(), styles.author.font, middle, y, CapyTextAlignment::Centered);
 
