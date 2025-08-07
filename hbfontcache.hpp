@@ -27,6 +27,7 @@ struct FontFiles {
 
 struct FontOwner {
     std::unique_ptr<hb_font_t, HBFontCloser> handle;
+    std::filesystem::path file;
     uint32_t units_per_em;
 };
 
@@ -81,9 +82,11 @@ struct FontInfo {
     FontInfo() = default;
     FontInfo(const FontOwner &o) {
         f = o.handle.get();
+        fname = &o.file;
         units_per_em = o.units_per_em;
     }
     hb_font_t *f;
+    const std::filesystem::path *fname;
     uint32_t units_per_em;
 };
 
@@ -92,6 +95,9 @@ public:
     HBFontCache();
 
     std::optional<FontInfo> get_font(TextCategory cat, TextStyle style) const;
+    std::optional<FontInfo> get_font(const HBFontProperties &par) const {
+        return get_font(par.cat, par.style);
+    }
 
 private:
     static constexpr double NUM_STEPS = 64;

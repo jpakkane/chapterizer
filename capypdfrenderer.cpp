@@ -315,17 +315,42 @@ void CapyPdfRenderer::render_line_justified(const std::vector<std::string> &mark
 }
 
 void CapyPdfRenderer::render_text_as_is(const char *line,
-                                        const FontParameters &par,
+                                        const HBTextParameters &par,
                                         Length x,
                                         Length y) {
-    /*
-    cairo_move_to(cr, x.pt(), y.pt());
-    pango_layout_set_attributes(layout, nullptr);
-    pango_layout_set_text(layout, line, -1);
-    pango_cairo_update_layout(cr, layout);
-    pango_cairo_show_layout(cr, layout);
-*/
-    std::abort();
+    auto fontinfo = std::move(fc.get_font(par.par).value());
+    auto capyfont_id = hbfont2capyfont(par, fontinfo);
+
+    capypdf::Text text = capyctx.text_new();
+    text.cmd_Tf(capyfont_id, par.size.pt());
+    text.cmd_Td(x.pt(), y.pt());
+    text.cmd_Tj(line);
+    capyctx.render_text_obj(text);
+}
+
+void CapyPdfRenderer::render_text(const char *line,
+                                  const HBTextParameters &par,
+                                  Length x,
+                                  Length y,
+                                  CapyTextAlignment alignment) {
+    if(alignment == CapyTextAlignment::Left) {
+        render_text_as_is(line, par, x, y);
+        return;
+    }
+
+    Length text_width = meas.text_width(line, par);
+    switch(alignment) {
+    case CapyTextAlignment::Left:
+        std::abort();
+        // Unreachable
+        break;
+    case CapyTextAlignment::Centered:
+        render_text_as_is(line, par, x - text_width / 2, y);
+        break;
+    case CapyTextAlignment::Right:
+        render_text_as_is(line, par, x - text_width, y);
+        break;
+    }
 }
 
 void CapyPdfRenderer::render_markup_as_is(
@@ -521,4 +546,17 @@ void CapyPdfRenderer::add_section_outline(int section_number, const std::string 
         surf, CAIRO_PDF_OUTLINE_ROOT, outline.c_str(), link.c_str(), (cairo_pdf_outline_flags_t)0);
 */
     std::abort();
+}
+
+CapyPDF_FontId CapyPdfRenderer::hbfont2capyfont(const HBTextParameters &par,
+                                                const FontInfo &fontinfo) {
+
+    auto it = loaded_fonts.find(fontinfo.f);
+    if(it != loaded_fonts.end()) {
+        return it->second;
+    }
+    capypdf::FontProperties fprop;
+    auto font_id = capygen.load_font(fontinfo.fname->c_str(), fprop);
+    loaded_fonts[fontinfo.f] = font_id;
+    return font_id;
 }

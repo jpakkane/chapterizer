@@ -61,7 +61,12 @@ public:
                                Length x,
                                Length y);
 
-    void render_text_as_is(const char *line, const FontParameters &par, Length x, Length y);
+    void render_text_as_is(const char *line, const HBTextParameters &par, Length x, Length y);
+    void render_text(const char *line,
+                     const HBTextParameters &par,
+                     Length x,
+                     Length y,
+                     CapyTextAlignment alignment);
 
     void render_markup_as_is(const char *line,
                              const FontParameters &par,
@@ -121,12 +126,14 @@ private:
     void draw_grid();
     void draw_cropmarks();
 
+    CapyPDF_FontId hbfont2capyfont(const HBTextParameters &par, const FontInfo &fontinfo);
+
     capypdf::Generator capygen;
     capypdf::DrawContext capyctx;
     int pages = 1;
     double bleed;
     double mediaw, mediah;
-    std::unordered_map<std::filesystem::path, CapyPDF_ImageId> loaded_fonts;
+    std::unordered_map<hb_font_t *, CapyPDF_FontId> loaded_fonts;
     std::unordered_map<std::filesystem::path, CapyPDF_ImageId> loaded_images;
     std::string outname;
     HBFontCache &fc;

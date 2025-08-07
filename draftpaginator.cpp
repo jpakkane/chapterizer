@@ -198,20 +198,21 @@ void DraftPaginator::generate_pdf(const char *outfile) {
     if(!only_maintext) {
         create_draft_title_page();
     }
+    /*
+        create_maintext();
 
-    create_maintext();
-
-    while(!layout.empty()) {
-        if(doc.data.is_draft) {
-            render_page_num(styles.normal.font);
-            flush_draw_commands();
-            // FIXME add code that prints the "The End" page.
-        } else {
-            new_page(true);
+        while(!layout.empty()) {
+            if(doc.data.is_draft) {
+                render_page_num(styles.normal.font);
+                flush_draw_commands();
+                // FIXME add code that prints the "The End" page.
+            } else {
+                new_page(true);
+            }
         }
-    }
-    rend->finalize_page();
-    rend.reset(nullptr);
+        rend->finalize_page();
+        rend.reset(nullptr);
+        */
 }
 
 void DraftPaginator::create_maintext() {
@@ -693,7 +694,6 @@ void DraftPaginator::draw_debug_bars(int num_bars, const Length bar_start_y) {
 }
 
 void DraftPaginator::flush_draw_commands() {
-    std::abort();
 #if 0
     const bool draw_cut_guide = false;
     const bool draw_textarea_box = false;
@@ -785,7 +785,6 @@ int DraftPaginator::count_words() {
 }
 
 void DraftPaginator::create_draft_title_page() {
-#if 0
     const int num_words = count_words();
     const auto middle = current_left_margin() + textblock_width() / 2;
     auto textblock_center = m.upper + textblock_height() / 2;
@@ -796,34 +795,25 @@ void DraftPaginator::create_draft_title_page() {
     const int bufsize = 128;
     char buf[bufsize];
     snprintf(buf, bufsize, wordcount_str[(int)doc.data.language], num_words);
-    rend->render_markup_as_is(
-        doc.data.author.c_str(), styles.normal.font, left_edge, y, CapyTextAlignment::Left);
-    rend->render_markup_as_is(buf, styles.normal.font, right_edge, y, CapyTextAlignment::Right);
+    rend->render_text_as_is(doc.data.author.c_str(), styles.normal.font, left_edge, y);
+    rend->render_text(buf, styles.normal.font, right_edge, y, CapyTextAlignment::Right);
     y += single_line_height;
 
-    rend->render_markup_as_is(doc.data.draftdata.phone.c_str(),
-                              styles.normal.font,
-                              left_edge,
-                              y,
-                              CapyTextAlignment::Left);
+    rend->render_text_as_is(doc.data.draftdata.phone.c_str(), styles.normal.font, left_edge, y);
     y += single_line_height;
-    rend->render_markup_as_is(
-        doc.data.draftdata.email.c_str(), styles.code.font, left_edge, y, CapyTextAlignment::Left);
+    rend->render_text_as_is(doc.data.draftdata.email.c_str(), styles.code.font, left_edge, y);
 
     y = textblock_center - 3 * styles.title.line_height;
     auto escaped_title = escape_pango_chars(doc.data.title);
-    rend->render_markup_as_is(
+    rend->render_text(
         escaped_title.c_str(), styles.title.font, middle, y, CapyTextAlignment::Centered);
     y += 2 * styles.title.line_height;
-    rend->render_markup_as_is(
+    rend->render_text(
         doc.data.author.c_str(), styles.author.font, middle, y, CapyTextAlignment::Centered);
 
     y += styles.title.line_height;
     const std::string date = current_date();
-    rend->render_markup_as_is(
-        date.c_str(), styles.author.font, middle, y, CapyTextAlignment::Centered);
+    rend->render_text(date.c_str(), styles.author.font, middle, y, CapyTextAlignment::Centered);
 
     new_page(false);
-#endif
-    std::abort();
 }

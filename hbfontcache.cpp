@@ -56,7 +56,7 @@ FontOwner HBFontCache::open_file(const std::filesystem::path &fontfile) {
     }
     // hb_font_set_scale(font, hbscale, hbscale);
     std::unique_ptr<hb_font_t, HBFontCloser> h{font};
-    FontOwner result{std::move(h), get_em_units(fontfile)};
+    FontOwner result{std::move(h), fontfile, get_em_units(fontfile)};
 
     return result;
 }

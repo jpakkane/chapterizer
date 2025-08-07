@@ -123,17 +123,14 @@ private:
     void create_draft_title_page();
     void create_maintext();
 
-    void create_section(const Section &s,
-                        Length &rel_y,
-                        bool &first_section,
-                        bool &first_paragraph);
+    void
+    create_section(const Section &s, Length &rel_y, bool &first_section, bool &first_paragraph);
     void create_paragraph(const Paragraph &p,
                           Length &rel_y,
                           const Length &bottom_watermark,
                           const HBChapterParameters &chpar,
                           Length extra_indent);
-    void create_footnote(const Footnote &f,
-                         const Length &bottom_watermark);
+    void create_footnote(const Footnote &f, const Length &bottom_watermark);
     void create_numberlist(const NumberList &nl, Length &rel_y);
 
     int count_words();
