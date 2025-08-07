@@ -18,7 +18,7 @@ HBFontCache::HBFontCache() {
                     "NotoSans-BoldItalic.ttf"};
     FontFiles mspace{"NotoMono-Regular.ttf", "", "", ""};
     open_files(serif, font_root, nserif);
-    open_files(sansserif, font_root, nserif);
+    open_files(sansserif, font_root, nsans);
     open_files(monospace, font_root, mspace);
 }
 
