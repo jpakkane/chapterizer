@@ -58,18 +58,18 @@ public:
         tt_end_tag = "</tt>";
     }
 
-    explicit SmallStack(const FontParameters &inline_typewriter_font) {
+    explicit SmallStack(const std::string inline_typewriter_font_name, const Length ptsize) {
         const int buf_size = 1024;
         char buf[buf_size];
 
-        if(inline_typewriter_font.name.find('"') != std::string::npos) {
+        if(inline_typewriter_font_name.find('"') != std::string::npos) {
             std::abort();
         }
         snprintf(buf,
                  buf_size,
                  R"(<span font="%s" size="%.2fpt">)",
-                 inline_typewriter_font.name.c_str(),
-                 inline_typewriter_font.size.pt());
+                 inline_typewriter_font_name.c_str(),
+                 ptsize.pt());
         tt_start_tag = buf;
         tt_end_tag = "</span>";
     }

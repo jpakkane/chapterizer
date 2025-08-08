@@ -271,7 +271,7 @@ void PrintPaginator::render_signing_page(const Signing &s) {
         Length x = middle - double(num_letters) / 2 * letter_width;
         for(size_t i = 0; i < num_letters; ++i) {
             const auto current_char = line[i];
-            if((const unsigned char)current_char >= NUM_ENTRIES) {
+            if((unsigned char)current_char >= NUM_ENTRIES) {
                 fprintf(stderr, "Ääkköset ovat vielä ongelma.\n");
                 std::abort();
             }
@@ -754,7 +754,7 @@ PrintPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string
 
 std::vector<EnrichedWord> PrintPaginator::text_to_formatted_words(const std::string &text,
                                                                   bool permit_hyphenation) {
-    StyleStack current_style(styles.code.font);
+    StyleStack current_style(styles.code.font.name, styles.code.font.size);
     auto plain_words = split_to_words(std::string_view(text));
     std::vector<EnrichedWord> processed_words;
     const Language lang = permit_hyphenation ? doc.data.language : Language::Unset;

@@ -102,7 +102,6 @@ public:
     static constexpr double NUM_STEPS = 64;
 
 private:
-
     void
     open_files(FontPtrs &ptrs, const std::filesystem::path &font_root, const FontFiles &fnames);
 
