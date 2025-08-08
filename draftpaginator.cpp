@@ -262,8 +262,6 @@ void DraftPaginator::create_maintext() {
                 display_height = display_height / 2;
                 display_width = display_width / 2;
             }
-#if 0
-FIXME! Re-enable.
             if(chapter_start_page == rend->page_num()) {
                 add_pending_figure(image);
             } else if(heights.figure_height > Length::zero()) {
@@ -274,7 +272,6 @@ FIXME! Re-enable.
             } else {
                 add_top_image(image);
             }
-#endif
         } else if(std::holds_alternative<NumberList>(e)) {
             // FIXME: expand commands like \footnote{1} to values.
             const NumberList &nl = std::get<NumberList>(e);
@@ -421,7 +418,6 @@ void DraftPaginator::create_footnote(const Footnote &f, const Length &bottom_wat
 }
 
 void DraftPaginator::create_numberlist(const NumberList &nl, Length &rel_y) {
-#if 0
     const auto paragraph_width = page.w - m.inner - m.outer;
 
     const Length number_area = Length::from_mm(5);
@@ -452,8 +448,6 @@ void DraftPaginator::create_numberlist(const NumberList &nl, Length &rel_y) {
     }
     rel_y += spaces.different_paragraphs;
     heights.whitespace_height += spaces.different_paragraphs;
-#endif
-    std::abort();
 }
 
 void DraftPaginator::add_top_image(const CapyImageInfo &image) {
@@ -466,7 +460,7 @@ void DraftPaginator::add_top_image(const CapyImageInfo &image) {
         cmd.display_width = cmd.display_width / 2;
     }
     cmd.x = textblock_width() / 2 - cmd.display_width / 2;
-    cmd.y = m.upper;
+    cmd.y = page.h - m.upper - cmd.display_height;
     layout.images.emplace_back(std::move(cmd));
     assert(heights.figure_height < Length::from_mm(0.0001));
     heights.figure_height += cmd.display_height;
@@ -666,8 +660,7 @@ void DraftPaginator::flush_draw_commands() {
         rend->draw_line(cut_x, Length::zero(), cut_x, page.h, Length::from_mm(0.1));
     }
     for(const auto &c : layout.images) {
-        // XXX FIXME rend->draw_image(c.i, c.x + current_left_margin(), c.y, c.display_width,
-        // c.display_height);
+        rend->draw_image(c.i, c.x + current_left_margin(), c.y, c.display_width, c.display_height);
     }
     for(const auto &c : layout.text) {
         if(std::holds_alternative<HBMarkupDrawCommand>(c)) {

@@ -512,45 +512,44 @@ void CapyPdfRenderer::finalize_page() {
 }
 
 void CapyPdfRenderer::draw_cropmarks() {
-    /*
     const auto b = bleed;
 
     capyctx.cmd_q();
-    cairo_move_to(cr, b, 0);
-    cairo_rel_line_to(cr, 0, b / 2);
-    cairo_move_to(cr, 0, b);
-    cairo_rel_line_to(cr, b / 2, 0);
+    capyctx.cmd_m(b, 0);
+    capyctx.cmd_l(b, b / 2);
+    capyctx.cmd_m(0, b);
+    capyctx.cmd_l(b / 2, b);
 
-    cairo_move_to(cr, b, 0);
-    cairo_rel_line_to(cr, 0, b / 2);
-    cairo_move_to(cr, 0, b);
-    cairo_rel_line_to(cr, b / 2, 0);
+    capyctx.cmd_m(b, 0);
+    capyctx.cmd_l(b, b / 2);
+    capyctx.cmd_m(0, b);
+    capyctx.cmd_l(b / 2, b);
 
-    cairo_move_to(cr, mediaw - b, 0);
-    cairo_rel_line_to(cr, 0, b / 2);
-    cairo_move_to(cr, mediaw - b / 2, b);
-    cairo_rel_line_to(cr, b / 2, 0);
+    capyctx.cmd_m(mediaw - b, 0);
+    capyctx.cmd_l(mediaw - b, b / 2);
+    capyctx.cmd_m(mediaw - b / 2, b);
+    capyctx.cmd_l(mediaw, b);
 
-    cairo_move_to(cr, b, mediah);
-    cairo_rel_line_to(cr, 0, -b / 2);
-    cairo_move_to(cr, 0, mediah - b);
-    cairo_rel_line_to(cr, b / 2, 0);
+    capyctx.cmd_m(b, mediah);
+    capyctx.cmd_l(b, mediah - b / 2);
+    capyctx.cmd_m(0, mediah - b);
+    capyctx.cmd_l(b / 2, mediah - b);
 
-    cairo_move_to(cr, mediaw - b, mediah);
-    cairo_rel_line_to(cr, 0, -b / 2);
-    cairo_move_to(cr, mediaw, mediah - b);
-    cairo_rel_line_to(cr, -b / 2, 0);
+    capyctx.cmd_m(mediaw - b, mediah);
+    capyctx.cmd_l(mediaw - b, mediah - b / 2);
+    capyctx.cmd_m(mediaw, mediah - b);
+    capyctx.cmd_l(mediaw - b / 2, mediah - b);
 
-    cairo_set_line_width(cr, 5);
-    cairo_set_source_rgb(cr, 1, 1, 1);
+    /*
+    capyctx.cmd_w(5);
+    capyctx.cmd_G(1);
+    capyctx.cmd_S();
     cairo_stroke_preserve(cr);
-    cairo_set_line_width(cr, 1);
-    cairo_set_source_rgb(cr, 0, 0, 0);
-    cairo_stroke(cr);
-
+*/
+    capyctx.cmd_w(1);
+    capyctx.cmd_G(0);
+    capyctx.cmd_S();
     capyctx.cmd_Q();
-    */
-    std::abort();
 }
 
 void CapyPdfRenderer::draw_line(Length x0, Length y0, Length x1, Length y1, Length thickness) {
@@ -590,11 +589,9 @@ CapyImageInfo CapyPdfRenderer::get_image(const std::filesystem::path &path) {
 void CapyPdfRenderer::draw_image(
     const CapyImageInfo &image, Length x, Length y, Length w, Length h) {
     capyctx.cmd_q();
-    capyctx.cmd_re(x.pt(), y.pt(), w.pt(), h.pt());
     capyctx.cmd_cm(1, 0, 0, 1, x.pt(), y.pt());
-    capyctx.cmd_cm(w.pt() / image.w, 0, 0, h.pt() / image.h, 0, 0);
+    capyctx.cmd_cm(w.pt(), 0, 0, h.pt(), 0, 0);
     capyctx.cmd_Do(image.id);
-    std::abort();
     capyctx.cmd_Q();
 }
 
