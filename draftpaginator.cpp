@@ -163,34 +163,24 @@ void DraftPaginator::generate_pdf(const char *outfile) {
     dprop.set_title(doc.data.title);
     dprop.set_author(doc.data.author);
     dprop.set_creator("SuperPDF from outer space!");
+    assert(doc.data.is_draft);
 
-    rend.reset(new CapyPdfRenderer(outfile,
-                                   page.w,
-                                   page.h,
-                                   doc.data.is_draft ? Length::zero() : doc.data.pdf.bleed,
-                                   dprop,
-                                   fc));
+    rend.reset(new CapyPdfRenderer(outfile, page.w, page.h, Length::zero(), dprop, fc));
 
     const bool only_maintext = false;
 
     if(!only_maintext) {
         create_draft_title_page();
+        new_page(false);
     }
-    /*
-        create_maintext();
+    create_maintext();
 
-        while(!layout.empty()) {
-            if(doc.data.is_draft) {
-                render_page_num(styles.normal.font);
-                flush_draw_commands();
-                // FIXME add code that prints the "The End" page.
-            } else {
-                new_page(true);
-            }
-        }
-        rend->finalize_page();
-        rend.reset(nullptr);
-        */
+    while(!layout.empty()) {
+        render_page_num(styles.normal);
+        flush_draw_commands();
+    }
+    rend->new_page();
+    rend.reset(nullptr);
 }
 
 void DraftPaginator::create_maintext() {
@@ -202,6 +192,7 @@ void DraftPaginator::create_maintext() {
     for(const auto &e : doc.elements) {
         if(std::holds_alternative<Section>(e)) {
             create_section(std::get<Section>(e), rel_y, first_section, first_paragraph);
+            return;
         } else if(std::holds_alternative<Paragraph>(e)) {
             create_paragraph(std::get<Paragraph>(e),
                              rel_y,
@@ -321,8 +312,6 @@ void DraftPaginator::create_section(const Section &s,
                                     Length &rel_y,
                                     bool &first_section,
                                     bool &first_paragraph) {
-    std::abort();
-#if 0
     const auto paragraph_width = page.w - m.inner - m.outer;
     const auto section_width = 0.8 * paragraph_width;
     printf("Processing section: %s\n", s.text.c_str());
@@ -332,8 +321,8 @@ void DraftPaginator::create_section(const Section &s,
     chapter_start_page = rend->page_num();
     rend->add_section_outline(s.number, s.text);
     first_section = false;
-    rel_y = Length::zero();
-    rel_y += spaces.above_section;
+    rel_y = page.h;
+    rel_y -= spaces.above_section;
     heights.whitespace_height += spaces.above_section;
     assert(s.level == 1);
     // Fancy stuff above the text.
@@ -350,13 +339,12 @@ void DraftPaginator::create_section(const Section &s,
     auto built_lines = build_ragged_paragraph(lines, styles.section, section_alignment, rel_y);
     for(auto &line : built_lines) {
         layout.text.emplace_back(std::move(line));
-        rel_y += styles.section.line_height;
+        rel_y -= styles.section.line_height;
         heights.text_height += styles.section.line_height;
     }
-    rel_y += spaces.below_section;
+    rel_y -= spaces.below_section;
     heights.text_height += spaces.below_section;
     first_paragraph = true;
-#endif
 }
 
 void DraftPaginator::create_paragraph(const Paragraph &p,
@@ -492,19 +480,15 @@ void DraftPaginator::add_top_image(const CapyImageInfo &image) {
     //   heights.figure_height += display_height;
 }
 
-void DraftPaginator::render_page_num(const HBTextParameters &par) {
-#if 0
+void DraftPaginator::render_page_num(const HBChapterParameters &par) {
     // In the official draft style the first page does not have a number
     // so logical page numbers are offset from physical pages by one.
     std::string text = doc.data.draftdata.page_number_template + std::to_string(current_page - 1);
-    auto quoted = escape_pango_chars(text);
-    rend->render_markup_as_is(quoted.c_str(),
-                              styles.normal.font,
-                              current_left_margin() + textblock_width(),
-                              m.upper - 2 * styles.normal.line_height,
-                              CapyTextAlignment::Right);
-#endif
-    std::abort();
+    rend->render_text(text.c_str(),
+                      par.font,
+                      current_left_margin() + textblock_width(),
+                      page.h - (m.upper - 2 * par.line_height),
+                      CapyTextAlignment::Right);
 }
 
 std::vector<HBTextCommands>
@@ -548,8 +532,6 @@ DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string
                                        const HBChapterParameters &text_par,
                                        const CapyTextAlignment alignment,
                                        Length rel_y) {
-    std::abort();
-#if 0
     std::vector<HBTextCommands> line_commands;
     const auto rel_x =
         alignment == CapyTextAlignment::Centered ? textblock_width() / 2 : Length::zero();
@@ -562,17 +544,14 @@ DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string
         assert(alignment != CapyTextAlignment::Right);
         line_commands.emplace_back(
             HBMarkupDrawCommand{std::move(full_line), &text_par.font, rel_x, rel_y, alignment});
-        rel_y += text_par.line_height;
+        rel_y -= text_par.line_height;
     }
     return line_commands;
-#endif
 }
 
 std::vector<EnrichedWord> DraftPaginator::text_to_formatted_words(const std::string &text,
                                                                   bool permit_hyphenation) {
-    std::abort();
-#if 0
-    StyleStack current_style(styles.code.font);
+    StyleStack current_style("dummy", Length::from_pt(10));
     auto plain_words = split_to_words(std::string_view(text));
     std::vector<EnrichedWord> processed_words;
     const Language lang = permit_hyphenation ? doc.data.language : Language::Unset;
@@ -588,13 +567,12 @@ std::vector<EnrichedWord> DraftPaginator::text_to_formatted_words(const std::str
                                                   start_style});
     }
     return processed_words;
-#endif
 }
 
 void DraftPaginator::new_page(bool draw_page_num) {
     flush_draw_commands();
     if(draw_page_num) {
-        render_page_num(styles.normal.font);
+        render_page_num(styles.normal);
     }
     rend->new_page();
     if(!pending_figures.empty()) {
@@ -672,7 +650,6 @@ void DraftPaginator::draw_debug_bars(int num_bars, const Length bar_start_y) {
 }
 
 void DraftPaginator::flush_draw_commands() {
-#if 0
     const bool draw_cut_guide = false;
     const bool draw_textarea_box = false;
     Length footnote_block_start = page.h - m.lower - heights.footnote_height;
@@ -699,18 +676,20 @@ void DraftPaginator::flush_draw_commands() {
     for(const auto &c : layout.text) {
         if(std::holds_alternative<HBMarkupDrawCommand>(c)) {
             const auto &md = std::get<HBMarkupDrawCommand>(c);
-            rend->render_markup_as_is(md.markup.c_str(),
-                                      *md.font,
-                                      md.x + current_left_margin(),
-                                      md.y + m.upper + heights.figure_height,
-                                      md.alignment);
+            rend->render_text(md.markup.c_str(),
+                              *md.font,
+                              md.x + current_left_margin(),
+                              md.y - m.upper - heights.figure_height,
+                              md.alignment);
         } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(c)) {
+#if 0
             const auto &md = std::get<HBJustifiedMarkupDrawCommand>(c);
             rend->render_line_justified(md.markup_words,
                                         *md.font,
                                         md.width,
                                         current_left_margin() + md.x,
                                         md.y + m.upper + heights.figure_height);
+#endif
         } else {
             printf("Unknown draw command.\n");
         }
@@ -719,18 +698,20 @@ void DraftPaginator::flush_draw_commands() {
     for(const auto &c : layout.footnote) {
         if(std::holds_alternative<HBMarkupDrawCommand>(c)) {
             const auto &md = std::get<HBMarkupDrawCommand>(c);
-            rend->render_markup_as_is(md.markup.c_str(),
-                                      *md.font,
-                                      current_left_margin() + md.x,
-                                      md.y + footnote_block_start,
-                                      md.alignment);
+            rend->render_text(md.markup.c_str(),
+                              *md.font,
+                              current_left_margin() + md.x,
+                              md.y - footnote_block_start,
+                              md.alignment);
         } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(c)) {
+#if 0
             const auto &md = std::get<HBJustifiedMarkupDrawCommand>(c);
             rend->render_line_justified(md.markup_words,
                                         *md.font,
                                         md.width,
                                         current_left_margin() + md.x,
                                         md.y + footnote_block_start);
+#endif
         } else {
             printf("Unknown draw command.\n");
         }
@@ -746,7 +727,6 @@ void DraftPaginator::flush_draw_commands() {
     }
     layout.clear();
     heights.clear();
-#endif
 }
 
 void DraftPaginator::add_pending_figure(const CapyImageInfo &f) { pending_figures.push_back(f); }
@@ -791,6 +771,4 @@ void DraftPaginator::create_draft_title_page() {
     y -= styles.title.line_height;
     const std::string date = current_date();
     rend->render_text(date.c_str(), styles.author.font, middle, y, CapyTextAlignment::Centered);
-
-    new_page(false);
 }

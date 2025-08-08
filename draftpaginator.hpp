@@ -27,6 +27,11 @@
 
 #include <memory>
 
+struct HBRun {
+    HBTextParameters par;
+    std::string text;
+};
+
 struct HBMarkupDrawCommand {
     std::string markup;
     const HBTextParameters *font;
@@ -93,7 +98,7 @@ public:
     void draw_debug_bars(int num_bars, const Length bar_start_y);
 
 private:
-    void render_page_num(const HBTextParameters &par);
+    void render_page_num(const HBChapterParameters &par);
     std::vector<HBTextCommands>
     build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
                               const HBChapterParameters &text_par,
