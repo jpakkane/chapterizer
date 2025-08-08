@@ -192,7 +192,6 @@ void DraftPaginator::create_maintext() {
     for(const auto &e : doc.elements) {
         if(std::holds_alternative<Section>(e)) {
             create_section(std::get<Section>(e), rel_y, first_section, first_paragraph);
-            return;
         } else if(std::holds_alternative<Paragraph>(e)) {
             create_paragraph(std::get<Paragraph>(e),
                              rel_y,
@@ -256,7 +255,7 @@ void DraftPaginator::create_maintext() {
         } else if(std::holds_alternative<Figure>(e)) {
             const Figure &cb = std::get<Figure>(e);
             const auto fullpath = doc.data.top_dir / cb.file;
-            auto image = rend->get_image(fullpath.c_str());
+            auto image = rend->get_image(fullpath);
             Length display_width = Length::from_mm(double(image.w) / image_dpi * 25.4);
             Length display_height = Length::from_mm(double(image.h) / image_dpi * 25.4);
             if(doc.data.is_draft) {
@@ -352,8 +351,6 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
                                       const Length &bottom_watermark,
                                       const HBChapterParameters &chpar,
                                       Length extra_indent) {
-    std::abort();
-#if 0
     const auto paragraph_width = textblock_width() - 2 * extra_indent;
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
     DraftParagraphFormatter b(processed_words, paragraph_width, chpar, fc);
@@ -394,7 +391,6 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
         rel_y += chpar.line_height;
         heights.text_height += chpar.line_height;
     }
-#endif
 }
 
 void DraftPaginator::create_footnote(const Footnote &f, const Length &bottom_watermark) {

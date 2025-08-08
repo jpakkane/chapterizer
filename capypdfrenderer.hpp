@@ -107,7 +107,7 @@ public:
                    double g,
                    CapyPDF_Line_Cap cap);
 
-    CapyImageInfo get_image(const std::string &path);
+    CapyImageInfo get_image(const std::filesystem::path &path);
 
     void draw_image(const CapyImageInfo &image, Length x, Length y, Length w, Length h);
 
@@ -134,7 +134,7 @@ private:
     double bleed;
     double mediaw, mediah;
     std::unordered_map<hb_font_t *, CapyPDF_FontId> loaded_fonts;
-    std::unordered_map<std::filesystem::path, CapyPDF_ImageId> loaded_images;
+    std::unordered_map<std::filesystem::path, CapyImageInfo> loaded_images;
     std::string outname;
     HBFontCache &fc;
     HBMeasurer meas;

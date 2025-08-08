@@ -569,25 +569,22 @@ void CapyPdfRenderer::draw_line(
     capyctx.cmd_Q();
 }
 
-CapyImageInfo CapyPdfRenderer::get_image(const std::string &path) {
-    /*
-    ImageInfo result;
+CapyImageInfo CapyPdfRenderer::get_image(const std::filesystem::path &path) {
     auto it = loaded_images.find(path);
     if(it != loaded_images.end()) {
-        result.surf = it->second;
-    } else {
-        result.surf = cairo_image_surface_create_from_png(path.c_str());
-        if(cairo_surface_status(result.surf) != CAIRO_STATUS_SUCCESS) {
-            printf("Failed to load image %s.\n", path.c_str());
-            std::abort();
-        }
-        loaded_images[path] = result.surf;
+        return it->second;
     }
-    result.w = cairo_image_surface_get_width(result.surf);
-    result.h = cairo_image_surface_get_height(result.surf);
-    return result;
-    */
-    std::abort();
+
+    CapyImageInfo info;
+    capypdf::RasterImage rimage = capygen.load_image(path.string().c_str());
+    auto size = rimage.get_size();
+    info.w = size.w;
+    info.h = size.h;
+    capypdf::ImagePdfProperties iprops;
+    info.id = capygen.add_image(rimage, iprops);
+    loaded_images[path] = info;
+
+    return info;
 }
 
 void CapyPdfRenderer::draw_image(
