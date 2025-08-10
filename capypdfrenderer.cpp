@@ -327,6 +327,10 @@ void CapyPdfRenderer::render_text_as_is(const char *line,
                                         const HBTextParameters &par,
                                         Length x,
                                         Length y) {
+    auto line_size = strlen(line);
+    if(line_size == 0) {
+        return;
+    }
     auto fontinfo = std::move(fc.get_font(par.par).value());
     auto capyfont_id = hbfont2capyfont(par, fontinfo);
     hb_buffer_t *buf = hb_buffer_create();
@@ -335,7 +339,7 @@ void CapyPdfRenderer::render_text_as_is(const char *line,
     const double num_steps = HBFontCache::NUM_STEPS;
     const double hbscale = par.size.pt() * num_steps;
 
-    hb_buffer_add_utf8(buf, line, -1, 0, -1);
+    hb_buffer_add_utf8(buf, line, line_size, 0, -1);
     hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
     hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
     hb_buffer_set_language(buf, hb_language_from_string("fi", -1));

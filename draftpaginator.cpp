@@ -220,7 +220,7 @@ void DraftPaginator::create_maintext() {
             first_paragraph = true;
         } else if(std::holds_alternative<CodeBlock>(e)) {
             const CodeBlock &cb = std::get<CodeBlock>(e);
-            rel_y += spaces.different_paragraphs;
+            rel_y -= spaces.different_paragraphs;
             heights.whitespace_height += spaces.different_paragraphs;
             for(const auto &line : cb.raw_lines) {
                 if(heights.total_height() >= bottom_watermark) {
@@ -232,11 +232,11 @@ void DraftPaginator::create_maintext() {
                                                              spaces.codeblock_indent,
                                                              rel_y,
                                                              CapyTextAlignment::Left});
-                rel_y += styles.code.line_height;
+                rel_y -= styles.code.line_height;
                 heights.text_height += styles.code.line_height;
             }
             first_paragraph = true;
-            rel_y += spaces.different_paragraphs;
+            rel_y -= spaces.different_paragraphs;
             heights.whitespace_height += spaces.different_paragraphs;
         } else if(std::holds_alternative<Letter>(e)) {
             const Letter &l = std::get<Letter>(e);
@@ -385,7 +385,7 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
         ++lines_in_paragraph;
         layout.text.emplace_back(std::move(line));
         adjust_y(layout.text.back(), current_y_origin);
-        rel_y += chpar.line_height;
+        rel_y -= chpar.line_height;
         heights.text_height += chpar.line_height;
     }
 }
