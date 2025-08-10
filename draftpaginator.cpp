@@ -185,7 +185,7 @@ void DraftPaginator::generate_pdf(const char *outfile) {
 
 void DraftPaginator::create_maintext() {
     const Length bottom_watermark = page.h - m.lower - m.upper;
-    Length rel_y;
+    Length rel_y; // Relative to top margin.
     bool first_paragraph = true;
     bool first_section = true;
 
@@ -240,7 +240,7 @@ void DraftPaginator::create_maintext() {
             heights.whitespace_height += spaces.different_paragraphs;
         } else if(std::holds_alternative<Letter>(e)) {
             const Letter &l = std::get<Letter>(e);
-            rel_y += spaces.different_paragraphs;
+            rel_y -= spaces.different_paragraphs;
             heights.whitespace_height += spaces.different_paragraphs;
             first_paragraph = true;
             for(const auto &partext : l.paragraphs) {
@@ -249,7 +249,7 @@ void DraftPaginator::create_maintext() {
                     p, rel_y, bottom_watermark, styles.letter, doc.data.pdf.spaces.letter_indent);
                 first_paragraph = false;
             }
-            rel_y += spaces.different_paragraphs;
+            rel_y -= spaces.different_paragraphs;
             heights.whitespace_height += spaces.different_paragraphs;
             first_paragraph = true;
         } else if(std::holds_alternative<Figure>(e)) {
@@ -258,10 +258,8 @@ void DraftPaginator::create_maintext() {
             auto image = rend->get_image(fullpath);
             Length display_width = Length::from_mm(double(image.w) / image_dpi * 25.4);
             Length display_height = Length::from_mm(double(image.h) / image_dpi * 25.4);
-            if(doc.data.is_draft) {
-                display_height = display_height / 2;
-                display_width = display_width / 2;
-            }
+            display_height = display_height / 2;
+            display_width = display_width / 2;
             if(chapter_start_page == rend->page_num()) {
                 add_pending_figure(image);
             } else if(heights.figure_height > Length::zero()) {
@@ -317,7 +315,7 @@ void DraftPaginator::create_section(const Section &s,
     chapter_start_page = rend->page_num();
     rend->add_section_outline(s.number, s.text);
     first_section = false;
-    rel_y = page.h;
+    rel_y = Length::zero();
     rel_y -= spaces.above_section;
     heights.whitespace_height += spaces.above_section;
     assert(s.level == 1);
@@ -332,7 +330,8 @@ void DraftPaginator::create_section(const Section &s,
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(title_string, false);
     DraftParagraphFormatter b(processed_words, section_width, styles.section, fc);
     auto lines = b.split_formatted_lines_to_runs();
-    auto built_lines = build_ragged_paragraph(lines, styles.section, section_alignment, rel_y);
+    auto built_lines =
+        build_ragged_paragraph(lines, styles.section, section_alignment, Length::zero(), rel_y);
     for(auto &line : built_lines) {
         layout.text.emplace_back(std::move(line));
         rel_y -= styles.section.line_height;
@@ -353,7 +352,8 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
     DraftParagraphFormatter b(processed_words, paragraph_width, chpar, fc);
     auto lines = b.split_formatted_lines_to_runs();
     std::vector<HBTextCommands> built_lines;
-    built_lines = build_ragged_paragraph(lines, chpar, CapyTextAlignment::Left, Length::zero());
+    built_lines = build_ragged_paragraph(
+        lines, chpar, CapyTextAlignment::Left, Length::zero(), Length::zero());
     if(!built_lines.empty()) {
         auto &first_line = built_lines[0];
         if(std::holds_alternative<HBMarkupDrawCommand>(first_line)) {
@@ -379,7 +379,7 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
     for(auto &line : built_lines) {
         if(heights.total_height() + chpar.line_height > bottom_watermark) {
             new_page(true);
-            current_y_origin = -lines_in_paragraph * chpar.line_height;
+            current_y_origin = lines_in_paragraph * chpar.line_height;
             rel_y = Length::zero();
         }
         ++lines_in_paragraph;
@@ -424,29 +424,32 @@ void DraftPaginator::create_numberlist(const NumberList &nl, Length &rel_y) {
     const Length indent = spaces.codeblock_indent; // FIXME
     const Length text_width = paragraph_width - number_area - 2 * indent;
     const Length item_separator = spaces.different_paragraphs / 2;
-    rel_y += spaces.different_paragraphs;
+    rel_y -= spaces.different_paragraphs;
     heights.whitespace_height += spaces.different_paragraphs;
     for(size_t i = 0; i < nl.items.size(); ++i) {
         if(i != 0) {
-            rel_y += item_separator;
+            rel_y -= item_separator;
             heights.whitespace_height += item_separator;
         }
         std::vector<EnrichedWord> processed_words = text_to_formatted_words(nl.items[i]);
         DraftParagraphFormatter b(processed_words, text_width, styles.lists, fc);
-        auto lines = b.split_formatted_lines();
+        auto lines = b.split_formatted_lines_to_runs();
         std::string fnum = std::to_string(i + 1);
         fnum += '.';
         layout.text.emplace_back(HBMarkupDrawCommand{
             std::move(fnum), &styles.lists.font, indent, rel_y, CapyTextAlignment::Left});
-        for(auto &line : build_justified_paragraph(
-                lines, styles.lists, text_width, indent + number_area, rel_y)) {
+        for(auto &line : build_ragged_paragraph(lines,
+                                                styles.lists,
+                                                CapyTextAlignment::Left, // FIXME
+                                                indent + number_area,
+                                                rel_y)) {
             // FIXME, handle page changes.
             layout.text.emplace_back(std::move(line));
             heights.text_height += styles.lists.line_height;
-            rel_y += styles.lists.line_height;
+            rel_y -= styles.lists.line_height;
         }
     }
-    rel_y += spaces.different_paragraphs;
+    rel_y -= spaces.different_paragraphs;
     heights.whitespace_height += spaces.different_paragraphs;
 }
 
@@ -455,10 +458,8 @@ void DraftPaginator::add_top_image(const CapyImageInfo &image) {
     cmd.i = image;
     cmd.display_width = Length::from_mm(double(image.w) / image_dpi * 25.4);
     cmd.display_height = Length::from_mm(double(image.h) / image_dpi * 25.4);
-    if(doc.data.is_draft) {
-        cmd.display_height = cmd.display_height / 2;
-        cmd.display_width = cmd.display_width / 2;
-    }
+    cmd.display_height = cmd.display_height / 2;
+    cmd.display_width = cmd.display_width / 2;
     cmd.x = textblock_width() / 2 - cmd.display_width / 2;
     cmd.y = page.h - m.upper - cmd.display_height;
     layout.images.emplace_back(std::move(cmd));
@@ -512,7 +513,7 @@ DraftPaginator::build_justified_paragraph(const std::vector<std::vector<std::str
                                                            CapyTextAlignment::Left});
         }
         line_num++;
-        rel_y += text_par.line_height;
+        rel_y -= text_par.line_height;
     }
     return line_commands;
 }
@@ -525,6 +526,7 @@ DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string
     std::vector<HBTextCommands> line_commands;
     const auto rel_x =
         alignment == CapyTextAlignment::Centered ? textblock_width() / 2 : Length::zero();
+
     line_commands.reserve(lines.size());
     for(const auto &markup_words : lines) {
         std::string full_line;
@@ -543,10 +545,11 @@ std::vector<HBTextCommands>
 DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<HBRun>> &lines,
                                        const HBChapterParameters &text_par,
                                        const CapyTextAlignment alignment,
+                                       Length extra_x,
                                        Length rel_y) {
     std::vector<HBTextCommands> line_commands;
-    const auto rel_x =
-        alignment == CapyTextAlignment::Centered ? textblock_width() / 2 : Length::zero();
+    const auto rel_x = extra_x + (alignment == CapyTextAlignment::Centered ? textblock_width() / 2
+                                                                           : Length::zero());
     line_commands.reserve(lines.size());
     for(const auto &runs : lines) {
         std::string full_line;
@@ -690,7 +693,7 @@ void DraftPaginator::flush_draw_commands() {
             rend->render_text(md.markup.c_str(),
                               *md.font,
                               md.x + current_left_margin(),
-                              md.y - m.upper - heights.figure_height,
+                              page.h - m.upper - heights.figure_height + md.y,
                               md.alignment);
         } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(c)) {
 #if 0

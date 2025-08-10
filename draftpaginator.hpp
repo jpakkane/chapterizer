@@ -108,6 +108,7 @@ private:
     std::vector<HBTextCommands> build_ragged_paragraph(const std::vector<std::vector<HBRun>> &lines,
                                                        const HBChapterParameters &text_par,
                                                        const CapyTextAlignment alignment,
+                                                       Length extra_x,
                                                        Length rel_y);
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
                                                       bool permit_hyphenation = true);
