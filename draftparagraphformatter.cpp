@@ -124,6 +124,25 @@ std::string wordfragment2markup(StyleStack &current_style,
     return markup;
 }
 
+HBRun wordfragment2run(const HBTextParameters &par,
+                       StyleStack &current_style,
+                       const EnrichedWord &w,
+                       size_t start,
+                       size_t end,
+                       bool add_space,
+                       bool add_dash) {
+    HBRun run;
+    run.par = par;
+    run.text = w.text.substr(start, end);
+    if(add_dash) {
+        run.text += '-';
+    }
+    if(add_space) {
+        run.text += ' ';
+    }
+    return run;
+}
+
 } // namespace
 
 DraftParagraphFormatter::DraftParagraphFormatter(const std::vector<EnrichedWord> &words_,
@@ -136,6 +155,12 @@ std::vector<std::vector<std::string>> DraftParagraphFormatter::split_formatted_l
     HBMeasurer shaper(fc, "fi");
     precompute();
     return stats_to_markup_lines(simple_split(shaper));
+}
+
+std::vector<std::vector<HBRun>> DraftParagraphFormatter::split_formatted_lines_to_runs() {
+    HBMeasurer shaper(fc, "fi");
+    precompute();
+    return stats_to_line_runs(simple_split(shaper));
 }
 
 void DraftParagraphFormatter::precompute() {
@@ -181,6 +206,18 @@ DraftParagraphFormatter::stats_to_markup_lines(const std::vector<LineStats> &lin
         lines.emplace_back(
             build_line_words_markup(linestats[i - 1].end_split, linestats[i].end_split));
     }
+    return lines;
+}
+
+std::vector<std::vector<HBRun>>
+DraftParagraphFormatter::stats_to_line_runs(const std::vector<LineStats> &linestats) const {
+    std::vector<std::vector<HBRun>> lines;
+    lines.reserve(linestats.size());
+    lines.push_back(build_line_words_runs(0, linestats[0].end_split));
+    for(size_t i = 1; i < linestats.size(); ++i) {
+        lines.push_back(build_line_words_runs(linestats[i - 1].end_split, linestats[i].end_split));
+    }
+
     return lines;
 }
 
@@ -296,6 +333,44 @@ DraftParagraphFormatter::build_line_words_markup(size_t from_split_ind, size_t t
     return markup_words;
 }
 
+std::vector<HBRun> DraftParagraphFormatter::build_line_words_runs(size_t from_split_ind,
+                                                                  size_t to_split_ind) const {
+    std::vector<HBRun> runs;
+    if(to_split_ind == from_split_ind) {
+        return runs;
+    }
+
+    const WordsOnLine line_words = words_for_splits(from_split_ind, to_split_ind);
+    const auto &from_loc = split_locations[from_split_ind];
+
+    StyleStack current_style = determine_style(from_loc);
+
+    if(line_words.first) {
+        runs.emplace_back(wordfragment2run(params.font,
+                                           current_style,
+                                           words[line_words.first->word],
+                                           line_words.first->from_bytes,
+                                           std::string::npos,
+                                           true,
+                                           false));
+    }
+    for(size_t i = line_words.full_word_begin; i < line_words.full_word_end; ++i) {
+        const bool add_space = i + 1 != line_words.full_word_end || line_words.last;
+        runs.emplace_back(wordfragment2run(
+            params.font, current_style, words[i], 0, std::string::npos, add_space, false));
+    }
+    if(line_words.last) {
+        runs.emplace_back(wordfragment2run(params.font,
+                                           current_style,
+                                           words[line_words.last->word],
+                                           0,
+                                           line_words.last->to_bytes,
+                                           false,
+                                           line_words.last->add_dash));
+    }
+    return runs;
+}
+
 StyleStack DraftParagraphFormatter::determine_style(TextLocation t) const {
     const auto &current_word = words[t.word_index];
     StyleStack style = words[t.word_index].start_style;
@@ -342,8 +417,8 @@ LineStats DraftParagraphFormatter::compute_closest_line_end(size_t start_split,
         split_points.end(),
         [this, &shaper, start_split, target_line_width_mm](const SplitPoint &p) {
             const auto loc = &p - split_points.data();
-            const auto trial_line = build_line_markup(start_split, loc);
-            const auto trial_width = shaper.text_width(trial_line.c_str(), params.font);
+            const auto trial_runs = build_line_words_runs(start_split, loc);
+            const auto trial_width = shaper.text_width(trial_runs);
             return trial_width <= target_line_width_mm;
         });
     if(ppoint == split_points.end()) {

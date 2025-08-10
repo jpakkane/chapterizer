@@ -27,11 +27,6 @@
 
 #include <memory>
 
-struct HBRun {
-    HBTextParameters par;
-    std::string text;
-};
-
 struct HBMarkupDrawCommand {
     std::string markup;
     const HBTextParameters *font;
@@ -110,6 +105,10 @@ private:
                            const HBChapterParameters &text_par,
                            const CapyTextAlignment alignment,
                            Length rel_y);
+    std::vector<HBTextCommands> build_ragged_paragraph(const std::vector<std::vector<HBRun>> &lines,
+                                                       const HBChapterParameters &text_par,
+                                                       const CapyTextAlignment alignment,
+                                                       Length rel_y);
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
                                                       bool permit_hyphenation = true);
 

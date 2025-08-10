@@ -211,7 +211,7 @@ void DraftPaginator::create_maintext() {
                                                          textblock_width() / 2,
                                                          rel_y,
                                                          CapyTextAlignment::Centered});
-            rel_y += styles.normal.line_height;
+            rel_y -= styles.normal.line_height;
             heights.whitespace_height += styles.normal.line_height;
             if(rel_y >= bottom_watermark) {
                 new_page(true);
@@ -331,7 +331,7 @@ void DraftPaginator::create_section(const Section &s,
     // The title. Hyphenation is prohibited.
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(title_string, false);
     DraftParagraphFormatter b(processed_words, section_width, styles.section, fc);
-    auto lines = b.split_formatted_lines();
+    auto lines = b.split_formatted_lines_to_runs();
     auto built_lines = build_ragged_paragraph(lines, styles.section, section_alignment, rel_y);
     for(auto &line : built_lines) {
         layout.text.emplace_back(std::move(line));
@@ -351,7 +351,7 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
     const auto paragraph_width = textblock_width() - 2 * extra_indent;
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
     DraftParagraphFormatter b(processed_words, paragraph_width, chpar, fc);
-    auto lines = b.split_formatted_lines();
+    auto lines = b.split_formatted_lines_to_runs();
     std::vector<HBTextCommands> built_lines;
     built_lines = build_ragged_paragraph(lines, chpar, CapyTextAlignment::Left, Length::zero());
     if(!built_lines.empty()) {
@@ -530,6 +530,28 @@ DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string
         std::string full_line;
         for(const auto &w : markup_words) {
             full_line += w;
+        }
+        assert(alignment != CapyTextAlignment::Right);
+        line_commands.emplace_back(
+            HBMarkupDrawCommand{std::move(full_line), &text_par.font, rel_x, rel_y, alignment});
+        rel_y -= text_par.line_height;
+    }
+    return line_commands;
+}
+
+std::vector<HBTextCommands>
+DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<HBRun>> &lines,
+                                       const HBChapterParameters &text_par,
+                                       const CapyTextAlignment alignment,
+                                       Length rel_y) {
+    std::vector<HBTextCommands> line_commands;
+    const auto rel_x =
+        alignment == CapyTextAlignment::Centered ? textblock_width() / 2 : Length::zero();
+    line_commands.reserve(lines.size());
+    for(const auto &runs : lines) {
+        std::string full_line;
+        for(const auto &run : runs) {
+            full_line += run.text;
         }
         assert(alignment != CapyTextAlignment::Right);
         line_commands.emplace_back(

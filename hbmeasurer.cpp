@@ -70,6 +70,14 @@ Length HBMeasurer::text_width(const char *utf8_text, const HBTextParameters &tex
     return total_size;
 }
 
+Length HBMeasurer::text_width(const std::vector<HBRun> &runs) const {
+    Length total_size;
+    for(const auto &r : runs) {
+        total_size += compute_width(r.text.c_str(), r.par);
+    }
+    return total_size;
+}
+
 Length HBMeasurer::compute_width(const char *utf8_text, const HBTextParameters &text_par) const {
     const double num_steps = 64;
     const double hbscale = text_par.size.pt() * num_steps;

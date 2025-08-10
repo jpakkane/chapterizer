@@ -33,6 +33,11 @@ struct HBTextParameters {
     }
 };
 
+struct HBRun {
+    HBTextParameters par;
+    std::string text;
+};
+
 struct HBStyledPlainText {
     std::string text;
     HBTextParameters font;
@@ -72,6 +77,8 @@ public:
     Length text_width(const std::string &s, const HBTextParameters &font) const {
         return text_width(s.c_str(), font);
     };
+
+    Length text_width(const std::vector<HBRun> &runs) const;
 
     Length codepoint_right_overhang(const uint32_t uchar, const HBTextParameters &font) const;
 
