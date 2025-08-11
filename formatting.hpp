@@ -53,6 +53,9 @@ template<typename T, int max_elements> class SmallStack final {
 public:
     typedef T value_type;
 
+    // FIXME, convert to an actual class once Pango goes away.
+    friend class HBStyleApplier;
+
     SmallStack() {
         tt_start_tag = "<tt>";
         tt_end_tag = "</tt>";

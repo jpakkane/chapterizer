@@ -40,8 +40,8 @@ template<typename T> void style_change(T &stack, typename T::value_type val) {
 }
 
 void adjust_y(HBTextCommands &c, Length diff) {
-    if(std::holds_alternative<HBMarkupDrawCommand>(c)) {
-        auto &mc = std::get<HBMarkupDrawCommand>(c);
+    if(std::holds_alternative<HBRunDrawCommand>(c)) {
+        auto &mc = std::get<HBRunDrawCommand>(c);
         mc.y += diff;
     } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(c)) {
         auto &mc = std::get<HBJustifiedMarkupDrawCommand>(c);
@@ -206,11 +206,11 @@ void DraftPaginator::create_maintext() {
             }
             create_footnote(std::get<Footnote>(e), bottom_watermark);
         } else if(std::holds_alternative<SceneChange>(e)) {
-            layout.text.emplace_back(HBMarkupDrawCommand{"#",
-                                                         &styles.normal.font,
-                                                         textblock_width() / 2,
-                                                         rel_y,
-                                                         CapyTextAlignment::Centered});
+            layout.text.emplace_back(SimpleTextDrawCommand{"#",
+                                                           styles.normal.font,
+                                                           textblock_width() / 2,
+                                                           rel_y,
+                                                           CapyTextAlignment::Centered});
             rel_y -= styles.normal.line_height;
             heights.whitespace_height += styles.normal.line_height;
             if(rel_y >= bottom_watermark) {
@@ -227,11 +227,11 @@ void DraftPaginator::create_maintext() {
                     new_page(true);
                     rel_y = Length::zero();
                 }
-                layout.text.emplace_back(HBMarkupDrawCommand{line.c_str(),
-                                                             &styles.code.font,
-                                                             spaces.codeblock_indent,
-                                                             rel_y,
-                                                             CapyTextAlignment::Left});
+                layout.text.emplace_back(SimpleTextDrawCommand{line.c_str(),
+                                                               styles.code.font,
+                                                               spaces.codeblock_indent,
+                                                               rel_y,
+                                                               CapyTextAlignment::Left});
                 rel_y -= styles.code.line_height;
                 heights.text_height += styles.code.line_height;
             }
@@ -284,11 +284,11 @@ void DraftPaginator::create_maintext() {
                     rel_y = Length::zero();
                 }
                 // FIXME, should use small caps.
-                layout.text.emplace_back(HBMarkupDrawCommand{line.c_str(),
-                                                             &styles.normal.font,
-                                                             textblock_width() / 2,
-                                                             rel_y,
-                                                             CapyTextAlignment::Centered});
+                layout.text.emplace_back(SimpleTextDrawCommand{line,
+                                                               styles.normal.font,
+                                                               textblock_width() / 2,
+                                                               rel_y,
+                                                               CapyTextAlignment::Centered});
                 rel_y += styles.code.line_height;
                 heights.text_height += styles.code.line_height;
             }
@@ -356,8 +356,10 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
         lines, chpar, CapyTextAlignment::Left, Length::zero(), Length::zero());
     if(!built_lines.empty()) {
         auto &first_line = built_lines[0];
-        if(std::holds_alternative<HBMarkupDrawCommand>(first_line)) {
-            std::get<HBMarkupDrawCommand>(first_line).x += chpar.indent;
+        if(std::holds_alternative<SimpleTextDrawCommand>(first_line)) {
+            std::get<SimpleTextDrawCommand>(first_line).x += chpar.indent;
+        } else if(std::holds_alternative<HBRunDrawCommand>(first_line)) {
+            std::get<HBRunDrawCommand>(first_line).x += chpar.indent;
         } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(first_line)) {
             std::get<HBJustifiedMarkupDrawCommand>(first_line).x += chpar.indent;
         } else {
@@ -366,8 +368,10 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
     }
     // Shift sideways
     for(auto &line : built_lines) {
-        if(std::holds_alternative<HBMarkupDrawCommand>(line)) {
-            std::get<HBMarkupDrawCommand>(line).x += extra_indent;
+        if(std::holds_alternative<SimpleTextDrawCommand>(line)) {
+            std::get<SimpleTextDrawCommand>(line).x += extra_indent;
+        } else if(std::holds_alternative<HBRunDrawCommand>(line)) {
+            std::get<HBRunDrawCommand>(line).x += extra_indent;
         } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(line)) {
             std::get<HBJustifiedMarkupDrawCommand>(line).x += extra_indent;
         } else {
@@ -406,13 +410,13 @@ void DraftPaginator::create_footnote(const Footnote &f, const Length &bottom_wat
     const auto footnote_total_height = built_lines.size() * styles.footnote.line_height;
     // FIXME, split the footnote over two pages.
     if(heights.total_height() + footnote_total_height >= bottom_watermark) {
-        pending_footnotes.emplace_back(HBMarkupDrawCommand{
-            std::move(fnum), &styles.footnote.font, Length::zero(), tmpy, CapyTextAlignment::Left});
+        pending_footnotes.emplace_back(SimpleTextDrawCommand{
+            std::move(fnum), styles.footnote.font, Length::zero(), tmpy, CapyTextAlignment::Left});
         pending_footnotes.insert(pending_footnotes.end(), built_lines.begin(), built_lines.end());
     } else {
         // FIXME: draw in flush_commands instead?
-        layout.footnote.emplace_back(HBMarkupDrawCommand{
-            std::move(fnum), &styles.footnote.font, Length::zero(), tmpy, CapyTextAlignment::Left});
+        layout.footnote.emplace_back(SimpleTextDrawCommand{
+            std::move(fnum), styles.footnote.font, Length::zero(), tmpy, CapyTextAlignment::Left});
         heights.footnote_height += footnote_total_height;
         layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
     }
@@ -437,8 +441,8 @@ void DraftPaginator::create_numberlist(const NumberList &nl, Length &rel_y) {
         auto lines = b.split_formatted_lines_to_runs();
         std::string fnum = std::to_string(i + 1);
         fnum += '.';
-        layout.text.emplace_back(HBMarkupDrawCommand{
-            std::move(fnum), &styles.lists.font, indent, rel_y, CapyTextAlignment::Left});
+        layout.text.emplace_back(SimpleTextDrawCommand{
+            std::move(fnum), styles.lists.font, indent, rel_y, CapyTextAlignment::Left});
         for(auto &line : build_ragged_paragraph(lines,
                                                 styles.lists,
                                                 CapyTextAlignment::Left, // FIXME
@@ -507,11 +511,12 @@ DraftPaginator::build_justified_paragraph(const std::vector<std::vector<std::str
             for(const auto &w : markup_words) {
                 full_line += w;
             }
-            line_commands.emplace_back(HBMarkupDrawCommand{std::move(full_line),
-                                                           &text_par.font,
-                                                           x + current_indent + x_off,
-                                                           rel_y + y_off,
-                                                           CapyTextAlignment::Left});
+            // FIXME, not correct.
+            line_commands.emplace_back(SimpleTextDrawCommand{std::move(full_line),
+                                                             text_par.font,
+                                                             x + current_indent + x_off,
+                                                             rel_y + y_off,
+                                                             CapyTextAlignment::Left});
         }
         line_num++;
         rel_y -= text_par.line_height;
@@ -536,7 +541,7 @@ DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string
         }
         assert(alignment != CapyTextAlignment::Right);
         line_commands.emplace_back(
-            HBMarkupDrawCommand{std::move(full_line), &text_par.font, rel_x, rel_y, alignment});
+            SimpleTextDrawCommand{std::move(full_line), text_par.font, rel_x, rel_y, alignment});
         rel_y -= text_par.line_height;
     }
     return line_commands;
@@ -553,13 +558,8 @@ DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<HBRun>> &li
                                                                            : Length::zero());
     line_commands.reserve(lines.size());
     for(const auto &runs : lines) {
-        std::string full_line;
-        for(const auto &run : runs) {
-            full_line += run.text;
-        }
         assert(alignment != CapyTextAlignment::Right);
-        line_commands.emplace_back(
-            HBMarkupDrawCommand{std::move(full_line), &text_par.font, rel_x, rel_y, alignment});
+        line_commands.emplace_back(HBRunDrawCommand{std::move(runs), rel_x, rel_y, alignment});
         rel_y -= text_par.line_height;
     }
     return line_commands;
@@ -689,10 +689,16 @@ void DraftPaginator::flush_draw_commands() {
         rend->draw_image(c.i, c.x + current_left_margin(), c.y, c.display_width, c.display_height);
     }
     for(const auto &c : layout.text) {
-        if(std::holds_alternative<HBMarkupDrawCommand>(c)) {
-            const auto &md = std::get<HBMarkupDrawCommand>(c);
-            rend->render_text(md.markup.c_str(),
-                              *md.font,
+        if(std::holds_alternative<SimpleTextDrawCommand>(c)) {
+            const auto &md = std::get<SimpleTextDrawCommand>(c);
+            rend->render_text(md.text.c_str(),
+                              md.par,
+                              md.x + current_left_margin(),
+                              page.h - m.upper - heights.figure_height + md.y,
+                              md.alignment);
+        } else if(std::holds_alternative<HBRunDrawCommand>(c)) {
+            const auto &md = std::get<HBRunDrawCommand>(c);
+            rend->render_runs(md.runs,
                               md.x + current_left_margin(),
                               page.h - m.upper - heights.figure_height + md.y,
                               md.alignment);
@@ -711,10 +717,10 @@ void DraftPaginator::flush_draw_commands() {
     }
 
     for(const auto &c : layout.footnote) {
-        if(std::holds_alternative<HBMarkupDrawCommand>(c)) {
-            const auto &md = std::get<HBMarkupDrawCommand>(c);
-            rend->render_text(md.markup.c_str(),
-                              *md.font,
+        if(std::holds_alternative<SimpleTextDrawCommand>(c)) {
+            const auto &md = std::get<SimpleTextDrawCommand>(c);
+            rend->render_text(md.text.c_str(),
+                              md.par,
                               current_left_margin() + md.x,
                               md.y + footnote_block_start,
                               md.alignment);

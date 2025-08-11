@@ -339,7 +339,6 @@ void CapyPdfRenderer::render_text_as_is(const char *line,
     const double num_steps = HBFontCache::NUM_STEPS;
     const double hbscale = par.size.pt() * num_steps;
 
-    hb_buffer_add_utf8(buf, line, line_size, 0, -1);
     hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
     hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
     hb_buffer_set_language(buf, hb_language_from_string("fi", -1));
@@ -350,17 +349,45 @@ void CapyPdfRenderer::render_text_as_is(const char *line,
     capypdf::Text text = capyctx.text_new();
     text.cmd_Tf(capyfont_id, par.size.pt());
     text.cmd_Td(x.pt(), y.pt());
+    HBRun single_run;
+    single_run.text = line;
+    single_run.par = par;
+    serialize_single_run(single_run, text, buf);
+
+    capyctx.render_text_obj(text);
+}
+
+void CapyPdfRenderer::serialize_single_run(const HBRun &run,
+                                           capypdf::Text &tobj,
+                                           hb_buffer_t *buf) {
+    auto fontinfo = std::move(fc.get_font(run.par.par).value());
+    auto *hbfont = fontinfo.f;
+
+    if(run.text.empty()) {
+        return;
+    }
+
+    const double num_steps = HBFontCache::NUM_STEPS;
+    const double hbscale = run.par.size.pt() * num_steps;
+
+    hb_buffer_clear_contents(buf);
+    hb_buffer_add_utf8(buf, run.text.data(), run.text.size(), 0, -1);
+
+    hb_buffer_guess_segment_properties(buf);
+    hb_font_set_scale(hbfont, hbscale, hbscale);
+
+    // tobj.cmd_Tf(capyfont_id, run.par.size.pt());
     capypdf::TextSequence ts;
 
-    if(par.par.extra == TextExtra::SmallCaps) {
+    if(run.par.par.extra == TextExtra::SmallCaps) {
         hb_feature_t userfeatures[1];
         userfeatures[0].tag = HB_TAG('s', 'm', 'c', 'p');
         userfeatures[0].value = 1;
         userfeatures[0].start = HB_FEATURE_GLOBAL_START;
         userfeatures[0].end = HB_FEATURE_GLOBAL_END;
-        hb_shape(fontinfo.f, buf, userfeatures, 1);
+        hb_shape(hbfont, buf, userfeatures, 1);
     } else {
-        hb_shape(fontinfo.f, buf, nullptr, 0);
+        hb_shape(hbfont, buf, nullptr, 0);
     }
 
     unsigned int glyph_count;
@@ -374,8 +401,9 @@ void CapyPdfRenderer::render_text_as_is(const char *line,
         // hb_position_t y_offset = curpos->y_offset;
         hb_position_t x_advance = curpos->x_advance;
         // hb_position_t y_advance = curpos->y_advance;
-        std::string_view original_text(line + glyph_info[i].cluster,
-                                       line + get_endpoint(glyph_info, glyph_count, i, line));
+        std::string_view original_text(
+            run.text.data() + glyph_info[i].cluster,
+            run.text.data() + get_endpoint(glyph_info, glyph_count, i, run.text.data()));
         auto hb_glyph_advance_in_font_units =
             hb_font_get_glyph_h_advance(fontinfo.f, current->codepoint) / hbscale *
             fontinfo.units_per_em;
@@ -394,8 +422,7 @@ void CapyPdfRenderer::render_text_as_is(const char *line,
         }
     }
 
-    text.cmd_TJ(ts);
-    capyctx.render_text_obj(text);
+    tobj.cmd_TJ(ts);
 }
 
 void CapyPdfRenderer::render_text(const char *line,
@@ -421,6 +448,40 @@ void CapyPdfRenderer::render_text(const char *line,
         render_text_as_is(line, par, x - text_width, y);
         break;
     }
+}
+
+void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
+                                  Length x,
+                                  Length y,
+                                  CapyTextAlignment alignment) {
+    // FIXME, use alignment.
+
+    hb_buffer_t *buf = hb_buffer_create();
+    std::unique_ptr<hb_buffer_t, HBBufferCloser> bc(buf);
+
+    const double num_steps = HBFontCache::NUM_STEPS;
+
+    hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
+    hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
+    hb_buffer_set_language(buf, hb_language_from_string("fi", -1));
+
+    hb_buffer_guess_segment_properties(buf);
+
+    capypdf::Text text = capyctx.text_new();
+    text.cmd_Td(x.pt(), y.pt());
+    for(size_t i = 0; i < runs.size(); ++i) {
+        const auto &run = runs[i];
+        if(i == 0 || runs[i].par != runs[i - 1].par) {
+            auto fontinfo = std::move(fc.get_font(run.par.par).value());
+            auto capyfont_id = hbfont2capyfont(run.par, fontinfo);
+            const double hbscale = run.par.size.pt() * num_steps;
+            hb_font_set_scale(fontinfo.f, hbscale, hbscale);
+            text.cmd_Tf(capyfont_id, run.par.size.pt());
+        }
+        serialize_single_run(run, text, buf);
+    }
+
+    capyctx.render_text_obj(text);
 }
 
 void CapyPdfRenderer::render_markup_as_is(
@@ -619,7 +680,7 @@ CapyPDF_FontId CapyPdfRenderer::hbfont2capyfont(const HBTextParameters &par,
         return it->second;
     }
     capypdf::FontProperties fprop;
-    auto font_id = capygen.load_font(fontinfo.fname->c_str(), fprop);
+    auto font_id = capygen.load_font(fontinfo.fname->string().c_str(), fprop);
     loaded_fonts[fontinfo.f] = font_id;
     return font_id;
 }

@@ -94,6 +94,8 @@ std::optional<FontInfo> HBFontCache::get_font(TextCategory cat, TextStyle style)
     case TextCategory::Monospace:
         p = &monospace;
         break;
+    default:
+        std::abort();
     }
     switch(style) {
     case TextStyle::Regular:
@@ -108,6 +110,8 @@ std::optional<FontInfo> HBFontCache::get_font(TextCategory cat, TextStyle style)
     case TextStyle::BoldItalic:
         result = FontInfo(p->bolditalic);
         break;
+    default:
+        std::abort();
     }
     if(!result.f) {
         return {};

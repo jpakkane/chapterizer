@@ -68,6 +68,9 @@ public:
                      Length y,
                      CapyTextAlignment alignment);
 
+    void
+    render_runs(const std::vector<HBRun> &runs, Length x, Length y, CapyTextAlignment alignment);
+
     void render_markup_as_is(const char *line,
                              const FontParameters &par,
                              Length x,
@@ -125,6 +128,8 @@ public:
 private:
     void draw_grid();
     void draw_cropmarks();
+
+    void serialize_single_run(const HBRun &run, capypdf::Text &tobj, hb_buffer_t *buf);
 
     CapyPDF_FontId hbfont2capyfont(const HBTextParameters &par, const FontInfo &fontinfo);
 

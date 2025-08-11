@@ -44,7 +44,7 @@ enum class TextCategory : uint8_t {
     Monospace,
 };
 
-enum class TextStyle {
+enum class TextStyle : uint8_t {
     Regular,
     Italic,
     Bold,

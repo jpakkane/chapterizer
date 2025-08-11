@@ -22,6 +22,43 @@
 #include <cassert>
 #include <cmath>
 
+class HBStyleApplier {
+public:
+    HBStyleApplier(const StyleStack &stack_) : stack{stack_} {}
+
+    void apply_to_base_style(HBFontProperties &props) {
+
+        for(int i = 0; i < stack.size; ++i) {
+            switch(stack.arr[i]) {
+            case ITALIC_S:
+                props.style = (TextStyle)((uint8_t)props.style ^ (uint8_t)TextStyle::Italic);
+                break;
+            case BOLD_S:
+                props.style = (TextStyle)((uint8_t)props.style ^ (uint8_t)TextStyle::Bold);
+                break;
+            case TT_S:
+                assert(props.cat != TextCategory::Monospace);
+                props.cat = TextCategory::Monospace;
+                break;
+            case SMALLCAPS_S:
+                props.extra = (TextExtra)((uint8_t)props.extra ^ (uint8_t)TextExtra::SmallCaps);
+                break;
+            case SUPERSCRIPT_S:
+                fprintf(stderr, "Superscript not supported yet.\n");
+                std::abort();
+            case SUBSCRIPT_S:
+                fprintf(stderr, "Subscript not supported yet.\n");
+                std::abort();
+            default:
+                std::abort();
+            }
+        }
+    }
+
+private:
+    const StyleStack &stack;
+};
+
 namespace {
 
 void toggle_format(StyleStack &current_style, std::string &line, const char format_to_toggle) {
@@ -78,6 +115,48 @@ void toggle_format(StyleStack &current_style, std::string &line, const char form
     }
 }
 
+void toggle_format(StyleStack &current_style, const char format_to_toggle) {
+    if(current_style.contains(format_to_toggle)) {
+        current_style.pop(format_to_toggle);
+        switch(format_to_toggle) {
+        case ITALIC_S:
+            break;
+        case BOLD_S:
+            break;
+        case TT_S:
+            break;
+        case SMALLCAPS_S:
+            break;
+        case SUPERSCRIPT_S:
+            break;
+        case SUBSCRIPT_S:
+            break;
+        default:
+            printf("Bad style end bit.\n");
+            std::abort();
+        }
+    } else {
+        current_style.push(format_to_toggle);
+        switch(format_to_toggle) {
+        case ITALIC_S:
+            break;
+        case BOLD_S:
+            break;
+        case TT_S:
+            break;
+        case SMALLCAPS_S:
+            break;
+        case SUPERSCRIPT_S:
+            break;
+        case SUBSCRIPT_S:
+            break;
+        default:
+            printf("Bad style start bit.\n");
+            std::abort();
+        }
+    }
+}
+
 std::string wordfragment2markup(StyleStack &current_style,
                                 const EnrichedWord &w,
                                 size_t start,
@@ -124,23 +203,55 @@ std::string wordfragment2markup(StyleStack &current_style,
     return markup;
 }
 
-HBRun wordfragment2run(const HBTextParameters &par,
-                       StyleStack &current_style,
-                       const EnrichedWord &w,
-                       size_t start,
-                       size_t end,
-                       bool add_space,
-                       bool add_dash) {
-    HBRun run;
-    run.par = par;
-    run.text = w.text.substr(start, end);
+std::vector<HBRun> wordfragment2runs(const HBTextParameters &original_par,
+                                     StyleStack &sstack,
+                                     const EnrichedWord &w,
+                                     size_t start,
+                                     size_t end,
+                                     bool add_space,
+                                     bool add_dash) {
+    std::vector<HBRun> runs;
+    HBTextParameters active_par = original_par;
+    std::string current_run;
+
+    std::string_view view = std::string_view{w.text}.substr(start, end);
+    assert(g_utf8_validate(view.data(), view.length(), nullptr));
+    size_t style_point = 0;
+    while(style_point < w.f.size() && w.f[style_point].offset < start) {
+        ++style_point;
+    }
+    for(size_t i = 0; i < view.size(); ++i) {
+        while(style_point < w.f.size() && w.f[style_point].offset == start + i) {
+            toggle_format(sstack, w.f[style_point].format);
+            HBStyleApplier applier(sstack);
+            auto new_active_style = active_par.par;
+            applier.apply_to_base_style(new_active_style);
+            active_par.par = new_active_style;
+            if(current_run.empty()) {
+                // Skip multiple style changes in a row.
+            } else {
+                runs.emplace_back(active_par, std::move(current_run));
+                current_run.clear();
+            }
+            ++style_point;
+        }
+        current_run += view[i];
+    }
+
     if(add_dash) {
-        run.text += '-';
+        current_run += '-';
+    }
+    while(style_point < w.f.size()) {
+        toggle_format(sstack, w.f[style_point].format);
+        ++style_point;
     }
     if(add_space) {
-        run.text += ' ';
+        current_run += ' ';
     }
-    return run;
+    if(!current_run.empty()) {
+        runs.emplace_back(active_par, std::move(current_run));
+    }
+    return runs;
 }
 
 } // namespace
@@ -346,27 +457,36 @@ std::vector<HBRun> DraftParagraphFormatter::build_line_words_runs(size_t from_sp
     StyleStack current_style = determine_style(from_loc);
 
     if(line_words.first) {
-        runs.emplace_back(wordfragment2run(params.font,
-                                           current_style,
-                                           words[line_words.first->word],
-                                           line_words.first->from_bytes,
-                                           std::string::npos,
-                                           true,
-                                           false));
+        auto new_runs = wordfragment2runs(params.font,
+                                          current_style,
+                                          words[line_words.first->word],
+                                          line_words.first->from_bytes,
+                                          std::string::npos,
+                                          true,
+                                          false);
+        for(auto &r : new_runs) {
+            runs.push_back(std::move(r));
+        }
     }
     for(size_t i = line_words.full_word_begin; i < line_words.full_word_end; ++i) {
         const bool add_space = i + 1 != line_words.full_word_end || line_words.last;
-        runs.emplace_back(wordfragment2run(
-            params.font, current_style, words[i], 0, std::string::npos, add_space, false));
+        auto new_runs = wordfragment2runs(
+            params.font, current_style, words[i], 0, std::string::npos, add_space, false);
+        for(auto &r : new_runs) {
+            runs.push_back(std::move(r));
+        }
     }
     if(line_words.last) {
-        runs.emplace_back(wordfragment2run(params.font,
-                                           current_style,
-                                           words[line_words.last->word],
-                                           0,
-                                           line_words.last->to_bytes,
-                                           false,
-                                           line_words.last->add_dash));
+        auto new_runs = wordfragment2runs(params.font,
+                                          current_style,
+                                          words[line_words.last->word],
+                                          0,
+                                          line_words.last->to_bytes,
+                                          false,
+                                          line_words.last->add_dash);
+        for(auto &r : new_runs) {
+            runs.push_back(std::move(r));
+        }
     }
     return runs;
 }

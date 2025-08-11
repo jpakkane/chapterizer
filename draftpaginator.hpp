@@ -27,9 +27,16 @@
 
 #include <memory>
 
-struct HBMarkupDrawCommand {
-    std::string markup;
-    const HBTextParameters *font;
+struct HBRunDrawCommand {
+    std::vector<HBRun> runs;
+    Length x;
+    Length y;
+    CapyTextAlignment alignment;
+};
+
+struct SimpleTextDrawCommand {
+    std::string text;
+    HBTextParameters par;
     Length x;
     Length y;
     CapyTextAlignment alignment;
@@ -51,7 +58,8 @@ struct CapyImageCommand {
     Length display_width;
 };
 
-typedef std::variant<HBMarkupDrawCommand, HBJustifiedMarkupDrawCommand> HBTextCommands;
+typedef std::variant<SimpleTextDrawCommand, HBRunDrawCommand, HBJustifiedMarkupDrawCommand>
+    HBTextCommands;
 
 struct PageLayout {
     std::vector<CapyImageCommand> images;
