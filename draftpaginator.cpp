@@ -391,16 +391,18 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
 }
 
 void DraftPaginator::create_footnote(const Footnote &f, const Length &bottom_watermark) {
-#if 0
     const auto paragraph_width = page.w - m.inner - m.outer;
     heights.whitespace_height += spaces.footnote_separation;
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(f.text);
-    DraftParagraphFormatter b(processed_words, paragraph_width, styles.footnote, fc);
-    auto lines = b.split_formatted_lines();
+    const Length number_indent = Length::from_pt(16);
+    DraftParagraphFormatter b(
+        processed_words, paragraph_width - number_indent, styles.footnote, fc);
+    auto lines = b.split_formatted_lines_to_runs();
     std::string fnum = std::to_string(f.number);
     fnum += '.';
     auto tmpy = heights.footnote_height;
-    auto built_lines = build_justified_paragraph(lines, styles.footnote, textblock_width());
+    auto built_lines = build_ragged_paragraph(
+        lines, styles.footnote, CapyTextAlignment::Left, number_indent, Length::zero());
     const auto footnote_total_height = built_lines.size() * styles.footnote.line_height;
     // FIXME, split the footnote over two pages.
     if(heights.total_height() + footnote_total_height >= bottom_watermark) {
@@ -414,7 +416,6 @@ void DraftPaginator::create_footnote(const Footnote &f, const Length &bottom_wat
         heights.footnote_height += footnote_total_height;
         layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
     }
-#endif
 }
 
 void DraftPaginator::create_numberlist(const NumberList &nl, Length &rel_y) {
@@ -667,7 +668,7 @@ void DraftPaginator::draw_debug_bars(int num_bars, const Length bar_start_y) {
 void DraftPaginator::flush_draw_commands() {
     const bool draw_cut_guide = false;
     const bool draw_textarea_box = false;
-    Length footnote_block_start = page.h - m.lower - heights.footnote_height;
+    Length footnote_block_start = m.lower + heights.footnote_height;
     if(doc.data.debug_draw && !doc.data.is_draft && current_page == chapter_start_page) {
         const Length bar_start_y = m.upper + spaces.above_section - 2 * styles.section.line_height;
         draw_debug_bars(4, bar_start_y);
@@ -715,7 +716,7 @@ void DraftPaginator::flush_draw_commands() {
             rend->render_text(md.markup.c_str(),
                               *md.font,
                               current_left_margin() + md.x,
-                              md.y - footnote_block_start,
+                              md.y + footnote_block_start,
                               md.alignment);
         } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(c)) {
 #if 0
@@ -735,8 +736,9 @@ void DraftPaginator::flush_draw_commands() {
         const Length line_distance = doc.data.pdf.spaces.footnote_separation;
         const Length line_indent = Length::from_mm(-5);
         const Length line_width = Length::from_mm(20);
+        const Length &baseline_correction = styles.footnote.line_height;
         const Length x0 = current_left_margin() + line_indent;
-        const Length y0 = footnote_block_start - 0.3 * line_distance;
+        const Length y0 = footnote_block_start + 0.3 * line_distance + 0.7 * baseline_correction;
         rend->draw_line(x0, y0, x0 + line_width, y0, line_thickness);
     }
     layout.clear();
