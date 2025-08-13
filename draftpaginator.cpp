@@ -724,6 +724,10 @@ void DraftPaginator::flush_draw_commands() {
                               current_left_margin() + md.x,
                               md.y + footnote_block_start,
                               md.alignment);
+        } else if(std::holds_alternative<HBRunDrawCommand>(c)) {
+            const auto &md = std::get<HBRunDrawCommand>(c);
+            rend->render_runs(
+                md.runs, current_left_margin() + md.x, md.y + footnote_block_start, md.alignment);
         } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(c)) {
 #if 0
             const auto &md = std::get<HBJustifiedMarkupDrawCommand>(c);
