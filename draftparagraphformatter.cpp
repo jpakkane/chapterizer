@@ -212,6 +212,10 @@ std::vector<HBRun> wordfragment2runs(const HBTextParameters &original_par,
                                      bool add_dash) {
     std::vector<HBRun> runs;
     HBTextParameters active_par = original_par;
+    {
+        HBStyleApplier tmp(sstack);
+        tmp.apply_to_base_style(active_par.par);
+    }
     std::string current_run;
 
     std::string_view view = std::string_view{w.text}.substr(start, end);
@@ -222,17 +226,16 @@ std::vector<HBRun> wordfragment2runs(const HBTextParameters &original_par,
     }
     for(size_t i = 0; i < view.size(); ++i) {
         while(style_point < w.f.size() && w.f[style_point].offset == start + i) {
-            toggle_format(sstack, w.f[style_point].format);
-            HBStyleApplier applier(sstack);
-            auto new_active_style = active_par.par;
-            applier.apply_to_base_style(new_active_style);
-            active_par.par = new_active_style;
             if(current_run.empty()) {
                 // Skip multiple style changes in a row.
             } else {
                 runs.emplace_back(active_par, std::move(current_run));
                 current_run.clear();
             }
+            toggle_format(sstack, w.f[style_point].format);
+            HBStyleApplier applier(sstack);
+            active_par = original_par;
+            applier.apply_to_base_style(active_par.par);
             ++style_point;
         }
         current_run += view[i];
@@ -243,6 +246,8 @@ std::vector<HBRun> wordfragment2runs(const HBTextParameters &original_par,
     }
     while(style_point < w.f.size()) {
         toggle_format(sstack, w.f[style_point].format);
+        HBStyleApplier applier(sstack);
+        applier.apply_to_base_style(active_par.par);
         ++style_point;
     }
     if(add_space) {
