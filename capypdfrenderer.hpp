@@ -71,16 +71,6 @@ public:
     void
     render_runs(const std::vector<HBRun> &runs, Length x, Length y, CapyTextAlignment alignment);
 
-    void render_markup_as_is(const char *line,
-                             const FontParameters &par,
-                             Length x,
-                             Length y,
-                             CapyTextAlignment alignment);
-    void render_markup_as_is(const std::vector<std::string> markup_words,
-                             const FontParameters &par,
-                             Length x,
-                             Length y,
-                             CapyTextAlignment alignment);
     void render_line_centered(const char *line, const FontParameters &par, Length x, Length y);
 
     void render_wonky_text(const char *text,

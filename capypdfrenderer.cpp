@@ -38,46 +38,6 @@ get_endpoint(hb_glyph_info_t *glyph_info, size_t glyph_count, size_t i, const ch
     return strlen(sampletext);
 }
 
-const char *workname = "turbotempfile.pdf";
-
-std::vector<std::string> hack_split(const std::string &in_text) {
-    std::string text;
-    text.reserve(in_text.size());
-    for(size_t i = 0; i < in_text.size(); ++i) {
-        if(in_text[i] == '\n') {
-            text.push_back(' ');
-        } else {
-            text.push_back(in_text[i]);
-        }
-    }
-    std::string val;
-    const char separator = ' ';
-    std::vector<std::string> words;
-    std::stringstream sstream(text);
-    while(std::getline(sstream, val, separator)) {
-        words.push_back(val);
-    }
-    return words;
-}
-
-uint32_t get_last_char(const std::string &markup) {
-    const gchar *txt = markup.c_str();
-    int angle_depth = 0;
-    uint32_t last_char = 0;
-    while(*txt) {
-        const uint32_t cur_char = g_utf8_get_char(txt);
-        if(cur_char == '<') {
-            ++angle_depth;
-        } else if(cur_char == '>') {
-            --angle_depth;
-        } else if(angle_depth == 0) {
-            last_char = cur_char; // FIXME, won't work with quoted angle brackets.
-        }
-        txt = g_utf8_next_char(txt);
-    }
-    return last_char;
-}
-
 } // namespace
 
 CapyPdfRenderer::CapyPdfRenderer(const char *ofname,
@@ -95,25 +55,7 @@ CapyPdfRenderer::CapyPdfRenderer(const char *ofname,
     outname = ofname;
 }
 
-CapyPdfRenderer::~CapyPdfRenderer() {
-    capygen.write();
-    /*
-    // Cairo only supports RGB output, so convert to Gray.
-    assert(outname.find('"') == std::string::npos);
-    std::string graycmd{"gs \"-sOutputFile="};
-    graycmd += outname;
-    graycmd += "\" -sDEVICE=pdfwrite -sColorConversionStrategy=Gray "
-               "-dProcessColorModel=/DeviceGray -dCompatibilityLevel=1.6 -dNOPAUSE -dBATCH \"";
-    graycmd += workname;
-    graycmd += "\"";
-    // printf("%s\n", graycmd.c_str());
-    auto rc = system(graycmd.c_str());
-    if(rc != 0) {
-        std::abort();
-    }
-    unlink(workname);
-*/
-}
+CapyPdfRenderer::~CapyPdfRenderer() { capygen.write(); }
 
 void CapyPdfRenderer::draw_grid() {
     std::abort();
@@ -482,42 +424,6 @@ void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
     }
 
     capyctx.render_text_obj(text);
-}
-
-void CapyPdfRenderer::render_markup_as_is(
-    const char *line, const FontParameters &par, Length x, Length y, CapyTextAlignment alignment) {
-    /*
-
-    switch(alignment) {
-    case TextAlignment::Left:
-        cairo_move_to(cr, x.pt(), y.pt());
-        break;
-    case TextAlignment::Centered:
-        PangoRectangle r;
-        pango_layout_get_extents(layout, nullptr, &r);
-        cairo_move_to(cr, (x - Length::from_pt(r.width / (2 * PANGO_SCALE))).pt(), y.pt());
-        break;
-    case TextAlignment::Right:
-        pango_layout_get_extents(layout, nullptr, &r);
-        cairo_move_to(cr, (x - Length::from_pt(r.width / PANGO_SCALE)).pt(), y.pt());
-    }
-
-    pango_cairo_update_layout(cr, layout);
-    pango_cairo_show_layout(cr, layout);
-*/
-    std::abort();
-}
-
-void CapyPdfRenderer::render_markup_as_is(const std::vector<std::string> markup_words,
-                                          const FontParameters &par,
-                                          Length x,
-                                          Length y,
-                                          CapyTextAlignment alignment) {
-    std::string full_line;
-    for(const auto &w : markup_words) {
-        full_line += w;
-    }
-    render_markup_as_is(full_line.c_str(), par, x, y, alignment);
 }
 
 void CapyPdfRenderer::render_line_centered(const char *line,
