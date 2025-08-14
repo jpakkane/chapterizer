@@ -106,8 +106,6 @@ public:
 
     void draw_dash_line(const std::vector<Coord> &points, double line_width);
 
-    void draw_arc(Length x, Length y, Length r, double angle1, double angle2, Length thickness);
-
     void draw_poly_line(const std::vector<Coord> &points, Length thickness);
 
     void add_section_outline(int section_number, const std::string &text);

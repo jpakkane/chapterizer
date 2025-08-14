@@ -169,20 +169,6 @@ void CapyPdfRenderer::draw_poly_line(const std::vector<Coord> &points, Length th
     capyctx.cmd_Q();
 }
 
-void CapyPdfRenderer::draw_arc(
-    Length x, Length y, Length r, double angle1, double angle2, Length thickness) {
-    /*
-    capyctx.cmd_q();
-    cairo_new_sub_path(cr);
-    cairo_set_source_rgb(cr, 0, 0, 0);
-    cairo_set_line_width(cr, thickness.pt());
-    cairo_arc_negative(cr, x.pt(), y.pt(), r.pt(), angle1, angle2);
-    cairo_stroke(cr);
-    capyctx.cmd_Q();
-*/
-    std::abort();
-}
-
 void CapyPdfRenderer::render_line_justified(const std::string &line_text,
                                             const FontParameters &par,
                                             Length line_width,

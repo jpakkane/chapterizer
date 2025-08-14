@@ -232,17 +232,6 @@ void PangoPdfRenderer::draw_poly_line(const std::vector<Coord> &points, Length t
     cairo_restore(cr);
 }
 
-void PangoPdfRenderer::draw_arc(
-    Length x, Length y, Length r, double angle1, double angle2, Length thickness) {
-    cairo_save(cr);
-    cairo_new_sub_path(cr);
-    cairo_set_source_rgb(cr, 0, 0, 0);
-    cairo_set_line_width(cr, thickness.pt());
-    cairo_arc_negative(cr, x.pt(), y.pt(), r.pt(), angle1, angle2);
-    cairo_stroke(cr);
-    cairo_restore(cr);
-}
-
 void PangoPdfRenderer::render_line_justified(const std::string &line_text,
                                              const FontParameters &par,
                                              Length line_width,
