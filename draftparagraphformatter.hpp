@@ -25,34 +25,6 @@
 
 class HBFontCache;
 
-struct HBChapterParameters {
-    Length line_height;
-    Length indent; // Of first line.
-    HBTextParameters font;
-    bool indent_last_line = false;
-};
-
-struct HBFontStyles {
-    HBTextParameters basic;
-    HBTextParameters heading;
-    HBTextParameters code;
-    HBTextParameters footnote;
-};
-
-struct HBChapterStyles {
-    HBChapterParameters normal;
-    HBChapterParameters normal_noindent;
-    HBChapterParameters code;
-    HBChapterParameters section;
-    HBChapterParameters letter;
-    HBChapterParameters footnote;
-    HBChapterParameters lists;
-    HBChapterParameters title;
-    HBChapterParameters author;
-    HBChapterParameters colophon;
-    HBChapterParameters dedication;
-};
-
 class DraftParagraphFormatter {
 public:
     DraftParagraphFormatter(const std::vector<EnrichedWord> &words,

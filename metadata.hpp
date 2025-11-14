@@ -53,20 +53,6 @@ struct CreditsEntry {
 
 typedef std::variant<CreditsTitle, CreditsEntry> Credits;
 
-struct ChapterStyles {
-    ChapterParameters normal;
-    ChapterParameters normal_noindent;
-    ChapterParameters code;
-    ChapterParameters section;
-    ChapterParameters letter;
-    ChapterParameters footnote;
-    ChapterParameters lists;
-    ChapterParameters title;
-    ChapterParameters author;
-    ChapterParameters colophon;
-    ChapterParameters dedication;
-};
-
 struct Spaces {
     Length above_section;
     Length below_section;

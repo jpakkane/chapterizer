@@ -21,6 +21,7 @@
 #include <functional>
 #include <string>
 #include <cmath>
+#include <cstdint>
 
 enum class TextAlignment : int {
     Left,
@@ -90,4 +91,108 @@ struct FontStyles {
     FontParameters heading;
     FontParameters code;
     FontParameters footnote;
+};
+
+struct ChapterStyles {
+    ChapterParameters normal;
+    ChapterParameters normal_noindent;
+    ChapterParameters code;
+    ChapterParameters section;
+    ChapterParameters letter;
+    ChapterParameters footnote;
+    ChapterParameters lists;
+    ChapterParameters title;
+    ChapterParameters author;
+    ChapterParameters colophon;
+    ChapterParameters dedication;
+};
+
+// Replace types above with these once HB
+// is the only backend.
+
+enum class TextCategory : uint8_t {
+    Serif,
+    SansSerif,
+    Monospace,
+};
+
+enum class TextStyle : uint8_t {
+    Regular,
+    Italic,
+    Bold,
+    BoldItalic,
+};
+
+enum class TextExtra : uint8_t {
+    None,
+    SmallCaps,
+};
+
+struct HBFontProperties {
+    TextCategory cat = TextCategory::Serif;
+    TextStyle style = TextStyle::Regular;
+    TextExtra extra = TextExtra::None;
+
+    bool operator==(const HBFontProperties &o) const noexcept {
+        return cat == o.cat && style == o.style && extra == o.extra;
+    }
+};
+
+template<> struct std::hash<HBFontProperties> {
+    std::size_t operator()(HBFontProperties const &fp) const noexcept {
+        const size_t shuffle = 13;
+        auto h1 = std::hash<size_t>{}((size_t)fp.cat);
+        auto h2 = std::hash<size_t>{}((size_t)fp.style);
+        auto h3 = std::hash<size_t>{}((size_t)fp.extra);
+        size_t hashvalue = (h1 * shuffle) + h2;
+        hashvalue = hashvalue * shuffle + h3;
+        return hashvalue;
+    }
+};
+
+struct HBTextParameters {
+    Length size = Length::from_pt(1000); // Be careful with comparisons.
+    HBFontProperties par;
+
+    bool operator==(const HBTextParameters &o) const noexcept {
+        return (fabs((size - o.size).pt()) < 0.05) && par == o.par;
+    }
+};
+
+template<> struct std::hash<HBTextParameters> {
+    std::size_t operator()(HBTextParameters const &fp) const noexcept {
+        const size_t shuffle = 13;
+        auto h1 = std::hash<size_t>{}((size_t)(fp.size.pt() + 0.001));
+        auto h2 = std::hash<HBFontProperties>{}(fp.par);
+        size_t hashvalue = (h1 * shuffle) + h2;
+        return hashvalue;
+    }
+};
+
+struct HBChapterParameters {
+    Length line_height;
+    Length indent; // Of first line.
+    HBTextParameters font;
+    bool indent_last_line = false;
+};
+
+struct HBFontStyles {
+    HBTextParameters basic;
+    HBTextParameters heading;
+    HBTextParameters code;
+    HBTextParameters footnote;
+};
+
+struct HBChapterStyles {
+    HBChapterParameters normal;
+    HBChapterParameters normal_noindent;
+    HBChapterParameters code;
+    HBChapterParameters section;
+    HBChapterParameters letter;
+    HBChapterParameters footnote;
+    HBChapterParameters lists;
+    HBChapterParameters title;
+    HBChapterParameters author;
+    HBChapterParameters colophon;
+    HBChapterParameters dedication;
 };

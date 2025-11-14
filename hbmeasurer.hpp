@@ -24,15 +24,6 @@
 #include <string>
 #include <unordered_map>
 
-struct HBTextParameters {
-    Length size = Length::from_pt(1000); // Be careful with comparisons.
-    HBFontProperties par;
-
-    bool operator==(const HBTextParameters &o) const noexcept {
-        return (fabs((size - o.size).pt()) < 0.05) && par == o.par;
-    }
-};
-
 struct HBRun {
     HBTextParameters par;
     std::string text;
@@ -44,16 +35,6 @@ struct HBStyledPlainText {
 
     bool operator==(const HBStyledPlainText &o) const noexcept {
         return text == o.text && font == o.font;
-    }
-};
-
-template<> struct std::hash<HBTextParameters> {
-    std::size_t operator()(HBTextParameters const &fp) const noexcept {
-        const size_t shuffle = 13;
-        auto h1 = std::hash<size_t>{}((size_t)(fp.size.pt() + 0.001));
-        auto h2 = std::hash<HBFontProperties>{}(fp.par);
-        size_t hashvalue = (h1 * shuffle) + h2;
-        return hashvalue;
     }
 };
 
