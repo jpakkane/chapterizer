@@ -206,11 +206,8 @@ void DraftPaginator::create_maintext() {
             }
             create_footnote(std::get<Footnote>(e), bottom_watermark);
         } else if(std::holds_alternative<SceneChange>(e)) {
-            layout.text.emplace_back(SimpleTextDrawCommand{"#",
-                                                           styles.normal.font,
-                                                           textblock_width() / 2,
-                                                           rel_y,
-                                                           CapyTextAlignment::Centered});
+            layout.text.emplace_back(SimpleTextDrawCommand{
+                "#", styles.normal.font, textblock_width() / 2, rel_y, TextAlignment::Centered});
             rel_y -= styles.normal.line_height;
             heights.whitespace_height += styles.normal.line_height;
             if(rel_y >= bottom_watermark) {
@@ -231,7 +228,7 @@ void DraftPaginator::create_maintext() {
                                                                styles.code.font,
                                                                spaces.codeblock_indent,
                                                                rel_y,
-                                                               CapyTextAlignment::Left});
+                                                               TextAlignment::Left});
                 rel_y -= styles.code.line_height;
                 heights.text_height += styles.code.line_height;
             }
@@ -288,7 +285,7 @@ void DraftPaginator::create_maintext() {
                                                                styles.normal.font,
                                                                textblock_width() / 2,
                                                                rel_y,
-                                                               CapyTextAlignment::Centered});
+                                                               TextAlignment::Centered});
                 rel_y += styles.code.line_height;
                 heights.text_height += styles.code.line_height;
             }
@@ -321,11 +318,11 @@ void DraftPaginator::create_section(const Section &s,
     assert(s.level == 1);
     // Fancy stuff above the text.
     std::string title_string;
-    CapyTextAlignment section_alignment = CapyTextAlignment::Centered;
+    TextAlignment section_alignment = TextAlignment::Centered;
     title_string = std::to_string(s.number);
     title_string += ". ";
     title_string += s.text;
-    section_alignment = CapyTextAlignment::Left;
+    section_alignment = TextAlignment::Left;
     // The title. Hyphenation is prohibited.
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(title_string, false);
     DraftParagraphFormatter b(processed_words, section_width, styles.section, fc);
@@ -352,8 +349,8 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
     DraftParagraphFormatter b(processed_words, paragraph_width, chpar, fc);
     auto lines = b.split_formatted_lines_to_runs();
     std::vector<HBTextCommands> built_lines;
-    built_lines = build_ragged_paragraph(
-        lines, chpar, CapyTextAlignment::Left, Length::zero(), Length::zero());
+    built_lines =
+        build_ragged_paragraph(lines, chpar, TextAlignment::Left, Length::zero(), Length::zero());
     if(!built_lines.empty()) {
         auto &first_line = built_lines[0];
         if(std::holds_alternative<SimpleTextDrawCommand>(first_line)) {
@@ -406,17 +403,17 @@ void DraftPaginator::create_footnote(const Footnote &f, const Length &bottom_wat
     fnum += '.';
     auto tmpy = heights.footnote_height;
     auto built_lines = build_ragged_paragraph(
-        lines, styles.footnote, CapyTextAlignment::Left, number_indent, Length::zero());
+        lines, styles.footnote, TextAlignment::Left, number_indent, Length::zero());
     const auto footnote_total_height = built_lines.size() * styles.footnote.line_height;
     // FIXME, split the footnote over two pages.
     if(heights.total_height() + footnote_total_height >= bottom_watermark) {
         pending_footnotes.emplace_back(SimpleTextDrawCommand{
-            std::move(fnum), styles.footnote.font, Length::zero(), tmpy, CapyTextAlignment::Left});
+            std::move(fnum), styles.footnote.font, Length::zero(), tmpy, TextAlignment::Left});
         pending_footnotes.insert(pending_footnotes.end(), built_lines.begin(), built_lines.end());
     } else {
         // FIXME: draw in flush_commands instead?
         layout.footnote.emplace_back(SimpleTextDrawCommand{
-            std::move(fnum), styles.footnote.font, Length::zero(), tmpy, CapyTextAlignment::Left});
+            std::move(fnum), styles.footnote.font, Length::zero(), tmpy, TextAlignment::Left});
         heights.footnote_height += footnote_total_height;
         layout.footnote.insert(layout.footnote.end(), built_lines.begin(), built_lines.end());
     }
@@ -442,10 +439,10 @@ void DraftPaginator::create_numberlist(const NumberList &nl, Length &rel_y) {
         std::string fnum = std::to_string(i + 1);
         fnum += '.';
         layout.text.emplace_back(SimpleTextDrawCommand{
-            std::move(fnum), styles.lists.font, indent, rel_y, CapyTextAlignment::Left});
+            std::move(fnum), styles.lists.font, indent, rel_y, TextAlignment::Left});
         for(auto &line : build_ragged_paragraph(lines,
                                                 styles.lists,
-                                                CapyTextAlignment::Left, // FIXME
+                                                TextAlignment::Left, // FIXME
                                                 indent + number_area,
                                                 rel_y)) {
             // FIXME, handle page changes.
@@ -484,7 +481,7 @@ void DraftPaginator::render_page_num(const HBChapterParameters &par) {
                       par.font,
                       current_left_margin() + textblock_width(),
                       page.h - (m.upper - 2 * par.line_height),
-                      CapyTextAlignment::Right);
+                      TextAlignment::Right);
 }
 
 std::vector<HBTextCommands>
@@ -516,7 +513,7 @@ DraftPaginator::build_justified_paragraph(const std::vector<std::vector<std::str
                                                              text_par.font,
                                                              x + current_indent + x_off,
                                                              rel_y + y_off,
-                                                             CapyTextAlignment::Left});
+                                                             TextAlignment::Left});
         }
         line_num++;
         rel_y -= text_par.line_height;
@@ -527,11 +524,11 @@ DraftPaginator::build_justified_paragraph(const std::vector<std::vector<std::str
 std::vector<HBTextCommands>
 DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
                                        const HBChapterParameters &text_par,
-                                       const CapyTextAlignment alignment,
+                                       const TextAlignment alignment,
                                        Length rel_y) {
     std::vector<HBTextCommands> line_commands;
     const auto rel_x =
-        alignment == CapyTextAlignment::Centered ? textblock_width() / 2 : Length::zero();
+        alignment == TextAlignment::Centered ? textblock_width() / 2 : Length::zero();
 
     line_commands.reserve(lines.size());
     for(const auto &markup_words : lines) {
@@ -539,7 +536,7 @@ DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string
         for(const auto &w : markup_words) {
             full_line += w;
         }
-        assert(alignment != CapyTextAlignment::Right);
+        assert(alignment != TextAlignment::Right);
         line_commands.emplace_back(
             SimpleTextDrawCommand{std::move(full_line), text_par.font, rel_x, rel_y, alignment});
         rel_y -= text_par.line_height;
@@ -550,15 +547,15 @@ DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string
 std::vector<HBTextCommands>
 DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<HBRun>> &lines,
                                        const HBChapterParameters &text_par,
-                                       const CapyTextAlignment alignment,
+                                       const TextAlignment alignment,
                                        Length extra_x,
                                        Length rel_y) {
     std::vector<HBTextCommands> line_commands;
-    const auto rel_x = extra_x + (alignment == CapyTextAlignment::Centered ? textblock_width() / 2
-                                                                           : Length::zero());
+    const auto rel_x =
+        extra_x + (alignment == TextAlignment::Centered ? textblock_width() / 2 : Length::zero());
     line_commands.reserve(lines.size());
     for(const auto &runs : lines) {
-        assert(alignment != CapyTextAlignment::Right);
+        assert(alignment != TextAlignment::Right);
         line_commands.emplace_back(HBRunDrawCommand{std::move(runs), rel_x, rel_y, alignment});
         rel_y -= text_par.line_height;
     }
@@ -780,7 +777,7 @@ void DraftPaginator::create_draft_title_page() {
     char buf[bufsize];
     snprintf(buf, bufsize, wordcount_str[(int)doc.data.language], num_words);
     rend->render_text_as_is(doc.data.author.c_str(), styles.normal.font, left_edge, y);
-    rend->render_text(buf, styles.normal.font, right_edge, y, CapyTextAlignment::Right);
+    rend->render_text(buf, styles.normal.font, right_edge, y, TextAlignment::Right);
     y -= single_line_height;
 
     rend->render_text_as_is(doc.data.draftdata.phone.c_str(), styles.normal.font, left_edge, y);
@@ -789,12 +786,12 @@ void DraftPaginator::create_draft_title_page() {
 
     y = textblock_center + 3 * styles.title.line_height;
     rend->render_text(
-        doc.data.title.c_str(), styles.title.font, middle, y, CapyTextAlignment::Centered);
+        doc.data.title.c_str(), styles.title.font, middle, y, TextAlignment::Centered);
     y -= 2 * styles.title.line_height;
     rend->render_text(
-        doc.data.author.c_str(), styles.author.font, middle, y, CapyTextAlignment::Centered);
+        doc.data.author.c_str(), styles.author.font, middle, y, TextAlignment::Centered);
 
     y -= styles.title.line_height;
     const std::string date = current_date();
-    rend->render_text(date.c_str(), styles.author.font, middle, y, CapyTextAlignment::Centered);
+    rend->render_text(date.c_str(), styles.author.font, middle, y, TextAlignment::Centered);
 }

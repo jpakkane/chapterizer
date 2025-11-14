@@ -27,13 +27,6 @@
 #include <vector>
 #include <string>
 
-enum class CapyTextAlignment : int {
-    Left,
-    Centered,
-    Right,
-    // Justified is stored in a separate struct.
-};
-
 struct CapyImageInfo {
     CapyPDF_ImageId id;
     int w, h;
@@ -62,14 +55,10 @@ public:
                                Length y);
 
     void render_text_as_is(const char *line, const HBTextParameters &par, Length x, Length y);
-    void render_text(const char *line,
-                     const HBTextParameters &par,
-                     Length x,
-                     Length y,
-                     CapyTextAlignment alignment);
+    void render_text(
+        const char *line, const HBTextParameters &par, Length x, Length y, TextAlignment alignment);
 
-    void
-    render_runs(const std::vector<HBRun> &runs, Length x, Length y, CapyTextAlignment alignment);
+    void render_runs(const std::vector<HBRun> &runs, Length x, Length y, TextAlignment alignment);
 
     void render_line_centered(const char *line, const FontParameters &par, Length x, Length y);
 

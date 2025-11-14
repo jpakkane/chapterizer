@@ -22,6 +22,13 @@
 #include <string>
 #include <cmath>
 
+enum class TextAlignment : int {
+    Left,
+    Centered,
+    Right,
+    // Justified is stored in a separate struct.
+};
+
 enum class ExtraPenaltyTypes : int {
     ConsecutiveDashes,
     // River,

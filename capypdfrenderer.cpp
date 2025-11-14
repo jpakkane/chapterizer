@@ -353,26 +353,23 @@ void CapyPdfRenderer::serialize_single_run(const HBRun &run,
     tobj.cmd_TJ(ts);
 }
 
-void CapyPdfRenderer::render_text(const char *line,
-                                  const HBTextParameters &par,
-                                  Length x,
-                                  Length y,
-                                  CapyTextAlignment alignment) {
-    if(alignment == CapyTextAlignment::Left) {
+void CapyPdfRenderer::render_text(
+    const char *line, const HBTextParameters &par, Length x, Length y, TextAlignment alignment) {
+    if(alignment == TextAlignment::Left) {
         render_text_as_is(line, par, x, y);
         return;
     }
 
     Length text_width = meas.text_width(line, par);
     switch(alignment) {
-    case CapyTextAlignment::Left:
+    case TextAlignment::Left:
         std::abort();
         // Unreachable
         break;
-    case CapyTextAlignment::Centered:
+    case TextAlignment::Centered:
         render_text_as_is(line, par, x - text_width / 2, y);
         break;
-    case CapyTextAlignment::Right:
+    case TextAlignment::Right:
         render_text_as_is(line, par, x - text_width, y);
         break;
     }
@@ -381,7 +378,7 @@ void CapyPdfRenderer::render_text(const char *line,
 void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
                                   Length x,
                                   Length y,
-                                  CapyTextAlignment alignment) {
+                                  TextAlignment alignment) {
     // FIXME, use alignment.
 
     hb_buffer_t *buf = hb_buffer_create();

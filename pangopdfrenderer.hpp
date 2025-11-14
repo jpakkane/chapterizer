@@ -25,13 +25,6 @@
 #include <vector>
 #include <string>
 
-enum class TextAlignment : int {
-    Left,
-    Centered,
-    Right,
-    // Justified is stored in a separate struct.
-};
-
 struct ImageInfo {
     cairo_surface_t *surf;
     int w, h;

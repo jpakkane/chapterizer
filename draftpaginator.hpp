@@ -31,7 +31,7 @@ struct HBRunDrawCommand {
     std::vector<HBRun> runs;
     Length x;
     Length y;
-    CapyTextAlignment alignment;
+    TextAlignment alignment;
 };
 
 struct SimpleTextDrawCommand {
@@ -39,7 +39,7 @@ struct SimpleTextDrawCommand {
     HBTextParameters par;
     Length x;
     Length y;
-    CapyTextAlignment alignment;
+    TextAlignment alignment;
 };
 
 struct HBJustifiedMarkupDrawCommand {
@@ -111,11 +111,11 @@ private:
     std::vector<HBTextCommands>
     build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
                            const HBChapterParameters &text_par,
-                           const CapyTextAlignment alignment,
+                           const TextAlignment alignment,
                            Length rel_y);
     std::vector<HBTextCommands> build_ragged_paragraph(const std::vector<std::vector<HBRun>> &lines,
                                                        const HBChapterParameters &text_par,
-                                                       const CapyTextAlignment alignment,
+                                                       const TextAlignment alignment,
                                                        Length extra_x,
                                                        Length rel_y);
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
