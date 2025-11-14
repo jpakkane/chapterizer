@@ -168,7 +168,7 @@ void CapyPdfRenderer::draw_poly_line(const std::vector<Coord> &points, Length th
     capyctx.cmd_Q();
 }
 
-void CapyPdfRenderer::render_line_justified(const std::string &line_text,
+void CapyPdfRenderer::render_line_justified(const std::vector<HBRun> &runs,
                                             const HBTextParameters &par,
                                             Length line_width,
                                             Length x,
@@ -258,13 +258,20 @@ void CapyPdfRenderer::render_text_as_is(const char *line,
     if(line_size == 0) {
         return;
     }
-    auto fontinfo = std::move(fc.get_font(par.par).value());
-    auto capyfont_id = hbfont2capyfont(par, fontinfo);
+    HBRun single_run;
+    single_run.text = line;
+    single_run.par = par;
+    render_run(single_run, x, y);
+}
+
+void CapyPdfRenderer::render_run(const HBRun &run, Length x, Length y) {
+    auto fontinfo = std::move(fc.get_font(run.par.par).value());
+    auto capyfont_id = hbfont2capyfont(run.par, fontinfo);
     hb_buffer_t *buf = hb_buffer_create();
     std::unique_ptr<hb_buffer_t, HBBufferCloser> bc(buf);
 
     const double num_steps = HBFontCache::NUM_STEPS;
-    const double hbscale = par.size.pt() * num_steps;
+    const double hbscale = run.par.size.pt() * num_steps;
 
     hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
     hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
@@ -274,14 +281,25 @@ void CapyPdfRenderer::render_text_as_is(const char *line,
     hb_font_set_scale(fontinfo.f, hbscale, hbscale);
 
     capypdf::Text text = capyctx.text_new();
-    text.cmd_Tf(capyfont_id, par.size.pt());
+    text.cmd_Tf(capyfont_id, run.par.size.pt());
     text.cmd_Td(x.pt(), y.pt());
-    HBRun single_run;
-    single_run.text = line;
-    single_run.par = par;
-    serialize_single_run(single_run, text, buf);
+    serialize_single_run(run, text, buf);
 
     capyctx.render_text_obj(text);
+}
+
+void CapyPdfRenderer::render_text_as_is(
+    const char *line, const HBTextParameters &par, Length x, Length y, TextAlignment align) {
+    if(align == TextAlignment::Left) {
+        render_text_as_is(line, par, x, y);
+    } else {
+        const auto line_width = meas.text_width(line, par);
+        if(align == TextAlignment::Right) {
+            render_text_as_is(line, par, x - line_width, y);
+        } else {
+            render_text_as_is(line, par, x - line_width / 2, y);
+        }
+    }
 }
 
 void CapyPdfRenderer::serialize_single_run(const HBRun &run,
@@ -418,22 +436,6 @@ void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
     }
 
     capyctx.render_text_obj(text);
-}
-
-void CapyPdfRenderer::render_line_centered(const char *line,
-                                           const HBTextParameters &par,
-                                           Length x,
-                                           Length y) {
-    /*
-    PangoRectangle r;
-
-    setup_pango(par);
-    pango_layout_set_attributes(layout, nullptr);
-    pango_layout_set_text(layout, line, -1);
-    pango_layout_get_extents(layout, nullptr, &r);
-    render_text_as_is(line, par, x - Length::from_pt(r.width / (2 * PANGO_SCALE)), y);
-*/
-    std::abort();
 }
 
 void CapyPdfRenderer::render_wonky_text(const char *text,

@@ -26,17 +26,15 @@
 #include <variant>
 #include <filesystem>
 
-struct MarkupDrawCommand {
-    std::string markup;
-    const HBTextParameters *font;
+struct TextDrawCommand {
+    std::vector<HBRun> runs;
     Length x;
     Length y;
     TextAlignment alignment;
 };
 
-struct JustifiedMarkupDrawCommand {
-    std::vector<std::string> markup_words;
-    const HBTextParameters *font;
+struct JustifiedTextDrawCommand {
+    std::vector<HBRun> words_runs;
     Length x;
     Length y;
     Length width;
@@ -50,7 +48,7 @@ struct ImageCommand {
     Length display_width;
 };
 
-typedef std::variant<MarkupDrawCommand, JustifiedMarkupDrawCommand> TextCommands;
+typedef std::variant<TextDrawCommand, JustifiedTextDrawCommand> TextCommands;
 
 struct SectionElement {
     std::vector<TextCommands> lines;
@@ -195,13 +193,12 @@ private:
     void build_main_text();
 
     std::vector<TextCommands>
-    build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
+    build_justified_paragraph(const std::vector<std::vector<HBRun>> &lines,
                               const HBChapterParameters &text_par,
                               const Length target_width);
-    std::vector<TextCommands>
-    build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
-                           const HBChapterParameters &text_par,
-                           const TextAlignment alignment);
+    std::vector<TextCommands> build_ragged_paragraph(const std::vector<std::vector<HBRun>> &lines,
+                                                     const HBChapterParameters &text_par,
+                                                     const TextAlignment alignment);
 
     void create_section(const Section &s, const ExtraPenaltyAmounts &extras);
     void create_codeblock(const CodeBlock &cb);

@@ -21,6 +21,7 @@
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
+#include <cassert>
 
 const char ITALIC_S = 1;
 const char BOLD_S = (1 << 1);
@@ -197,6 +198,43 @@ private:
 };
 
 typedef SmallStack<char, 6> StyleStack;
+
+class HBStyleApplier {
+public:
+    HBStyleApplier(const StyleStack &stack_) : stack{stack_} {}
+
+    void apply_to_base_style(HBFontProperties &props) {
+
+        for(int i = 0; i < stack.size; ++i) {
+            switch(stack.arr[i]) {
+            case ITALIC_S:
+                props.style = (TextStyle)((uint8_t)props.style ^ (uint8_t)TextStyle::Italic);
+                break;
+            case BOLD_S:
+                props.style = (TextStyle)((uint8_t)props.style ^ (uint8_t)TextStyle::Bold);
+                break;
+            case TT_S:
+                assert(props.cat != TextCategory::Monospace);
+                props.cat = TextCategory::Monospace;
+                break;
+            case SMALLCAPS_S:
+                props.extra = (TextExtra)((uint8_t)props.extra ^ (uint8_t)TextExtra::SmallCaps);
+                break;
+            case SUPERSCRIPT_S:
+                fprintf(stderr, "Superscript not supported yet.\n");
+                std::abort();
+            case SUBSCRIPT_S:
+                fprintf(stderr, "Subscript not supported yet.\n");
+                std::abort();
+            default:
+                std::abort();
+            }
+        }
+    }
+
+private:
+    const StyleStack &stack;
+};
 
 struct FormattingChange {
     size_t offset;

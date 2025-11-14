@@ -196,3 +196,25 @@ struct HBChapterStyles {
     HBChapterParameters colophon;
     HBChapterParameters dedication;
 };
+
+struct HBRun {
+    HBTextParameters par;
+    std::string text;
+};
+
+struct HBStyledPlainText {
+    std::string text;
+    HBTextParameters font;
+
+    bool operator==(const HBStyledPlainText &o) const noexcept {
+        return text == o.text && font == o.font;
+    }
+};
+
+template<> struct std::hash<HBStyledPlainText> {
+    std::size_t operator()(HBStyledPlainText const &s) const noexcept {
+        auto h1 = std::hash<std::string>{}(s.text);
+        auto h2 = std::hash<HBTextParameters>{}(s.font);
+        return (h1 * 13) + h2;
+    }
+};

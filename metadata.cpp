@@ -189,7 +189,7 @@ void parse_font_files(FontFiles &f, const json &fdict) {
 void parse_font_paths(FontFilePaths &paths, const json &fonts) {
     parse_font_files(paths.serif, fonts["serif"]);
     parse_font_files(paths.sansserif, fonts["sans"]);
-    parse_font_files(paths.mono, fonts["smono"]);
+    parse_font_files(paths.mono, fonts["mono"]);
 }
 
 void load_pdf_element(Metadata &m, const json &pdf) {

@@ -42,7 +42,7 @@ public:
                              HBFontCache &fc_);
     ~CapyPdfRenderer();
 
-    void render_line_justified(const std::string &text,
+    void render_line_justified(const std::vector<HBRun> &runs,
                                const HBTextParameters &par,
                                Length line_width_mm,
                                Length x,
@@ -55,6 +55,8 @@ public:
                                Length y);
 
     void render_text_as_is(const char *line, const HBTextParameters &par, Length x, Length y);
+    void render_text_as_is(
+        const char *line, const HBTextParameters &par, Length x, Length y, TextAlignment align);
     void render_text(
         const char *line, const HBTextParameters &par, Length x, Length y, TextAlignment alignment);
     void render_markup_as_is(const char *line, const HBTextParameters &par, Length x, Length y);
@@ -62,8 +64,7 @@ public:
         const char *line, const HBTextParameters &par, Length x, Length y, TextAlignment align);
 
     void render_runs(const std::vector<HBRun> &runs, Length x, Length y, TextAlignment alignment);
-
-    void render_line_centered(const char *line, const HBTextParameters &par, Length x, Length y);
+    void render_run(const HBRun &runs, Length x, Length y);
 
     void render_wonky_text(const char *text,
                            const HBTextParameters &par,

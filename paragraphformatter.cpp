@@ -134,27 +134,21 @@ std::vector<ExtraPenaltyStatistics> compute_extra_penalties(const std::vector<st
     return penalties;
 }
 
-void toggle_format(StyleStack &current_style, std::string &line, const char format_to_toggle) {
+void toggle_format(StyleStack &current_style, const char format_to_toggle) {
     if(current_style.contains(format_to_toggle)) {
         current_style.pop(format_to_toggle);
         switch(format_to_toggle) {
         case ITALIC_S:
-            line.append("</i>");
             break;
         case BOLD_S:
-            line.append("</b>");
             break;
         case TT_S:
-            line.append(current_style.inline_code_end_tag());
             break;
         case SMALLCAPS_S:
-            line.append("</span>");
             break;
         case SUPERSCRIPT_S:
-            line.append("</sup>");
             break;
         case SUBSCRIPT_S:
-            line.append("</sub>");
             break;
         default:
             printf("Bad style end bit.\n");
@@ -164,22 +158,16 @@ void toggle_format(StyleStack &current_style, std::string &line, const char form
         current_style.push(format_to_toggle);
         switch(format_to_toggle) {
         case ITALIC_S:
-            line.append("<i>");
             break;
         case BOLD_S:
-            line.append("<b>");
             break;
         case TT_S:
-            line.append(current_style.inline_code_start_tag());
             break;
         case SMALLCAPS_S:
-            line.append("<span variant=\"small-caps\" letter_spacing=\"100\">");
             break;
         case SUPERSCRIPT_S:
-            line.append("<sup>");
             break;
         case SUBSCRIPT_S:
-            line.append("<sub>");
             break;
         default:
             printf("Bad style start bit.\n");
@@ -188,14 +176,20 @@ void toggle_format(StyleStack &current_style, std::string &line, const char form
     }
 }
 
-std::string wordfragment2markup(StyleStack &current_style,
-                                const EnrichedWord &w,
-                                size_t start,
-                                size_t end,
-                                bool add_space,
-                                bool add_dash) {
-    std::string markup;
-    current_style.write_buildup_markup(markup);
+std::vector<HBRun> wordfragment2runs(const HBTextParameters &original_par,
+                                     StyleStack &sstack,
+                                     const EnrichedWord &w,
+                                     size_t start,
+                                     size_t end,
+                                     bool add_space,
+                                     bool add_dash) {
+    std::vector<HBRun> runs;
+    HBTextParameters active_par = original_par;
+    {
+        HBStyleApplier tmp(sstack);
+        tmp.apply_to_base_style(active_par.par);
+    }
+    std::string current_run;
 
     std::string_view view = std::string_view{w.text}.substr(start, end);
     assert(g_utf8_validate(view.data(), view.length(), nullptr));
@@ -205,33 +199,37 @@ std::string wordfragment2markup(StyleStack &current_style,
     }
     for(size_t i = 0; i < view.size(); ++i) {
         while(style_point < w.f.size() && w.f[style_point].offset == start + i) {
-            toggle_format(current_style, markup, w.f[style_point].format);
+            if(current_run.empty()) {
+                // Skip multiple style changes in a row.
+            } else {
+                runs.emplace_back(active_par, std::move(current_run));
+                current_run.clear();
+            }
+            toggle_format(sstack, w.f[style_point].format);
+            HBStyleApplier applier(sstack);
+            active_par = original_par;
+            applier.apply_to_base_style(active_par.par);
             ++style_point;
         }
-        if(view[i] == '<') {
-            markup += "&lt;";
-        } else if(view[i] == '>') {
-            markup += "&gt;";
-        } else if(view[i] == '&') {
-            markup += "&amp;";
-        } else {
-            markup += view[i];
-        }
+        current_run += view[i];
     }
 
     if(add_dash) {
-        markup += '-';
+        current_run += '-';
     }
     while(style_point < w.f.size()) {
-        toggle_format(current_style, markup, w.f[style_point].format);
+        toggle_format(sstack, w.f[style_point].format);
+        HBStyleApplier applier(sstack);
+        applier.apply_to_base_style(active_par.par);
         ++style_point;
     }
     if(add_space) {
-        markup += ' '; // The space must be inside the markup to get the correct width.
+        current_run += ' ';
     }
-    current_style.write_teardown_markup(markup);
-    assert(g_utf8_validate(markup.c_str(), -1, nullptr));
-    return markup;
+    if(!current_run.empty()) {
+        runs.emplace_back(active_par, std::move(current_run));
+    }
+    return runs;
 }
 
 } // namespace
@@ -267,12 +265,12 @@ std::vector<std::string> ParagraphFormatter::split_lines() {
     }
 }
 
-std::vector<std::vector<std::string>> ParagraphFormatter::split_formatted_lines() {
+std::vector<std::vector<HBRun>> ParagraphFormatter::split_formatted_lines() {
     precompute();
     HBMeasurer shaper{fc, "fi"};
     best_penalty = 1e100;
     best_split.clear();
-    return global_split_markup(shaper);
+    return global_split_runs(shaper);
 }
 
 std::vector<LineStats> ParagraphFormatter::simple_split(HBMeasurer &shaper) {
@@ -289,14 +287,13 @@ std::vector<LineStats> ParagraphFormatter::simple_split(HBMeasurer &shaper) {
     return lines;
 }
 
-std::vector<std::vector<std::string>>
+std::vector<std::vector<HBRun>>
 ParagraphFormatter::stats_to_markup_lines(const std::vector<LineStats> &linestats) const {
-    std::vector<std::vector<std::string>> lines;
+    std::vector<std::vector<HBRun>> lines;
     lines.reserve(linestats.size());
-    lines.emplace_back(build_line_words_markup(0, linestats[0].end_split));
+    lines.push_back(build_line_words_runs(0, linestats[0].end_split));
     for(size_t i = 1; i < linestats.size(); ++i) {
-        lines.emplace_back(
-            build_line_words_markup(linestats[i - 1].end_split, linestats[i].end_split));
+        lines.push_back(build_line_words_runs(linestats[i - 1].end_split, linestats[i].end_split));
     }
     return lines;
 }
@@ -308,8 +305,7 @@ Length ParagraphFormatter::current_line_width(size_t line_num) const {
     return paragraph_width;
 }
 
-std::vector<std::vector<std::string>>
-ParagraphFormatter::global_split_markup(const HBMeasurer &shaper) {
+std::vector<std::vector<HBRun>> ParagraphFormatter::global_split_runs(const HBMeasurer &shaper) {
     std::vector<std::string> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
@@ -483,52 +479,14 @@ std::string ParagraphFormatter::build_line_text_debug(size_t from_split_ind,
     return result;
 }
 
-std::string ParagraphFormatter::build_line_markup(size_t from_split_ind,
-                                                  size_t to_split_ind) const {
-    std::string line;
-    const auto markup_words = build_line_words_markup(from_split_ind, to_split_ind);
-    for(const auto &w : markup_words) {
-        line += w;
+std::vector<HBRun> ParagraphFormatter::build_line_markup(size_t from_split_ind,
+                                                         size_t to_split_ind) const {
+    std::vector<HBRun> line;
+    const auto word_runs = build_line_words_runs(from_split_ind, to_split_ind);
+    for(const auto &w : word_runs) {
+        line.push_back(std::move(w));
     }
     return line;
-}
-
-std::vector<std::string> ParagraphFormatter::build_line_words_markup(size_t from_split_ind,
-                                                                     size_t to_split_ind) const {
-    assert(to_split_ind >= from_split_ind);
-    std::vector<std::string> line;
-    std::vector<std::string> markup_words;
-    if(to_split_ind == from_split_ind) {
-        return line;
-    }
-    const WordsOnLine line_words = words_for_splits(from_split_ind, to_split_ind);
-    const auto &from_loc = split_locations[from_split_ind];
-
-    StyleStack current_style = determine_style(from_loc);
-
-    if(line_words.first) {
-        markup_words.emplace_back(wordfragment2markup(current_style,
-                                                      words[line_words.first->word],
-                                                      line_words.first->from_bytes,
-                                                      std::string::npos,
-                                                      true,
-                                                      false));
-    }
-    for(size_t i = line_words.full_word_begin; i < line_words.full_word_end; ++i) {
-        const bool add_space = i + 1 != line_words.full_word_end || line_words.last;
-        markup_words.emplace_back(
-            wordfragment2markup(current_style, words[i], 0, std::string::npos, add_space, false));
-    }
-    if(line_words.last) {
-        markup_words.emplace_back(wordfragment2markup(current_style,
-                                                      words[line_words.last->word],
-                                                      0,
-                                                      line_words.last->to_bytes,
-                                                      false,
-                                                      line_words.last->add_dash));
-    }
-
-    return markup_words;
 }
 
 StyleStack ParagraphFormatter::determine_style(TextLocation t) const {
@@ -539,7 +497,7 @@ StyleStack ParagraphFormatter::determine_style(TextLocation t) const {
     std::string dummy;
     while(i < t.offset) {
         while(style_point < current_word.f.size() && current_word.f[style_point].offset == i) {
-            toggle_format(style, dummy, current_word.f[style_point].format);
+            toggle_format(style, current_word.f[style_point].format);
             ++style_point;
         }
         ++i;
@@ -582,8 +540,8 @@ LineStats ParagraphFormatter::compute_closest_line_end(size_t start_split,
         split_points.end(),
         [this, &shaper, start_split, target_line_width_mm](const SplitPoint &p) {
             const auto loc = &p - split_points.data();
-            const auto trial_line = build_line_markup(start_split, loc);
-            const auto trial_width = shaper.markup_width(trial_line.c_str(), params.font);
+            const auto trial_line = build_line_words_runs(start_split, loc);
+            const auto trial_width = shaper.text_width(trial_line);
             return trial_width <= target_line_width_mm;
         });
     if(ppoint == split_points.end()) {
@@ -595,7 +553,7 @@ LineStats ParagraphFormatter::compute_closest_line_end(size_t start_split,
     }
 
     const auto final_line = build_line_markup(start_split, chosen_point);
-    const auto final_width = shaper.markup_width(final_line.c_str(), params.font);
+    const auto final_width = shaper.text_width(final_line);
     // FIXME, check whether the word ends in a dash.
     return LineStats{chosen_point,
                      final_width,
@@ -622,7 +580,7 @@ std::vector<LineStats> ParagraphFormatter::get_line_end_choices(size_t start_spl
     auto add_point = [&](size_t split_point) {
         const auto trial_split = split_point;
         const auto trial_line = build_line_markup(start_split, trial_split);
-        const auto trial_width = shaper.markup_width(trial_line.c_str(), params.font);
+        const auto trial_width = shaper.text_width(trial_line);
         potentials.emplace_back(
             LineStats{trial_split,
                       trial_width,
@@ -684,4 +642,51 @@ bool SplitStates::abandon_search(const std::vector<LineStats> &new_splits,
         current_slot.pop_back();
     }
     return false;
+}
+
+std::vector<HBRun> ParagraphFormatter::build_line_words_runs(size_t from_split_ind,
+                                                             size_t to_split_ind) const {
+    std::vector<HBRun> runs;
+    if(to_split_ind == from_split_ind) {
+        return runs;
+    }
+
+    const WordsOnLine line_words = words_for_splits(from_split_ind, to_split_ind);
+    const auto &from_loc = split_locations[from_split_ind];
+
+    StyleStack current_style = determine_style(from_loc);
+
+    if(line_words.first) {
+        auto new_runs = wordfragment2runs(params.font,
+                                          current_style,
+                                          words[line_words.first->word],
+                                          line_words.first->from_bytes,
+                                          std::string::npos,
+                                          true,
+                                          false);
+        for(auto &r : new_runs) {
+            runs.push_back(std::move(r));
+        }
+    }
+    for(size_t i = line_words.full_word_begin; i < line_words.full_word_end; ++i) {
+        const bool add_space = i + 1 != line_words.full_word_end || line_words.last;
+        auto new_runs = wordfragment2runs(
+            params.font, current_style, words[i], 0, std::string::npos, add_space, false);
+        for(auto &r : new_runs) {
+            runs.push_back(std::move(r));
+        }
+    }
+    if(line_words.last) {
+        auto new_runs = wordfragment2runs(params.font,
+                                          current_style,
+                                          words[line_words.last->word],
+                                          0,
+                                          line_words.last->to_bytes,
+                                          false,
+                                          line_words.last->add_dash);
+        for(auto &r : new_runs) {
+            runs.push_back(std::move(r));
+        }
+    }
+    return runs;
 }

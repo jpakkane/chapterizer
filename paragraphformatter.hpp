@@ -129,7 +129,7 @@ public:
                        HBFontCache &fc_);
 
     std::vector<std::string> split_lines();
-    std::vector<std::vector<std::string>> split_formatted_lines();
+    std::vector<std::vector<HBRun>> split_formatted_lines();
 
     double paragraph_end_penalty(const std::vector<LineStats> &lines) const;
 
@@ -145,20 +145,19 @@ private:
     get_line_end_choices(size_t start_split, const HBMeasurer &shaper, size_t line_num) const;
 
     std::vector<LineStats> simple_split(HBMeasurer &shaper);
-    std::vector<std::vector<std::string>> global_split_markup(const HBMeasurer &shaper);
+    std::vector<std::vector<HBRun>> global_split_runs(const HBMeasurer &shaper);
     void global_split_recursive(const HBMeasurer &shaper,
                                 std::vector<LineStats> &line_stats,
                                 size_t split_pos);
-    std::vector<std::vector<std::string>>
+    std::vector<std::vector<HBRun>>
     stats_to_markup_lines(const std::vector<LineStats> &linestats) const;
     Length current_line_width(size_t line_num) const;
     double total_penalty(const std::vector<LineStats> &lines, bool is_complete = false) const;
 
     WordsOnLine words_for_splits(size_t from_split_ind, size_t to_split_ind) const;
-    std::string build_line_markup(size_t from_split_ind, size_t to_split_ind) const;
+    std::vector<HBRun> build_line_words_runs(size_t from_split_ind, size_t to_split_ind) const;
+    std::vector<HBRun> build_line_markup(size_t from_split_ind, size_t to_split_ind) const;
     std::string build_line_text_debug(size_t from_split_ind, size_t to_split_ind) const;
-    std::vector<std::string> build_line_words_markup(size_t from_split_ind,
-                                                     size_t to_split_ind) const;
 
     Length paragraph_width;
     std::vector<EnrichedWord> words;

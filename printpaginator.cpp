@@ -23,7 +23,8 @@
 namespace {
 
 void plaintextprinter(FILE *f, const TextCommands &c) {
-    if(const auto *just = std::get_if<JustifiedMarkupDrawCommand>(&c)) {
+    /*
+    if(const auto *just = std::get_if<JustifiedTextDrawCommand>(&c)) {
         for(const auto &w : just->markup_words) {
             if(w.back() != ' ') {
                 fprintf(f, "%s ", w.c_str());
@@ -31,7 +32,7 @@ void plaintextprinter(FILE *f, const TextCommands &c) {
                 fprintf(f, "%s", w.c_str());
             }
         }
-    } else if(const auto *rag = std::get_if<MarkupDrawCommand>(&c)) {
+    } else if(const auto *rag = std::get_if<TextDrawCommand>(&c)) {
         if(rag->markup.empty()) {
         } else if(rag->markup.back() != ' ') {
             fprintf(f, "%s ", rag->markup.c_str());
@@ -39,10 +40,11 @@ void plaintextprinter(FILE *f, const TextCommands &c) {
             fprintf(f, "%s", rag->markup.c_str());
         }
     }
+*/
 };
 
 const std::vector<TextCommands> empty_line{
-    MarkupDrawCommand{"", nullptr, Length::zero(), Length::zero(), TextAlignment::Left}};
+    TextDrawCommand{{}, Length::zero(), Length::zero(), TextAlignment::Left}};
 
 } // namespace
 
@@ -147,7 +149,16 @@ void PrintPaginator::generate_pdf(const char *outfile) {
     capypdf::PageProperties pprop;
 
     if(doc.data.pdf.bleed.mm() > 0) {
-        std::abort();
+        pprop.set_pagebox(CAPY_BOX_MEDIA,
+                          0,
+                          0,
+                          (page.w + 2 * doc.data.pdf.bleed).pt(),
+                          (page.h + 2 * doc.data.pdf.bleed).pt());
+        pprop.set_pagebox(CAPY_BOX_TRIM,
+                          doc.data.pdf.bleed.pt(),
+                          doc.data.pdf.bleed.pt(),
+                          (page.w + doc.data.pdf.bleed).pt(),
+                          (page.h + doc.data.pdf.bleed).pt());
     } else {
         pprop.set_pagebox(CAPY_BOX_MEDIA, 0, 0, page.w.pt(), page.h.pt());
     }
@@ -155,7 +166,7 @@ void PrintPaginator::generate_pdf(const char *outfile) {
     dprop.set_title(doc.data.title);
     dprop.set_author(doc.data.author);
     dprop.set_creator("SuperPDF from outer space!");
-    assert(doc.data.is_draft);
+    assert(!doc.data.is_draft);
 
     rend.reset(new CapyPdfRenderer(outfile, page.w, page.h, doc.data.pdf.bleed, dprop, fc));
     std::filesystem::path statfile(outfile);
@@ -187,8 +198,7 @@ void PrintPaginator::render_frontmatter() {
             Length y = m.upper + textblock_height() - col->lines.size() * line_height;
             const Length &left = current_left_margin();
             for(const auto &line : col->lines) {
-                rend->render_markup_as_is(
-                    line.c_str(), styles.colophon.font, left, y, TextAlignment::Left);
+                rend->render_text_as_is(line.c_str(), styles.colophon.font, left, y);
                 y += line_height;
             }
         } else if(auto *ded = std::get_if<Dedication>(&f)) {
@@ -196,7 +206,8 @@ void PrintPaginator::render_frontmatter() {
             const Length &line_height = styles.dedication.line_height;
             const Length &middle = current_left_margin() + textblock_width() / 2;
             for(const auto &line : ded->lines) {
-                rend->render_line_centered(line.c_str(), styles.dedication.font, middle, y);
+                rend->render_text_as_is(
+                    line.c_str(), styles.dedication.font, middle, y, TextAlignment::Centered);
                 y += line_height;
             }
         } else if(std::holds_alternative<FirstPage>(f)) {
@@ -212,7 +223,7 @@ void PrintPaginator::render_frontmatter() {
             buf = stylespan_start;
             buf += doc.data.author;
             buf += stylespan_end;
-            rend->render_markup_as_is(buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
+            rend->render_text_as_is(buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
             tempfont.size = Length::from_pt(24);
             y += 8 * line_height;
             auto colon = doc.data.title.find(':');
@@ -220,8 +231,7 @@ void PrintPaginator::render_frontmatter() {
                 buf = stylespan_start;
                 buf += doc.data.title;
                 buf += stylespan_end;
-                rend->render_markup_as_is(
-                    buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
+                rend->render_text_as_is(buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
             } else {
                 auto part1 = doc.data.title.substr(0, colon + 1);
                 auto part2 = doc.data.title.substr(colon + 2);
@@ -231,21 +241,18 @@ void PrintPaginator::render_frontmatter() {
                 buf = stylespan_start;
                 buf += part1;
                 buf += stylespan_end;
-                rend->render_markup_as_is(
-                    buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
+                rend->render_text_as_is(buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
                 y += 4 * line_height;
                 buf = stylespan_start;
                 buf += part2_1;
                 buf += stylespan_end;
                 tempfont.size = Length::from_pt(28);
-                rend->render_markup_as_is(
-                    buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
+                rend->render_text_as_is(buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
                 y += 2 * line_height;
                 buf = stylespan_start;
                 buf += part2_2;
                 buf += stylespan_end;
-                rend->render_markup_as_is(
-                    buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
+                rend->render_text_as_is(buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
             }
         } else if(auto *signing = std::get_if<Signing>(&f)) {
             render_signing_page(*signing);
@@ -341,13 +348,12 @@ void PrintPaginator::render_mainmatter() {
                 it.next_element();
                 assert(section_element.lines.size() == 1);
                 const auto &chapter_number =
-                    std::get<MarkupDrawCommand>(section_element.lines.front());
+                    std::get<TextDrawCommand>(section_element.lines.front());
                 const Length hack_delta = Length::from_pt(-90);
-                rend->render_markup_as_is(chapter_number.markup.c_str(),
-                                          styles.section.font,
-                                          textblock_left + textblock_width() / 2,
-                                          y + hack_delta,
-                                          chapter_number.alignment);
+                rend->render_runs(chapter_number.runs,
+                                  textblock_left + textblock_width() / 2,
+                                  y + hack_delta,
+                                  chapter_number.alignment);
                 y += line_height;
                 render_maintext_lines(it, sec_page->main_text.end, book_page_number, y, 0);
             } else if(std::holds_alternative<EmptyPage>(p)) {
@@ -418,27 +424,20 @@ void PrintPaginator::render_maintext_lines(const TextElementIterator &start_loc,
         ++current_line;
         if(std::holds_alternative<ParagraphElement>(it.element())) {
             const auto &line = it.line();
-            if(const auto *j = std::get_if<JustifiedMarkupDrawCommand>(&line)) {
+            if(const auto *j = std::get_if<JustifiedTextDrawCommand>(&line)) {
                 rend->render_line_justified(
-                    j->markup_words, styles.normal.font, j->width, textblock_left + j->x, y);
-            } else if(const auto *r = std::get_if<MarkupDrawCommand>(&line)) {
-                rend->render_markup_as_is(r->markup.c_str(),
-                                          styles.normal.font,
-                                          textblock_left + r->x,
-                                          y,
-                                          TextAlignment::Left);
+                    j->words_runs, styles.normal.font, j->width, textblock_left + j->x, y);
+            } else if(const auto *r = std::get_if<TextDrawCommand>(&line)) {
+                rend->render_runs(r->runs, textblock_left + r->x, y, TextAlignment::Left);
             } else {
                 std::abort();
             }
             y += line_height;
         } else if(auto *special = std::get_if<SpecialTextElement>(&it.element())) {
             const auto &line = it.line();
-            const auto mu = std::get<MarkupDrawCommand>(line);
-            rend->render_markup_as_is(mu.markup.c_str(),
-                                      *special->font,
-                                      textblock_left + special->extra_indent,
-                                      y,
-                                      special->alignment);
+            const auto mu = std::get<TextDrawCommand>(line);
+            rend->render_runs(
+                mu.runs, textblock_left + special->extra_indent, y, special->alignment);
             y += line_height;
         } else if(auto *empty = std::get_if<EmptyLineElement>(&it.element())) {
             // Empty lines at the top of the page are ignored.
@@ -567,8 +566,10 @@ void PrintPaginator::create_codeblock(const CodeBlock &cb) {
     el.font = &styles.code.font;
     el.alignment = TextAlignment::Left;
     for(const auto &line : cb.raw_lines) {
-        el.lines.emplace_back(MarkupDrawCommand{
-            line.c_str(), &styles.code.font, Length::zero(), Length::zero(), el.alignment});
+        std::vector<HBRun> bob;
+        bob.emplace_back(styles.code.font, line);
+        el.lines.emplace_back(
+            TextDrawCommand{std::move(bob), Length::zero(), Length::zero(), el.alignment});
     }
     elements.emplace_back(std::move(el));
 }
@@ -596,9 +597,9 @@ void PrintPaginator::create_sign(const SignBlock &sign) {
             // FIXME
             // https://gitlab.gnome.org/GNOME/pango/-/issues/855
             {
-                auto &textline = std::get<MarkupDrawCommand>(rag_lines.front());
-                textline.markup.insert(0, "<span font_features=\"onum=1\">");
-                textline.markup.append("</span>");
+                auto &textline = std::get<TextDrawCommand>(rag_lines.front());
+                // textline.markup.insert(0, "<span font_features=\"onum=1\">");
+                // textline.markup.append("</span>");
             }
             el.lines.emplace_back(std::move(rag_lines.front()));
         } else {
@@ -677,8 +678,10 @@ void PrintPaginator::create_section(const Section &s, const ExtraPenaltyAmounts 
     title_string = "·";
     title_string += std::to_string(s.number);
     title_string += "·";
-    selem.lines.emplace_back(MarkupDrawCommand{
-        title_string, &styles.section.font, textblock_width() / 2, rel_y, TextAlignment::Centered});
+    std::vector<HBRun> bob;
+    bob.emplace_back(styles.section.font, title_string);
+    selem.lines.emplace_back(
+        TextDrawCommand{std::move(bob), textblock_width() / 2, rel_y, TextAlignment::Centered});
     title_string = s.text;
     // The title. Hyphenation is prohibited.
     const bool only_number_in_chapter_heading = true;
@@ -711,28 +714,21 @@ void PrintPaginator::create_paragraph(const Paragraph &p,
 }
 
 std::vector<TextCommands>
-PrintPaginator::build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
+PrintPaginator::build_justified_paragraph(const std::vector<std::vector<HBRun>> &lines,
                                           const HBChapterParameters &text_par,
                                           const Length target_width) {
     Length rel_y = Length::zero();
     std::vector<TextCommands> line_commands;
     line_commands.reserve(lines.size());
     size_t line_num = 0;
-    for(const auto &markup_words : lines) {
+    for(const auto &runs : lines) {
         Length current_indent = line_num == 0 ? text_par.indent : Length{};
         if(line_num < lines.size() - 1) {
-            line_commands.emplace_back(JustifiedMarkupDrawCommand{markup_words,
-                                                                  &text_par.font,
-                                                                  current_indent,
-                                                                  rel_y,
-                                                                  target_width - current_indent});
+            line_commands.emplace_back(JustifiedTextDrawCommand{
+                runs, current_indent, rel_y, target_width - current_indent});
         } else {
-            std::string full_line;
-            for(const auto &w : markup_words) {
-                full_line += w;
-            }
-            line_commands.emplace_back(MarkupDrawCommand{
-                std::move(full_line), &text_par.font, current_indent, rel_y, TextAlignment::Left});
+            line_commands.emplace_back(
+                TextDrawCommand{runs, current_indent, rel_y, TextAlignment::Left});
         }
         line_num++;
         rel_y += text_par.line_height;
@@ -741,7 +737,7 @@ PrintPaginator::build_justified_paragraph(const std::vector<std::vector<std::str
 }
 
 std::vector<TextCommands>
-PrintPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
+PrintPaginator::build_ragged_paragraph(const std::vector<std::vector<HBRun>> &lines,
                                        const HBChapterParameters &text_par,
                                        const TextAlignment alignment) {
     std::vector<TextCommands> line_commands;
@@ -749,14 +745,9 @@ PrintPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string
         alignment == TextAlignment::Centered ? textblock_width() / 2 : Length::zero();
     const auto rel_y = Length::zero(); // FIXME, eventually remove.
     line_commands.reserve(lines.size());
-    for(const auto &markup_words : lines) {
-        std::string full_line;
-        for(const auto &w : markup_words) {
-            full_line += w;
-        }
+    for(const auto &word_runs : lines) {
         assert(alignment != TextAlignment::Right);
-        line_commands.emplace_back(
-            MarkupDrawCommand{std::move(full_line), &text_par.font, rel_x, rel_y, alignment});
+        line_commands.emplace_back(TextDrawCommand{word_runs, rel_x, rel_y, alignment});
     }
     return line_commands;
 }
