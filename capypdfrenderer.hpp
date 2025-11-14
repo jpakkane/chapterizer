@@ -115,7 +115,7 @@ private:
     CapyPDF_FontId hbfont2capyfont(const HBTextParameters &par, const FontInfo &fontinfo);
 
     capypdf::Generator capygen;
-    capypdf::DrawContext capyctx;
+    capypdf::DrawContext ctx;
     int pages = 1;
     double bleed;
     double mediaw, mediah;

@@ -45,12 +45,12 @@ CapyPdfRenderer::CapyPdfRenderer(const char *ofname,
                                  Length bleed_,
                                  const capypdf::DocumentProperties &docprop,
                                  HBFontCache &fc_)
-    : capygen{ofname, docprop}, capyctx{capygen.new_page_context()}, bleed{bleed_.pt()},
+    : capygen{ofname, docprop}, ctx{capygen.new_page_context()}, bleed{bleed_.pt()},
       mediaw{pagew.pt() + 2 * bleed}, mediah{pageh.pt() + 2 * bleed}, fc{fc_}, meas(fc, "fi") {
 
     init_page();
 
-    capyctx.cmd_w(0.1);
+    ctx.cmd_w(0.1);
     outname = ofname;
 }
 
@@ -74,20 +74,20 @@ void CapyPdfRenderer::draw_grid() {
 }
 
 void CapyPdfRenderer::draw_box(Length x, Length y, Length w, Length h, Length thickness) {
-    capyctx.cmd_q();
-    capyctx.cmd_w(thickness.pt());
-    capyctx.cmd_G(0.0);
-    capyctx.cmd_re(x.pt(), y.pt(), (x + w).pt(), (y + h).pt());
-    capyctx.cmd_S();
-    capyctx.cmd_Q();
+    ctx.cmd_q();
+    ctx.cmd_w(thickness.pt());
+    ctx.cmd_G(0.0);
+    ctx.cmd_re(x.pt(), y.pt(), (x + w).pt(), (y + h).pt());
+    ctx.cmd_S();
+    ctx.cmd_Q();
 }
 
 void CapyPdfRenderer::fill_box(Length x, Length y, Length w, Length h, double color) {
-    capyctx.cmd_q();
-    capyctx.cmd_g(color);
-    capyctx.cmd_re(x.pt(), y.pt(), (x + w).pt(), (y + h).pt());
-    capyctx.cmd_f();
-    capyctx.cmd_Q();
+    ctx.cmd_q();
+    ctx.cmd_g(color);
+    ctx.cmd_re(x.pt(), y.pt(), (x + w).pt(), (y + h).pt());
+    ctx.cmd_f();
+    ctx.cmd_Q();
 }
 
 void CapyPdfRenderer::fill_rounded_corner_box(
@@ -96,31 +96,30 @@ void CapyPdfRenderer::fill_rounded_corner_box(
     const double round_fraction = 0.5;
     const auto round_distance = round_fraction * w;
 
-    capyctx.cmd_q();
-    capyctx.cmd_g(color);
+    ctx.cmd_q();
+    ctx.cmd_g(color);
 
-    capyctx.cmd_m((x + round_fraction * w).pt(), y.pt());
-    capyctx.cmd_l((x + w - round_distance).pt(), y.pt());
-    capyctx.cmd_c(
-        (x + w).pt(), y.pt(), (x + w).pt(), y.pt(), (x + w).pt(), (y + round_distance).pt());
+    ctx.cmd_m((x + round_fraction * w).pt(), y.pt());
+    ctx.cmd_l((x + w - round_distance).pt(), y.pt());
+    ctx.cmd_c((x + w).pt(), y.pt(), (x + w).pt(), y.pt(), (x + w).pt(), (y + round_distance).pt());
 
-    capyctx.cmd_l((x + w).pt(), (y + h - round_distance).pt());
-    capyctx.cmd_c((x + w).pt(),
-                  (y + h).pt(),
-                  (x + w).pt(),
-                  (y + h).pt(),
-                  (x + w - round_distance).pt(),
-                  (y + h).pt());
+    ctx.cmd_l((x + w).pt(), (y + h - round_distance).pt());
+    ctx.cmd_c((x + w).pt(),
+              (y + h).pt(),
+              (x + w).pt(),
+              (y + h).pt(),
+              (x + w - round_distance).pt(),
+              (y + h).pt());
 
-    capyctx.cmd_l((x + round_distance).pt(), (y + h).pt());
-    capyctx.cmd_c(
+    ctx.cmd_l((x + round_distance).pt(), (y + h).pt());
+    ctx.cmd_c(
         (x).pt(), (y + h).pt(), (x).pt(), (y + h).pt(), (x).pt(), (y + h - round_distance).pt());
 
-    capyctx.cmd_l(x.pt(), (y + round_distance).pt());
-    capyctx.cmd_c(x.pt(), y.pt(), x.pt(), y.pt(), (x + round_distance).pt(), y.pt());
-    capyctx.cmd_h();
-    capyctx.cmd_f();
-    capyctx.cmd_Q();
+    ctx.cmd_l(x.pt(), (y + round_distance).pt());
+    ctx.cmd_c(x.pt(), y.pt(), x.pt(), y.pt(), (x + round_distance).pt(), y.pt());
+    ctx.cmd_h();
+    ctx.cmd_f();
+    ctx.cmd_Q();
 }
 
 void CapyPdfRenderer::draw_dash_line(const std::vector<Coord> &points, double line_width) {
@@ -148,15 +147,15 @@ void CapyPdfRenderer::draw_poly_line(const std::vector<Coord> &points, Length th
     if(points.size() < 2) {
         return;
     }
-    capyctx.cmd_q();
-    capyctx.cmd_G(0);
-    capyctx.cmd_w(thickness.pt());
-    capyctx.cmd_m(points[0].x.pt(), points[0].y.pt());
+    ctx.cmd_q();
+    ctx.cmd_G(0);
+    ctx.cmd_w(thickness.pt());
+    ctx.cmd_m(points[0].x.pt(), points[0].y.pt());
     for(size_t i = 1; i < points.size(); ++i) {
-        capyctx.cmd_l(points[i].x.pt(), points[i].y.pt());
+        ctx.cmd_l(points[i].x.pt(), points[i].y.pt());
     }
-    capyctx.cmd_S();
-    capyctx.cmd_Q();
+    ctx.cmd_S();
+    ctx.cmd_Q();
 }
 
 void CapyPdfRenderer::render_line_justified(const std::vector<HBRun> &runs,
@@ -271,12 +270,12 @@ void CapyPdfRenderer::render_run(const HBRun &run, Length x, Length y) {
     hb_buffer_guess_segment_properties(buf);
     hb_font_set_scale(fontinfo.f, hbscale, hbscale);
 
-    capypdf::Text text = capyctx.text_new();
+    capypdf::Text text = ctx.text_new();
     text.cmd_Tf(capyfont_id, run.par.size.pt());
     text.cmd_Td(x.pt(), y.pt());
     serialize_single_run(run, text, buf);
 
-    capyctx.render_text_obj(text);
+    ctx.render_text_obj(text);
 }
 
 void CapyPdfRenderer::render_text_as_is(
@@ -412,7 +411,7 @@ void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
 
     hb_buffer_guess_segment_properties(buf);
 
-    capypdf::Text text = capyctx.text_new();
+    capypdf::Text text = ctx.text_new();
     text.cmd_Td(x.pt(), y.pt());
     for(size_t i = 0; i < runs.size(); ++i) {
         const auto &run = runs[i];
@@ -426,7 +425,7 @@ void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
         serialize_single_run(run, text, buf);
     }
 
-    capyctx.render_text_obj(text);
+    ctx.render_text_obj(text);
 }
 
 void CapyPdfRenderer::render_wonky_text(const char *text,
@@ -450,21 +449,21 @@ void CapyPdfRenderer::render_wonky_text(const char *text,
 
 void CapyPdfRenderer::new_page() {
     finalize_page();
-    capygen.add_page(capyctx);
+    capygen.add_page(ctx);
     init_page();
     ++pages;
 }
 
 void CapyPdfRenderer::init_page() {
     if(bleed > 0) {
-        capyctx.cmd_q();
-        capyctx.cmd_cm(1.0, 0, 0, 1.0, bleed, bleed);
+        ctx.cmd_q();
+        ctx.cmd_cm(1.0, 0, 0, 1.0, bleed, bleed);
     }
 }
 
 void CapyPdfRenderer::finalize_page() {
     if(bleed > 0) {
-        capyctx.cmd_Q();
+        ctx.cmd_Q();
         draw_cropmarks();
     }
 }
@@ -472,31 +471,31 @@ void CapyPdfRenderer::finalize_page() {
 void CapyPdfRenderer::draw_cropmarks() {
     const auto b = bleed;
 
-    capyctx.cmd_q();
-    capyctx.cmd_m(b, 0);
-    capyctx.cmd_l(b, b / 2);
-    capyctx.cmd_m(0, b);
-    capyctx.cmd_l(b / 2, b);
+    ctx.cmd_q();
+    ctx.cmd_m(b, 0);
+    ctx.cmd_l(b, b / 2);
+    ctx.cmd_m(0, b);
+    ctx.cmd_l(b / 2, b);
 
-    capyctx.cmd_m(b, 0);
-    capyctx.cmd_l(b, b / 2);
-    capyctx.cmd_m(0, b);
-    capyctx.cmd_l(b / 2, b);
+    ctx.cmd_m(b, 0);
+    ctx.cmd_l(b, b / 2);
+    ctx.cmd_m(0, b);
+    ctx.cmd_l(b / 2, b);
 
-    capyctx.cmd_m(mediaw - b, 0);
-    capyctx.cmd_l(mediaw - b, b / 2);
-    capyctx.cmd_m(mediaw - b / 2, b);
-    capyctx.cmd_l(mediaw, b);
+    ctx.cmd_m(mediaw - b, 0);
+    ctx.cmd_l(mediaw - b, b / 2);
+    ctx.cmd_m(mediaw - b / 2, b);
+    ctx.cmd_l(mediaw, b);
 
-    capyctx.cmd_m(b, mediah);
-    capyctx.cmd_l(b, mediah - b / 2);
-    capyctx.cmd_m(0, mediah - b);
-    capyctx.cmd_l(b / 2, mediah - b);
+    ctx.cmd_m(b, mediah);
+    ctx.cmd_l(b, mediah - b / 2);
+    ctx.cmd_m(0, mediah - b);
+    ctx.cmd_l(b / 2, mediah - b);
 
-    capyctx.cmd_m(mediaw - b, mediah);
-    capyctx.cmd_l(mediaw - b, mediah - b / 2);
-    capyctx.cmd_m(mediaw, mediah - b);
-    capyctx.cmd_l(mediaw - b / 2, mediah - b);
+    ctx.cmd_m(mediaw - b, mediah);
+    ctx.cmd_l(mediaw - b, mediah - b / 2);
+    ctx.cmd_m(mediaw, mediah - b);
+    ctx.cmd_l(mediaw - b / 2, mediah - b);
 
     /*
     capyctx.cmd_w(5);
@@ -504,26 +503,26 @@ void CapyPdfRenderer::draw_cropmarks() {
     capyctx.cmd_S();
     cairo_stroke_preserve(cr);
 */
-    capyctx.cmd_w(1);
-    capyctx.cmd_G(0);
-    capyctx.cmd_S();
-    capyctx.cmd_Q();
+    ctx.cmd_w(1);
+    ctx.cmd_G(0);
+    ctx.cmd_S();
+    ctx.cmd_Q();
 }
 
 void CapyPdfRenderer::draw_line(Length x0, Length y0, Length x1, Length y1, Length thickness) {
-    capyctx.cmd_w(thickness.pt());
-    capyctx.cmd_m(x0.pt(), y0.pt());
-    capyctx.cmd_l(x1.pt(), y1.pt());
-    capyctx.cmd_S();
+    ctx.cmd_w(thickness.pt());
+    ctx.cmd_m(x0.pt(), y0.pt());
+    ctx.cmd_l(x1.pt(), y1.pt());
+    ctx.cmd_S();
 }
 
 void CapyPdfRenderer::draw_line(
     Length x0, Length y0, Length x1, Length y1, Length thickness, double g, CapyPDF_Line_Cap cap) {
-    capyctx.cmd_q();
-    capyctx.cmd_G(g);
-    capyctx.cmd_J(cap);
+    ctx.cmd_q();
+    ctx.cmd_G(g);
+    ctx.cmd_J(cap);
     draw_line(x0, y0, x1, y1, thickness);
-    capyctx.cmd_Q();
+    ctx.cmd_Q();
 }
 
 CapyImageInfo CapyPdfRenderer::get_image(const std::filesystem::path &path) {
@@ -546,11 +545,11 @@ CapyImageInfo CapyPdfRenderer::get_image(const std::filesystem::path &path) {
 
 void CapyPdfRenderer::draw_image(
     const CapyImageInfo &image, Length x, Length y, Length w, Length h) {
-    capyctx.cmd_q();
-    capyctx.cmd_cm(1, 0, 0, 1, x.pt(), y.pt());
-    capyctx.cmd_cm(w.pt(), 0, 0, h.pt(), 0, 0);
-    capyctx.cmd_Do(image.id);
-    capyctx.cmd_Q();
+    ctx.cmd_q();
+    ctx.cmd_cm(1, 0, 0, 1, x.pt(), y.pt());
+    ctx.cmd_cm(w.pt(), 0, 0, h.pt(), 0, 0);
+    ctx.cmd_Do(image.id);
+    ctx.cmd_Q();
 }
 
 void CapyPdfRenderer::add_section_outline(int section_number, const std::string &text) {
