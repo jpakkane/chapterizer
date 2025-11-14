@@ -306,7 +306,7 @@ Metadata load_book_json(const char *path) {
             auto sfile = m.top_dir / text;
             m.frontmatter.emplace_back(Signing{read_lines(sfile.c_str())});
         } else {
-            fprintf(stderr, "Not supported yet.\n");
+            fprintf(stderr, "Frontmatter not supported yet.\n");
             std::abort();
         }
     }

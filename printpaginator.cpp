@@ -543,7 +543,7 @@ void PrintPaginator::build_main_text() {
             elements.emplace_back(EmptyLineElement{1});
             first_paragraph = true;
         } else {
-            fprintf(stderr, "Not supported yet.\n");
+            fprintf(stderr, "Maintext entry not supported yet.\n");
             std::abort();
         }
     }
