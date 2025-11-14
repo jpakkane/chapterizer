@@ -92,44 +92,35 @@ void CapyPdfRenderer::fill_box(Length x, Length y, Length w, Length h, double co
 
 void CapyPdfRenderer::fill_rounded_corner_box(
     Length x, Length y, Length w, Length h, double color) {
-    std::abort();
 
-    /*
     const double round_fraction = 0.5;
     const auto round_distance = round_fraction * w;
 
     capyctx.cmd_q();
-    cairo_set_source_rgb(cr, color, color, color);
+    capyctx.cmd_g(color);
 
-    cairo_move_to(cr, (x + round_fraction * w).pt(), y.pt());
-    cairo_line_to(cr, (x + w - round_distance).pt(), y.pt());
-    cairo_curve_to(
-        cr, (x + w).pt(), y.pt(), (x + w).pt(), y.pt(), (x + w).pt(), (y + round_distance).pt());
+    capyctx.cmd_m((x + round_fraction * w).pt(), y.pt());
+    capyctx.cmd_l((x + w - round_distance).pt(), y.pt());
+    capyctx.cmd_c(
+        (x + w).pt(), y.pt(), (x + w).pt(), y.pt(), (x + w).pt(), (y + round_distance).pt());
 
-    cairo_line_to(cr, (x + w).pt(), (y + h - round_distance).pt());
-    cairo_curve_to(cr,
-                   (x + w).pt(),
-                   (y + h).pt(),
-                   (x + w).pt(),
-                   (y + h).pt(),
-                   (x + w - round_distance).pt(),
-                   (y + h).pt());
+    capyctx.cmd_l((x + w).pt(), (y + h - round_distance).pt());
+    capyctx.cmd_c((x + w).pt(),
+                  (y + h).pt(),
+                  (x + w).pt(),
+                  (y + h).pt(),
+                  (x + w - round_distance).pt(),
+                  (y + h).pt());
 
-    cairo_line_to(cr, (x + round_distance).pt(), (y + h).pt());
-    cairo_curve_to(cr,
-                   (x).pt(),
-                   (y + h).pt(),
-                   (x).pt(),
-                   (y + h).pt(),
-                   (x).pt(),
-                   (y + h - round_distance).pt());
+    capyctx.cmd_l((x + round_distance).pt(), (y + h).pt());
+    capyctx.cmd_c(
+        (x).pt(), (y + h).pt(), (x).pt(), (y + h).pt(), (x).pt(), (y + h - round_distance).pt());
 
-    cairo_line_to(cr, x.pt(), (y + round_distance).pt());
-    cairo_curve_to(cr, x.pt(), y.pt(), x.pt(), y.pt(), (x + round_distance).pt(), y.pt());
-    cairo_close_path(cr);
-    cairo_fill(cr);
+    capyctx.cmd_l(x.pt(), (y + round_distance).pt());
+    capyctx.cmd_c(x.pt(), y.pt(), x.pt(), y.pt(), (x + round_distance).pt(), y.pt());
+    capyctx.cmd_h();
+    capyctx.cmd_f();
     capyctx.cmd_Q();
-*/
 }
 
 void CapyPdfRenderer::draw_dash_line(const std::vector<Coord> &points, double line_width) {
@@ -198,7 +189,7 @@ void CapyPdfRenderer::render_line_justified(const std::vector<HBRun> &runs,
         x += space_extra_width;
     }
     */
-    std::abort();
+    render_runs(runs, x, y, TextAlignment::Left);
 }
 
 void CapyPdfRenderer::render_line_justified(const std::vector<std::string> &markup_words,

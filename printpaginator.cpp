@@ -195,26 +195,26 @@ void PrintPaginator::render_frontmatter() {
 
         } else if(auto *col = std::get_if<Colophon>(&f)) {
             const Length &line_height = styles.colophon.line_height;
-            Length y = m.upper + textblock_height() - col->lines.size() * line_height;
+            Length y = m.lower + col->lines.size() * line_height;
             const Length &left = current_left_margin();
             for(const auto &line : col->lines) {
                 rend->render_text_as_is(line.c_str(), styles.colophon.font, left, y);
-                y += line_height;
+                y -= line_height;
             }
         } else if(auto *ded = std::get_if<Dedication>(&f)) {
-            Length y = m.upper + textblock_height() / 4;
+            Length y = page.h - (m.upper + textblock_height() / 4);
             const Length &line_height = styles.dedication.line_height;
             const Length &middle = current_left_margin() + textblock_width() / 2;
             for(const auto &line : ded->lines) {
                 rend->render_text_as_is(
                     line.c_str(), styles.dedication.font, middle, y, TextAlignment::Centered);
-                y += line_height;
+                y -= line_height;
             }
         } else if(std::holds_alternative<FirstPage>(f)) {
             const char stylespan_start[] = R"(<span variant="small-caps" letter_spacing="1500">)";
             const char stylespan_end[] = "</span>";
             std::string buf;
-            Length y = m.upper + textblock_height() / 8;
+            Length y = page.h - (m.upper + textblock_height() / 8);
             const Length &line_height = styles.normal.line_height;
             const Length &middle = current_left_margin() + textblock_width() / 2;
             auto tempfont = styles.normal.font;
@@ -225,7 +225,7 @@ void PrintPaginator::render_frontmatter() {
             buf += stylespan_end;
             rend->render_text_as_is(buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
             tempfont.size = Length::from_pt(24);
-            y += 8 * line_height;
+            y -= 8 * line_height;
             auto colon = doc.data.title.find(':');
             if(colon == std::string::npos) {
                 buf = stylespan_start;
@@ -242,13 +242,13 @@ void PrintPaginator::render_frontmatter() {
                 buf += part1;
                 buf += stylespan_end;
                 rend->render_text_as_is(buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
-                y += 4 * line_height;
+                y -= 4 * line_height;
                 buf = stylespan_start;
                 buf += part2_1;
                 buf += stylespan_end;
                 tempfont.size = Length::from_pt(28);
                 rend->render_text_as_is(buf.c_str(), tempfont, middle, y, TextAlignment::Centered);
-                y += 2 * line_height;
+                y -= 2 * line_height;
                 buf = stylespan_start;
                 buf += part2_2;
                 buf += stylespan_end;
@@ -277,7 +277,7 @@ void PrintPaginator::render_signing_page(const Signing &s) {
         xdelta[i] = 3 * Length::from_pt(shiftdist(e));
         tilt[i] = shiftdist(e) / 2;
     }
-    Length y = m.upper + textblock_height() / 5;
+    Length y = page.h - (m.upper + textblock_height() / 5);
     const Length letter_width = Length::from_pt(6);
     const Length &line_height = styles.code.line_height;
     const Length &middle = current_left_margin() + textblock_width() / 2;
@@ -302,14 +302,14 @@ void PrintPaginator::render_signing_page(const Signing &s) {
                                     y);
             x += letter_width;
         }
-        y += line_height;
+        y -= line_height;
     }
 }
 
 void PrintPaginator::render_floating_image(const ImageElement &imel) {
-    Length y = m.upper;
     Length imw = Length::from_mm(double(imel.info.w) / imel.ppi * 25.4);
     Length imh = Length::from_mm(double(imel.info.h) / imel.ppi * 25.4);
+    Length y = page.h - (m.upper + imh);
     Length x = current_left_margin() + textblock_width() / 2 - imw / 2;
     rend->draw_image(imel.info, x, y, imw, imh);
 }
@@ -322,10 +322,10 @@ void PrintPaginator::render_mainmatter() {
             size_t book_page_number = rend->page_num();
             if(auto *reg_page = std::get_if<RegularPage>(&p)) {
                 const Length line_height = styles.normal.line_height;
-                Length y = m.upper + line_height;
+                Length y = page.h - (m.upper + line_height);
                 if(reg_page->image) {
                     render_floating_image(reg_page->image.value());
-                    y += line_height * reg_page->image->height_in_lines;
+                    y -= line_height * reg_page->image->height_in_lines;
                 }
                 render_maintext_lines(
                     reg_page->main_text.start, reg_page->main_text.end, book_page_number, y);
@@ -342,7 +342,7 @@ void PrintPaginator::render_mainmatter() {
                                                  : doc.data.pdf.margins.inner;
                 const size_t chapter_heading_top_whitespace = 8;
                 const Length line_height = styles.normal.line_height;
-                Length y = m.upper + chapter_heading_top_whitespace * line_height;
+                Length y = page.h - (m.upper + chapter_heading_top_whitespace * line_height);
                 auto it = sec_page->main_text.start;
                 const auto &section_element = std::get<SectionElement>(it.element());
                 it.next_element();
@@ -352,9 +352,9 @@ void PrintPaginator::render_mainmatter() {
                 const Length hack_delta = Length::from_pt(-90);
                 rend->render_runs(chapter_number.runs,
                                   textblock_left + textblock_width() / 2,
-                                  y + hack_delta,
+                                  y - hack_delta,
                                   chapter_number.alignment);
-                y += line_height;
+                y -= line_height;
                 render_maintext_lines(it, sec_page->main_text.end, book_page_number, y, 0);
             } else if(std::holds_alternative<EmptyPage>(p)) {
             } else {
@@ -432,17 +432,17 @@ void PrintPaginator::render_maintext_lines(const TextElementIterator &start_loc,
             } else {
                 std::abort();
             }
-            y += line_height;
+            y -= line_height;
         } else if(auto *special = std::get_if<SpecialTextElement>(&it.element())) {
             const auto &line = it.line();
             const auto mu = std::get<TextDrawCommand>(line);
             rend->render_runs(
                 mu.runs, textblock_left + special->extra_indent, y, special->alignment);
-            y += line_height;
+            y -= line_height;
         } else if(auto *empty = std::get_if<EmptyLineElement>(&it.element())) {
             // Empty lines at the top of the page are ignored.
             if(current_line != 0) {
-                y += empty->num_lines * line_height;
+                y -= empty->num_lines * line_height;
             }
         } else if(std::holds_alternative<ImageElement>(it.element())) {
             // Images are rendered at the start of the page.
@@ -495,11 +495,11 @@ void PrintPaginator::draw_page_number(size_t page_number) {
         // https://gitlab.gnome.org/GNOME/pango/-/issues/855
         char buf[80];
         snprintf(buf, 80, "<span font_features=\"onum=1\">%d</span>", (int)page_number);
-        rend->render_markup_as_is(buf, styles.normal.font, x, y, align);
+        rend->render_text_as_is(buf, styles.normal.font, x, y, align);
     } else {
         char buf[20];
         snprintf(buf, 20, "%d", (int)page_number);
-        rend->render_markup_as_is(buf, styles.normal.font, x, y, align);
+        rend->render_text_as_is(buf, styles.normal.font, x, y, align);
     }
 }
 
