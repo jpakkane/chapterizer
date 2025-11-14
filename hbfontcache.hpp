@@ -4,6 +4,7 @@
 #pragma once
 
 #include <chaptercommon.hpp>
+#include <metadata.hpp>
 #include <units.hpp>
 #include <hb.h>
 
@@ -16,13 +17,6 @@ struct HBFontCloser {
 
 struct HBBufferCloser {
     void operator()(hb_buffer_t *b) const noexcept { hb_buffer_destroy(b); }
-};
-
-struct FontFiles {
-    std::string regular;
-    std::string italic;
-    std::string bold;
-    std::string bolditalic;
 };
 
 struct FontOwner {

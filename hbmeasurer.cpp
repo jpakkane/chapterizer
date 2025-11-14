@@ -145,3 +145,7 @@ Length HBMeasurer::codepoint_right_overhang(const uint32_t uchar,
     const auto letter_width = text_width(tmp, font);
     return hang_fraction * letter_width;
 }
+
+Length HBMeasurer::markup_width(const char *utf8_text, const HBTextParameters &font) const {
+    std::abort();
+}

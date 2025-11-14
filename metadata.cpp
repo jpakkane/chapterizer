@@ -25,10 +25,14 @@ namespace {
 const std::unordered_map<std::string, Language> langmap{
     {"unk", Language::Unset}, {"en", Language::English}, {"fi", Language::Finnish}};
 
-const std::unordered_map<std::string, FontStyle> stylemap{{"regular", FontStyle::Regular},
-                                                          {"italic", FontStyle::Italic},
-                                                          {"bold", FontStyle::Bold},
-                                                          {"bolditalic", FontStyle::BoldItalic}};
+const std::unordered_map<std::string, TextCategory> categorymap{{"serif", TextCategory::Serif},
+                                                                {"sans", TextCategory::SansSerif},
+                                                                {"mono", TextCategory::Monospace}};
+
+const std::unordered_map<std::string, TextStyle> stylemap{{"regular", TextStyle::Regular},
+                                                          {"italic", TextStyle::Italic},
+                                                          {"bold", TextStyle::Bold},
+                                                          {"bolditalic", TextStyle::BoldItalic}};
 
 std::vector<std::string> extract_stringarray(const nlohmann::json &data, const char *entryname) {
     std::vector<std::string> result;
@@ -90,19 +94,25 @@ int get_int(const json &data, const char *key) {
     return value.get<int>();
 }
 
-ChapterParameters parse_chapterstyle(const json &data) {
-    ChapterParameters chapter_style;
+HBChapterParameters parse_chapterstyle(const json &data) {
+    HBChapterParameters chapter_style;
     chapter_style.line_height = Length::from_pt(get_double(data, "line_height"));
     chapter_style.indent = Length::from_mm(get_double(data, "indent"));
     auto font = data["font"];
-    chapter_style.font.name = get_string(font, "name");
+    auto cat = get_string(font, "category");
+    auto cit = categorymap.find(cat);
+    if(cit == categorymap.end()) {
+        fprintf(stderr, "Unknown category: %s\n", cat.c_str());
+    }
+    chapter_style.font.par.cat = cit->second;
+
     const auto stylestr = get_string(font, "type");
     auto it = stylemap.find(stylestr);
     if(it == stylemap.end()) {
         printf("Unknown type \"%s\".", stylestr.c_str());
         std::abort();
     }
-    chapter_style.font.type = it->second;
+    chapter_style.font.par.style = it->second;
     chapter_style.font.size = Length::from_pt(get_double(font, "pointsize"));
     auto fit = data.find("justify_last");
     if(fit != data.end()) {
@@ -113,9 +123,9 @@ ChapterParameters parse_chapterstyle(const json &data) {
 
 void setup_draft_settings(Metadata &m) {
     // Fonts
-    m.pdf.styles.normal.font.name = "Liberation Serif";
+    m.pdf.styles.normal.font.par.cat = TextCategory::Serif;
     m.pdf.styles.normal.font.size = Length::from_pt(12);
-    m.pdf.styles.normal.font.type = FontStyle::Regular;
+    m.pdf.styles.normal.font.par.style = TextStyle::Regular;
     m.pdf.styles.normal.indent = Length::from_mm(10);
     m.pdf.styles.normal.line_height = Length::from_pt(20);
     const auto &normal = m.pdf.styles.normal;
@@ -123,23 +133,23 @@ void setup_draft_settings(Metadata &m) {
     m.pdf.styles.normal_noindent.indent = Length::zero();
 
     m.pdf.styles.code = normal;
-    m.pdf.styles.code.font.name = "Liberation Mono";
+    m.pdf.styles.code.font.par.cat = TextCategory::Monospace;
     m.pdf.styles.code.font.size = Length::from_pt(10);
     m.pdf.styles.colophon = normal;
     m.pdf.styles.dedication = normal;
     m.pdf.styles.footnote = normal;
     m.pdf.styles.lists = normal;
     m.pdf.styles.letter = normal;
-    m.pdf.styles.letter.font.type = FontStyle::Italic;
+    m.pdf.styles.letter.font.par.style = TextStyle::Italic;
 
-    m.pdf.styles.section.font.name = "Liberation Sans";
+    m.pdf.styles.section.font.par.cat = TextCategory::SansSerif;
     m.pdf.styles.section.font.size = Length::from_pt(14);
-    m.pdf.styles.section.font.type = FontStyle::Bold;
+    m.pdf.styles.section.font.par.style = TextStyle::Bold;
     m.pdf.styles.section.line_height = Length::from_pt(25);
 
     m.pdf.styles.title = m.pdf.styles.section;
     m.pdf.styles.author = m.pdf.styles.section;
-    m.pdf.styles.author.font.type = FontStyle::Regular;
+    m.pdf.styles.author.font.par.style = TextStyle::Regular;
 
     // Page
     m.pdf.page.w = Length::from_mm(210);
@@ -159,6 +169,27 @@ void setup_draft_settings(Metadata &m) {
     m.pdf.spaces.letter_indent = Length::from_mm(20);
     m.pdf.spaces.different_paragraphs = Length::from_mm(5);
     m.pdf.spaces.footnote_separation = Length::from_mm(5);
+}
+
+void parse_font_files(FontFiles &f, const json &fdict) {
+    if(fdict.contains("regular")) {
+        f.regular = fdict["regular"];
+    }
+    if(fdict.contains("italic")) {
+        f.italic = fdict["italic"];
+    }
+    if(fdict.contains("bold")) {
+        f.bold = fdict["bold"];
+    }
+    if(fdict.contains("bolditalic")) {
+        f.bold = fdict["bolditalic"];
+    }
+}
+
+void parse_font_paths(FontFilePaths &paths, const json &fonts) {
+    parse_font_files(paths.serif, fonts["serif"]);
+    parse_font_files(paths.sansserif, fonts["sans"]);
+    parse_font_files(paths.mono, fonts["smono"]);
 }
 
 void load_pdf_element(Metadata &m, const json &pdf) {
@@ -186,6 +217,8 @@ void load_pdf_element(Metadata &m, const json &pdf) {
     if(m.is_draft) {
         setup_draft_settings(m);
     } else {
+
+        parse_font_paths(m.pdf.font_files, pdf["fontfiles"]);
 
         m.pdf.page.w = Length::from_mm(get_int(page, "width"));
         m.pdf.page.h = Length::from_mm(get_int(page, "height"));

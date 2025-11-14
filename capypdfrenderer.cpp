@@ -21,10 +21,9 @@
 
 #include <hb.h>
 
-#include <textstats.hpp>
+#include <hbmeasurer.hpp>
+#include <cstring>
 #include <algorithm>
-
-static TextStats hack{};
 
 #include <sstream>
 
@@ -170,7 +169,7 @@ void CapyPdfRenderer::draw_poly_line(const std::vector<Coord> &points, Length th
 }
 
 void CapyPdfRenderer::render_line_justified(const std::string &line_text,
-                                            const FontParameters &par,
+                                            const HBTextParameters &par,
                                             Length line_width,
                                             Length x,
                                             Length y) {
@@ -203,7 +202,7 @@ void CapyPdfRenderer::render_line_justified(const std::string &line_text,
 }
 
 void CapyPdfRenderer::render_line_justified(const std::vector<std::string> &markup_words,
-                                            const FontParameters &par,
+                                            const HBTextParameters &par,
                                             Length line_width,
                                             Length x,
                                             Length y) {
@@ -375,6 +374,18 @@ void CapyPdfRenderer::render_text(
     }
 }
 
+void CapyPdfRenderer::render_markup_as_is(const char *line,
+                                          const HBTextParameters &par,
+                                          Length x,
+                                          Length y) {
+    std::abort();
+}
+
+void CapyPdfRenderer::render_markup_as_is(
+    const char *line, const HBTextParameters &par, Length x, Length y, TextAlignment align) {
+    std::abort();
+}
+
 void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
                                   Length x,
                                   Length y,
@@ -410,7 +421,7 @@ void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
 }
 
 void CapyPdfRenderer::render_line_centered(const char *line,
-                                           const FontParameters &par,
+                                           const HBTextParameters &par,
                                            Length x,
                                            Length y) {
     /*
@@ -426,7 +437,7 @@ void CapyPdfRenderer::render_line_centered(const char *line,
 }
 
 void CapyPdfRenderer::render_wonky_text(const char *text,
-                                        const FontParameters &par,
+                                        const HBTextParameters &par,
                                         Length raise,
                                         Length shift,
                                         double tilt,

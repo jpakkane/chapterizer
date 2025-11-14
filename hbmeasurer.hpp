@@ -63,6 +63,8 @@ public:
 
     Length codepoint_right_overhang(const uint32_t uchar, const HBTextParameters &font) const;
 
+    Length markup_width(const char *utf8_text, const HBTextParameters &font) const;
+
 private:
     Length compute_width(const char *utf8_text, const HBTextParameters &text_par) const;
 

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "paragraphformatter.hpp"
-#include <textstats.hpp>
+#include <paragraphformatter.hpp>
+#include <glib.h>
 #include <algorithm>
 #include <numeric>
 #include <optional>
@@ -38,9 +38,11 @@ double line_penalty(const LineStats &line, Length target_width) {
 }
 
 std::vector<LinePenaltyStatistics> compute_line_penalties(const std::vector<std::string> &lines,
-                                                          const ChapterParameters &par,
-                                                          const Length paragraph_width) {
-    TextStats shaper;
+                                                          const HBChapterParameters &par,
+                                                          const Length paragraph_width,
+                                                          HBFontCache &fc) {
+    const char *language = "fi";
+    HBMeasurer shaper(fc, language);
     std::vector<LinePenaltyStatistics> penalties;
     penalties.reserve(lines.size());
     Length indent = par.indent;
@@ -236,22 +238,24 @@ std::string wordfragment2markup(StyleStack &current_style,
 
 PenaltyStatistics compute_stats(const std::vector<std::string> &lines,
                                 const Length paragraph_width,
-                                const ChapterParameters &par,
-                                const ExtraPenaltyAmounts &amounts) {
+                                const HBChapterParameters &par,
+                                const ExtraPenaltyAmounts &amounts,
+                                HBFontCache &fc) {
 
-    return PenaltyStatistics{compute_line_penalties(lines, par, paragraph_width),
+    return PenaltyStatistics{compute_line_penalties(lines, par, paragraph_width, fc),
                              compute_extra_penalties(lines, amounts)};
 }
 
 ParagraphFormatter::ParagraphFormatter(const std::vector<EnrichedWord> &words_,
                                        const Length target_width,
-                                       const ChapterParameters &in_params,
-                                       const ExtraPenaltyAmounts &ea)
-    : paragraph_width(target_width), words{words_}, params{in_params}, extras(ea) {}
+                                       const HBChapterParameters &in_params,
+                                       const ExtraPenaltyAmounts &ea,
+                                       HBFontCache &fc_)
+    : paragraph_width(target_width), words{words_}, params{in_params}, extras(ea), fc(fc_) {}
 
 std::vector<std::string> ParagraphFormatter::split_lines() {
     precompute();
-    TextStats shaper;
+    HBMeasurer shaper(fc, "fi");
     best_penalty = 1e100;
     best_split.clear();
     if(false) {
@@ -265,13 +269,13 @@ std::vector<std::string> ParagraphFormatter::split_lines() {
 
 std::vector<std::vector<std::string>> ParagraphFormatter::split_formatted_lines() {
     precompute();
-    TextStats shaper;
+    HBMeasurer shaper{fc, "fi"};
     best_penalty = 1e100;
     best_split.clear();
     return global_split_markup(shaper);
 }
 
-std::vector<LineStats> ParagraphFormatter::simple_split(TextStats &shaper) {
+std::vector<LineStats> ParagraphFormatter::simple_split(HBMeasurer &shaper) {
     std::vector<LineStats> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
@@ -305,7 +309,7 @@ Length ParagraphFormatter::current_line_width(size_t line_num) const {
 }
 
 std::vector<std::vector<std::string>>
-ParagraphFormatter::global_split_markup(const TextStats &shaper) {
+ParagraphFormatter::global_split_markup(const HBMeasurer &shaper) {
     std::vector<std::string> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
@@ -320,7 +324,7 @@ ParagraphFormatter::global_split_markup(const TextStats &shaper) {
     return stats_to_markup_lines(best_split);
 }
 
-void ParagraphFormatter::global_split_recursive(const TextStats &shaper,
+void ParagraphFormatter::global_split_recursive(const HBMeasurer &shaper,
                                                 std::vector<LineStats> &line_stats,
                                                 size_t current_split) {
     if(state_cache.abandon_search(line_stats, total_penalty(line_stats))) {
@@ -556,7 +560,7 @@ TextLocation ParagraphFormatter::point_to_location(const SplitPoint &p) const {
 }
 
 LineStats ParagraphFormatter::get_closest_line_end(size_t start_split,
-                                                   const TextStats &shaper,
+                                                   const HBMeasurer &shaper,
                                                    size_t line_num) const {
     auto f = closest_line_ends.find(start_split);
     if(f != closest_line_ends.end()) {
@@ -568,7 +572,7 @@ LineStats ParagraphFormatter::get_closest_line_end(size_t start_split,
 }
 
 LineStats ParagraphFormatter::compute_closest_line_end(size_t start_split,
-                                                       const TextStats &shaper,
+                                                       const HBMeasurer &shaper,
                                                        size_t line_num) const {
     assert(start_split < split_points.size() - 1);
     const Length target_line_width_mm = current_line_width(line_num);
@@ -600,7 +604,7 @@ LineStats ParagraphFormatter::compute_closest_line_end(size_t start_split,
 
 // Sorted by decreasing fitness.
 std::vector<LineStats> ParagraphFormatter::get_line_end_choices(size_t start_split,
-                                                                const TextStats &shaper,
+                                                                const HBMeasurer &shaper,
                                                                 size_t line_num) const {
     std::vector<LineStats> potentials;
     potentials.reserve(5);

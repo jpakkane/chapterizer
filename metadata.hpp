@@ -62,13 +62,27 @@ struct Spaces {
     Length footnote_separation;
 };
 
+struct FontFiles {
+    std::string regular;
+    std::string italic;
+    std::string bold;
+    std::string bolditalic;
+};
+
+struct FontFilePaths {
+    FontFiles serif;
+    FontFiles sansserif;
+    FontFiles mono;
+};
+
 struct PdfMetadata {
     std::string ofname;
     std::vector<std::string> colophon;
     PageSize page;
     Length bleed;
     Margins margins;
-    ChapterStyles styles;
+    HBChapterStyles styles;
+    FontFilePaths font_files;
     Spaces spaces;
 };
 

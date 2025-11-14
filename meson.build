@@ -20,9 +20,7 @@ l = static_library('chap',
     'wordhyphenator.cpp',
     'paragraphformatter.cpp',
     'draftparagraphformatter.cpp',
-    'textstats.cpp',
     'hbmeasurer.cpp',
-    'pangopdfrenderer.cpp',
     'capypdfrenderer.cpp',
     'utils.cpp',
     'fchelpers.cpp',
@@ -43,11 +41,11 @@ executable('bookmaker', 'bookmaker.cpp',
     link_with: l,
     dependencies: [pangocairo_dep, tixml_dep, capy_dep])
 
-if gtk4_dep.found()
-    executable('guitool', 'guitool.cpp',
-      link_with: l,
-      dependencies: [gtk4_dep])
-endif
+#if gtk4_dep.found()
+#    executable('guitool', 'guitool.cpp',
+#      link_with: l,
+#      dependencies: [gtk4_dep])
+#endif
 
 executable('tests', 'tests.cpp',
     link_with: [l],

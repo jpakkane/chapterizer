@@ -30,12 +30,32 @@
             "lower": 20
         },
         "bleed": 20,
+        "fontfiles": {
+            "serif": {
+                "regular": "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+                "italic": "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf",
+                "bold": "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
+                "bolditalic": "/usr/share/fonts/truetype/liberation/LiberationSerif-BoldItalic.ttf"
+            },
+            "sans": {
+                "regular": "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                "italic": "/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf",
+                "bold": "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                "bolditalic": "/usr/share/fonts/truetype/liberation/LiberationSans-BoldItalic.ttf"
+            },
+            "mono": {
+                "regular": "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
+                "italic": "/usr/share/fonts/truetype/liberation/LiberationMono-Italic.ttf",
+                "bold": "/usr/share/fonts/truetype/liberation/LiberationMono-Bold.ttf",
+                "bolditalic": "/usr/share/fonts/truetype/liberation/LiberationMono-BoldItalic.ttf"
+            }
+        },
         "styles": {
             "normal": {
                 "line_height": 14,
                 "indent": 5,
                 "font": {
-                    "name": "Liberation Serif",
+                    "category": "serif",
                     "type": "regular",
                     "pointsize": 10
                 }
@@ -44,7 +64,7 @@
                 "line_height": 16,
                 "indent": 0,
                 "font": {
-                    "name": "Liberation Sans",
+                    "category": "sans",
                     "type": "bold",
                     "pointsize": 14
                 }
@@ -53,7 +73,7 @@
                 "line_height": 12,
                 "indent": 0,
                 "font": {
-                    "name": "Liberation Mono",
+                    "category": "mono",
                     "type": "regular",
                     "pointsize": 9
                 }
@@ -62,7 +82,7 @@
                 "line_height": 22,
                 "indent": 0,
                 "font": {
-                    "name": "Liberation Serif",
+                    "category": "serif",
                     "type": "bold",
                     "pointsize": 16
                 }
@@ -71,7 +91,7 @@
                 "line_height": 16,
                 "indent": 0,
                 "font": {
-                    "name": "Liberation Serif",
+                    "category": "serif",
                     "type": "regular",
                     "pointsize": 14
                 }
@@ -80,7 +100,7 @@
                 "line_height": 11,
                 "indent": 5,
                 "font": {
-                    "name": "Liberation Serif",
+                    "category": "serif",
                     "type": "regular",
                     "pointsize": 9
                 }
@@ -89,7 +109,7 @@
                 "line_height": 14,
                 "indent": 5,
                 "font": {
-                    "name": "Liberation Serif",
+                    "category": "serif",
                     "type": "italic",
                     "pointsize": 10
                 }
@@ -98,7 +118,7 @@
                 "line_height": 12,
                 "indent": 0,
                 "font": {
-                    "name": "Liberation Serif",
+                    "category": "serif",
                     "type": "regular",
                     "pointsize": 10
                 }
@@ -107,7 +127,7 @@
                 "line_height": 11,
                 "indent": 5,
                 "font": {
-                    "name": "Liberation Serif",
+                    "category": "serif",
                     "type": "regular",
                     "pointsize": 9
                 }
@@ -116,7 +136,7 @@
                 "line_height": 12,
                 "indent": 0,
                 "font": {
-                    "name": "Liberation Serif",
+                    "category": "serif",
                     "type": "italic",
                     "pointsize": 10
                 }

@@ -17,8 +17,10 @@
 #pragma once
 
 #include <chaptercommon.hpp>
+#include <hbmeasurer.hpp>
 #include <wordhyphenator.hpp>
 #include <formatting.hpp>
+#include <hbfontcache.hpp>
 #include <utils.hpp>
 #include <variant>
 #include <optional>
@@ -122,8 +124,9 @@ class ParagraphFormatter {
 public:
     ParagraphFormatter(const std::vector<EnrichedWord> &words,
                        const Length target_width,
-                       const ChapterParameters &in_params,
-                       const ExtraPenaltyAmounts &ea);
+                       const HBChapterParameters &in_params,
+                       const ExtraPenaltyAmounts &ea,
+                       HBFontCache &fc_);
 
     std::vector<std::string> split_lines();
     std::vector<std::vector<std::string>> split_formatted_lines();
@@ -134,16 +137,16 @@ private:
     void precompute();
     TextLocation point_to_location(const SplitPoint &p) const;
     LineStats
-    get_closest_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const;
+    get_closest_line_end(size_t start_split, const HBMeasurer &shaper, size_t line_num) const;
     LineStats
-    compute_closest_line_end(size_t start_split, const TextStats &shaper, size_t line_num) const;
+    compute_closest_line_end(size_t start_split, const HBMeasurer &shaper, size_t line_num) const;
 
     std::vector<LineStats>
-    get_line_end_choices(size_t start_split, const TextStats &shaper, size_t line_num) const;
+    get_line_end_choices(size_t start_split, const HBMeasurer &shaper, size_t line_num) const;
 
-    std::vector<LineStats> simple_split(TextStats &shaper);
-    std::vector<std::vector<std::string>> global_split_markup(const TextStats &shaper);
-    void global_split_recursive(const TextStats &shaper,
+    std::vector<LineStats> simple_split(HBMeasurer &shaper);
+    std::vector<std::vector<std::string>> global_split_markup(const HBMeasurer &shaper);
+    void global_split_recursive(const HBMeasurer &shaper,
                                 std::vector<LineStats> &line_stats,
                                 size_t split_pos);
     std::vector<std::vector<std::string>>
@@ -169,8 +172,9 @@ private:
 
     // Cached results of best states we have achieved thus far.
     SplitStates state_cache;
-    ChapterParameters params;
+    HBChapterParameters params;
     ExtraPenaltyAmounts extras;
+    HBFontCache &fc;
 
     mutable std::unordered_map<size_t, LineStats> closest_line_ends;
 };

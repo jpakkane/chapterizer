@@ -25,6 +25,8 @@
 
 namespace {
 
+HBFontCache fc;
+
 const char preformatted_text[] =
     R"(From the corner of the divan of Persian
 saddle-bags on which he was lying, smoking,
@@ -382,7 +384,7 @@ void run_optimization_cb(GtkButton *, gpointer data) {
         rich_words.emplace_back(
             EnrichedWord{std::move(words[i]), std::move(hyphenated_words[i]), {}, empty_style});
     }
-    ParagraphFormatter builder{rich_words, paragraph_width, params, extras};
+    ParagraphFormatter builder{rich_words, paragraph_width, params, extras, fc};
     auto new_lines = builder.split_formatted_lines();
     std::string collator;
     for(const auto &l : new_lines) {

@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <pangopdfrenderer.hpp>
+#include <capypdfrenderer.hpp>
 #include <metadata.hpp>
 #include <formatting.hpp>
 #include <units.hpp>
@@ -28,7 +28,7 @@
 
 struct MarkupDrawCommand {
     std::string markup;
-    const FontParameters *font;
+    const HBTextParameters *font;
     Length x;
     Length y;
     TextAlignment alignment;
@@ -36,14 +36,14 @@ struct MarkupDrawCommand {
 
 struct JustifiedMarkupDrawCommand {
     std::vector<std::string> markup_words;
-    const FontParameters *font;
+    const HBTextParameters *font;
     Length x;
     Length y;
     Length width;
 };
 
 struct ImageCommand {
-    ImageInfo i;
+    CapyImageInfo i;
     Length x; // Relative to left edge of text block.
     Length y;
     Length display_height;
@@ -63,14 +63,14 @@ struct EmptyLineElement {
 
 struct ParagraphElement {
     std::vector<TextCommands> lines;
-    ChapterParameters params;
+    HBChapterParameters params;
     Length paragraph_width;
 };
 
 struct SpecialTextElement {
     std::vector<TextCommands> lines;
     Length extra_indent;
-    const FontParameters *font = nullptr;
+    const HBTextParameters *font = nullptr;
     TextAlignment alignment;
 };
 
@@ -78,7 +78,7 @@ struct ImageElement {
     std::filesystem::path path;
     double ppi;
     size_t height_in_lines;
-    ImageInfo info;
+    CapyImageInfo info;
 };
 
 struct FootnoteElement {};
@@ -196,11 +196,11 @@ private:
 
     std::vector<TextCommands>
     build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
-                              const ChapterParameters &text_par,
+                              const HBChapterParameters &text_par,
                               const Length target_width);
     std::vector<TextCommands>
     build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
-                           const ChapterParameters &text_par,
+                           const HBChapterParameters &text_par,
                            const TextAlignment alignment);
 
     void create_section(const Section &s, const ExtraPenaltyAmounts &extras);
@@ -210,7 +210,7 @@ private:
 
     void create_paragraph(const Paragraph &p,
                           const ExtraPenaltyAmounts &extras,
-                          const ChapterParameters &chpar,
+                          const HBChapterParameters &chpar,
                           Length extra_indent);
 
     void optimize_page_splits();
@@ -248,14 +248,15 @@ private:
     const Document &doc;
     // These are just helpers to cut down on typing.
     const PageSize &page;
-    const ChapterStyles &styles;
+    const HBChapterStyles &styles;
     const Spaces &spaces;
     const Margins &m;
-    std::unique_ptr<PangoPdfRenderer> rend;
+    std::unique_ptr<CapyPdfRenderer> rend;
     WordHyphenator hyphen;
     int current_page = 1;
     int chapter_start_page = -1;
 
+    HBFontCache fc;
     // Add frontmatter
     std::vector<std::vector<Page>> maintext_sections;
     // Add backmatter

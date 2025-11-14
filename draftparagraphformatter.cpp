@@ -16,9 +16,10 @@
 
 #include <draftparagraphformatter.hpp>
 #include <hbfontcache.hpp>
-#include <textstats.hpp>
+#include <hbmeasurer.hpp>
 #include <algorithm>
 #include <optional>
+#include <glib.h>
 #include <cassert>
 #include <cmath>
 

@@ -143,16 +143,25 @@ PrintPaginator::PrintPaginator(const Document &d)
 PrintPaginator::~PrintPaginator() { fclose(stats); }
 
 void PrintPaginator::generate_pdf(const char *outfile) {
+    capypdf::DocumentProperties dprop;
+    capypdf::PageProperties pprop;
+
+    if(doc.data.pdf.bleed.mm() > 0) {
+        std::abort();
+    } else {
+        pprop.set_pagebox(CAPY_BOX_MEDIA, 0, 0, page.w.pt(), page.h.pt());
+    }
+    dprop.set_default_page_properties(pprop);
+    dprop.set_title(doc.data.title);
+    dprop.set_author(doc.data.author);
+    dprop.set_creator("SuperPDF from outer space!");
+    assert(doc.data.is_draft);
+
+    rend.reset(new CapyPdfRenderer(outfile, page.w, page.h, doc.data.pdf.bleed, dprop, fc));
     std::filesystem::path statfile(outfile);
     statfile.replace_extension(".stats.txt");
     stats = fopen(statfile.string().c_str(), "w");
     fprintf(stats, "Statistics\n\n");
-    rend.reset(new PangoPdfRenderer(outfile,
-                                    page.w,
-                                    page.h,
-                                    doc.data.pdf.bleed,
-                                    doc.data.title.c_str(),
-                                    doc.data.author.c_str()));
     build_main_text();
     if(true) {
         std::filesystem::path dumpfile(outfile);
@@ -578,7 +587,7 @@ void PrintPaginator::create_sign(const SignBlock &sign) {
             tmpline += line;
             tmpline += '|';
             std::vector<EnrichedWord> processed_words = text_to_formatted_words(tmpline);
-            ParagraphFormatter b(processed_words, textwidth, styles.normal, extra);
+            ParagraphFormatter b(processed_words, textwidth, styles.normal, extra, fc);
             auto lines = b.split_formatted_lines();
             el.extra_indent = textblock_width() / 2;
             el.alignment = TextAlignment::Centered;
@@ -619,7 +628,7 @@ void PrintPaginator::create_letter(const Letter &letter) {
         el.alignment = TextAlignment::Left;
         auto paragraph_width = textblock_width() - 2 * spaces.letter_indent;
         std::vector<EnrichedWord> processed_words = text_to_formatted_words(partext);
-        ParagraphFormatter b(processed_words, paragraph_width, styles.letter, extra);
+        ParagraphFormatter b(processed_words, paragraph_width, styles.letter, extra, fc);
         auto lines = b.split_formatted_lines();
         el.extra_indent = spaces.letter_indent;
         el.lines = build_ragged_paragraph(lines, styles.letter, el.alignment);
@@ -675,7 +684,7 @@ void PrintPaginator::create_section(const Section &s, const ExtraPenaltyAmounts 
     const bool only_number_in_chapter_heading = true;
     if(!only_number_in_chapter_heading) {
         std::vector<EnrichedWord> processed_words = text_to_formatted_words(title_string, false);
-        ParagraphFormatter b(processed_words, section_width, styles.section, extras);
+        ParagraphFormatter b(processed_words, section_width, styles.section, extras, fc);
         auto lines = b.split_formatted_lines();
         auto built_lines = build_ragged_paragraph(lines, styles.section, section_alignment);
         for(auto &line : built_lines) {
@@ -688,12 +697,12 @@ void PrintPaginator::create_section(const Section &s, const ExtraPenaltyAmounts 
 
 void PrintPaginator::create_paragraph(const Paragraph &p,
                                       const ExtraPenaltyAmounts &extras,
-                                      const ChapterParameters &chpar,
+                                      const HBChapterParameters &chpar,
                                       Length extra_indent) {
     ParagraphElement pelem;
     pelem.paragraph_width = textblock_width() - 2 * extra_indent;
     std::vector<EnrichedWord> processed_words = text_to_formatted_words(p.text);
-    ParagraphFormatter b(processed_words, pelem.paragraph_width, chpar, extras);
+    ParagraphFormatter b(processed_words, pelem.paragraph_width, chpar, extras, fc);
     auto lines = b.split_formatted_lines();
     pelem.params = chpar;
     pelem.lines = build_justified_paragraph(lines, chpar, pelem.paragraph_width);
@@ -703,7 +712,7 @@ void PrintPaginator::create_paragraph(const Paragraph &p,
 
 std::vector<TextCommands>
 PrintPaginator::build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
-                                          const ChapterParameters &text_par,
+                                          const HBChapterParameters &text_par,
                                           const Length target_width) {
     Length rel_y = Length::zero();
     std::vector<TextCommands> line_commands;
@@ -733,7 +742,7 @@ PrintPaginator::build_justified_paragraph(const std::vector<std::vector<std::str
 
 std::vector<TextCommands>
 PrintPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
-                                       const ChapterParameters &text_par,
+                                       const HBChapterParameters &text_par,
                                        const TextAlignment alignment) {
     std::vector<TextCommands> line_commands;
     const auto rel_x =
@@ -754,7 +763,7 @@ PrintPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string
 
 std::vector<EnrichedWord> PrintPaginator::text_to_formatted_words(const std::string &text,
                                                                   bool permit_hyphenation) {
-    StyleStack current_style(styles.code.font.name, styles.code.font.size);
+    StyleStack current_style("dummy", styles.code.font.size);
     auto plain_words = split_to_words(std::string_view(text));
     std::vector<EnrichedWord> processed_words;
     const Language lang = permit_hyphenation ? doc.data.language : Language::Unset;
