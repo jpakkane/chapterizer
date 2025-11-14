@@ -471,6 +471,16 @@ void PrintPaginator::new_page() {
         }
     }
     rend->new_page();
+    const bool debug_page = true;
+    if(debug_page) {
+        rend->draw_box(Length::zero(), Length::zero(), page.w, page.h, 0.8, Length::from_pt(0.5));
+        rend->draw_box(current_left_margin(),
+                       m.lower,
+                       textblock_width(),
+                       textblock_height(),
+                       0.8,
+                       Length::from_pt(0.5));
+    }
 }
 
 void PrintPaginator::draw_edge_markers(size_t chapter_number, size_t page_number) {
@@ -480,7 +490,7 @@ void PrintPaginator::draw_edge_markers(size_t chapter_number, size_t page_number
     Length x = (page_number % 2) ? page.w : Length::zero();
     // move downwards per chapter
     Length y =
-        page.h / 2 - (5 - (((int64_t)chapter_number - 1) % 10)) * tab_height + stroke_width / 2;
+        page.h / 2 + (5 - (((int64_t)chapter_number - 1) % 10)) * tab_height + stroke_width / 2;
 
     rend->fill_rounded_corner_box(x - stroke_width / 2, y, stroke_width, tab_height, 0.8);
 }

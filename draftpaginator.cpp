@@ -625,6 +625,7 @@ void DraftPaginator::draw_debug_bars(int num_bars, const Length bar_start_y) {
                    bar_start_y,
                    textblock_width() + 2 * chaffwidth,
                    2 * num_bars * boxheight,
+                   0.5,
                    Length::from_pt(0.1));
     // Text area box
     const double line_width = 0.4;
@@ -675,6 +676,7 @@ void DraftPaginator::flush_draw_commands() {
                        m.upper,
                        textblock_width(),
                        textblock_height(),
+                       0.5,
                        Length::from_pt(0.1));
     }
     if(draw_cut_guide) {

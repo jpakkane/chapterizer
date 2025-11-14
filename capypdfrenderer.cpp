@@ -40,13 +40,14 @@ get_endpoint(hb_glyph_info_t *glyph_info, size_t glyph_count, size_t i, const ch
 } // namespace
 
 CapyPdfRenderer::CapyPdfRenderer(const char *ofname,
-                                 Length pagew,
-                                 Length pageh,
+                                 Length pagew_,
+                                 Length pageh_,
                                  Length bleed_,
                                  const capypdf::DocumentProperties &docprop,
                                  HBFontCache &fc_)
     : capygen{ofname, docprop}, ctx{capygen.new_page_context()}, bleed{bleed_.pt()},
-      mediaw{pagew.pt() + 2 * bleed}, mediah{pageh.pt() + 2 * bleed}, fc{fc_}, meas(fc, "fi") {
+      pagew{pagew_.pt()}, pageh{pageh_.pt()}, mediaw{pagew_.pt() + 2 * bleed},
+      mediah{pageh_.pt() + 2 * bleed}, fc{fc_}, meas(fc, "fi") {
 
     init_page();
 
@@ -73,11 +74,11 @@ void CapyPdfRenderer::draw_grid() {
 */
 }
 
-void CapyPdfRenderer::draw_box(Length x, Length y, Length w, Length h, Length thickness) {
+void CapyPdfRenderer::draw_box(Length x, Length y, Length w, Length h, double g, Length thickness) {
     ctx.cmd_q();
     ctx.cmd_w(thickness.pt());
-    ctx.cmd_G(0.0);
-    ctx.cmd_re(x.pt(), y.pt(), (x + w).pt(), (y + h).pt());
+    ctx.cmd_G(g);
+    ctx.cmd_re(x.pt(), y.pt(), w.pt(), h.pt());
     ctx.cmd_S();
     ctx.cmd_Q();
 }

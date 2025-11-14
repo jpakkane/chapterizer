@@ -35,8 +35,8 @@ struct CapyImageInfo {
 class CapyPdfRenderer {
 public:
     explicit CapyPdfRenderer(const char *ofname,
-                             Length pagew,
-                             Length pageh,
+                             Length pagew_,
+                             Length pageh_,
                              Length bleed,
                              const capypdf::DocumentProperties &docprop,
                              HBFontCache &fc_);
@@ -78,7 +78,7 @@ public:
     void new_page();
     int page_num() const { return pages; }
 
-    void draw_box(Length x, Length y, Length w, Length h, Length thickness);
+    void draw_box(Length x, Length y, Length w, Length h, double g, Length thickness);
     void fill_box(Length x, Length y, Length w, Length h, double color);
 
     void fill_rounded_corner_box(Length x, Length y, Length w, Length h, double color);
@@ -118,6 +118,7 @@ private:
     capypdf::DrawContext ctx;
     int pages = 1;
     double bleed;
+    double pagew, pageh;
     double mediaw, mediah;
     std::unordered_map<hb_font_t *, CapyPDF_FontId> loaded_fonts;
     std::unordered_map<std::filesystem::path, CapyImageInfo> loaded_images;
