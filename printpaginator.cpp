@@ -437,7 +437,7 @@ void PrintPaginator::render_maintext_lines(const TextElementIterator &start_loc,
             const auto &line = it.line();
             if(const auto *j = std::get_if<JustifiedTextDrawCommand>(&line)) {
                 rend->render_line_justified(
-                    j->words_runs, styles.normal.font, j->width, textblock_left + j->x, y);
+                    j->words, styles.normal.font, j->width, textblock_left + j->x, y);
             } else if(const auto *r = std::get_if<TextDrawCommand>(&line)) {
                 rend->render_runs(r->runs, textblock_left + r->x, y, TextAlignment::Left);
             } else {
@@ -745,8 +745,11 @@ PrintPaginator::build_justified_paragraph(const std::vector<HBLine> &lines,
     for(const auto &line : lines) {
         Length current_indent = line_num == 0 ? text_par.indent : Length{};
         if(line_num < lines.size() - 1) {
-            line_commands.emplace_back(JustifiedTextDrawCommand{
-                line2runs(line) /*FIXME*/, current_indent, rel_y, target_width - current_indent});
+            line_commands.emplace_back(
+                JustifiedTextDrawCommand{line /* FIXME, should do a std::move */,
+                                         current_indent,
+                                         rel_y,
+                                         target_width - current_indent});
         } else {
             line_commands.emplace_back(
                 TextDrawCommand{line2runs(line), current_indent, rel_y, TextAlignment::Left});

@@ -37,6 +37,45 @@ get_endpoint(hb_glyph_info_t *glyph_info, size_t glyph_count, size_t i, const ch
     return strlen(sampletext);
 }
 
+void hb_buffer_to_textsequence(hb_buffer_t *buf,
+                               capypdf::TextSequence &ts,
+                               FontInfo &fontinfo,
+                               double hbscale,
+                               const char *unshaped_text) {
+
+    unsigned int glyph_count;
+    hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
+    hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
+    for(unsigned int i = 0; i < glyph_count; i++) {
+        const hb_glyph_info_t *current = glyph_info + i;
+        const hb_glyph_position_t *curpos = glyph_pos + i;
+        hb_codepoint_t glyphid = current->codepoint;
+        hb_position_t x_offset = curpos->x_offset;
+        // hb_position_t y_offset = curpos->y_offset;
+        hb_position_t x_advance = curpos->x_advance;
+        // hb_position_t y_advance = curpos->y_advance;
+        std::string_view original_text(unshaped_text + glyph_info[i].cluster,
+                                       unshaped_text +
+                                           get_endpoint(glyph_info, glyph_count, i, unshaped_text));
+        auto hb_glyph_advance_in_font_units =
+            hb_font_get_glyph_h_advance(fontinfo.f, current->codepoint) / hbscale *
+            fontinfo.units_per_em;
+        const auto hb_advance_in_font_units = x_advance / hbscale * fontinfo.units_per_em;
+        const int32_t kerning_delta =
+            int32_t(hb_glyph_advance_in_font_units - hb_advance_in_font_units);
+        // FIXME, should check this better, such as if the original text consisted of only one
+        // codepoint.
+        if(original_text.size() == 1) {
+            ts.append_raw_glyph(glyphid, original_text.front());
+        } else {
+            ts.append_ligature_glyph(glyphid, original_text);
+        }
+        if(kerning_delta != 0) {
+            ts.append_kerning(kerning_delta);
+        }
+    }
+}
+
 } // namespace
 
 CapyPdfRenderer::CapyPdfRenderer(const char *ofname,
@@ -159,86 +198,58 @@ void CapyPdfRenderer::draw_poly_line(const std::vector<Coord> &points, Length th
     ctx.cmd_Q();
 }
 
-void CapyPdfRenderer::render_line_justified(const std::vector<HBRun> &runs,
-                                            const HBTextParameters &par,
-                                            Length line_width,
-                                            Length x,
-                                            Length y) {
-    /*
-    assert(line_text.find('\n') == std::string::npos);
-    setup_pango(par);
-    const auto words = hack_split(line_text);
-    Length text_width = hack.text_width(line_text.c_str(), par);
-    const double num_spaces = std::count(line_text.begin(), line_text.end(), ' ');
+void CapyPdfRenderer::render_line_justified(
+    const HBLine line, const HBTextParameters &par, Length line_width, Length x, Length y) {
+    const Length text_width = meas.text_width(line);
+    const double num_spaces = line.words.size() - 1;
+    // assert(num_spaces > 1);
     const Length space_extra_width{num_spaces > 0 ? ((line_width - text_width) / num_spaces)
                                                   : Length::zero()};
+    const Length space_extra_width_fontunits = 1000 * space_extra_width;
 
-    std::string tmp;
-    for(size_t i = 0; i < words.size(); ++i) {
-        cairo_move_to(cr, x.pt(), y.pt());
-        PangoRectangle r;
+    hb_buffer_t *buf = hb_buffer_create();
+    std::unique_ptr<hb_buffer_t, HBBufferCloser> bc(buf);
 
-        tmp = words[i];
-        tmp += ' ';
-        pango_layout_set_attributes(layout, nullptr);
-        pango_layout_set_text(layout, tmp.c_str(), -1);
-        pango_layout_get_extents(layout, nullptr, &r);
-        pango_cairo_update_layout(cr, layout);
-        pango_cairo_show_layout(cr, layout);
-        x += Length::from_pt(double(r.width) / PANGO_SCALE);
-        x += space_extra_width;
+    const double num_steps = HBFontCache::NUM_STEPS;
+
+    assert(!line.words.empty());
+
+    capypdf::Text text = ctx.text_new();
+    text.cmd_Td(x.pt(), y.pt());
+
+    for(size_t i = 0; i < line.words.size(); ++i) {
+        const bool is_first = i == 0;
+        const bool is_last = i == line.words.size() - 1;
+        const auto &word = line.words[i];
+        capypdf::TextSequence ts = capypdf::TextSequence();
+        for(const auto &run : word.runs) {
+            // FIXME, only set font if the style changes.
+            auto fontinfo = std::move(fc.get_font(run.par.par).value());
+            auto capyfont_id = hbfont2capyfont(run.par, fontinfo);
+            const double run_font_size = run.par.size.pt();
+
+            const double hbscale = run_font_size * num_steps;
+
+            hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
+            hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
+            hb_buffer_set_language(buf, hb_language_from_string("fi", -1));
+            hb_buffer_add_utf8(buf, run.text.data(), run.text.size(), 0, -1);
+
+            hb_font_set_scale(fontinfo.f, hbscale, hbscale);
+
+            // FIXME: set shaping options.
+            hb_shape(fontinfo.f, buf, nullptr, 0);
+
+            text.cmd_Tf(capyfont_id, run.par.size.pt());
+            hb_buffer_to_textsequence(buf, ts, fontinfo, hbscale, run.text.c_str());
+            if(!is_last) {
+                ts.append_kerning(-space_extra_width_fontunits.pt() / run.par.size.pt());
+            }
+            hb_buffer_reset(buf);
+        }
+        text.cmd_TJ(ts);
     }
-    */
-    render_runs(runs, x, y, TextAlignment::Left);
-}
-
-void CapyPdfRenderer::render_line_justified(const std::vector<std::string> &markup_words,
-                                            const HBTextParameters &par,
-                                            Length line_width,
-                                            Length x,
-                                            Length y) {
-    /*
-    if(markup_words.empty()) {
-        return;
-    }
-    const uint32_t last_char = get_last_char(markup_words.back());
-    const Length overhang_right = hack.codepoint_right_overhang(last_char, par);
-    setup_pango(par);
-    std::string full_line;
-    for(const auto &w : markup_words) {
-        full_line += w; // Markup words end in spaces (except the last one).
-    }
-
-    pango_layout_set_attributes(layout, nullptr);
-    // Pango aligns by top, we want alignment by baseline.
-    // https://gitlab.gnome.org/GNOME/pango/-/issues/698
-    pango_layout_set_text(layout, "A", 1);
-    const auto desired_baseline = pango_layout_get_baseline(layout) / PANGO_SCALE;
-
-    const Length target_width = line_width;
-    pango_layout_set_markup(layout, full_line.c_str(), full_line.length());
-    const Length text_width = hack.markup_width(full_line.c_str(), par);
-    const double num_spaces = double(markup_words.size() - 1);
-    const Length space_extra_width =
-        num_spaces > 0 ? (target_width - text_width + overhang_right) / num_spaces : Length::zero();
-
-    for(const auto &markup_word : markup_words) {
-        cairo_move_to(cr, x.pt(), y.pt());
-        PangoRectangle r;
-
-        pango_layout_set_attributes(layout, nullptr);
-        pango_layout_set_markup(layout, markup_word.c_str(), -1);
-        const auto current_baseline = pango_layout_get_baseline(layout) / PANGO_SCALE;
-
-        cairo_rel_move_to(cr, 0, desired_baseline - current_baseline);
-        pango_layout_get_extents(layout, nullptr, &r);
-        pango_cairo_update_layout(cr, layout);
-        pango_cairo_show_layout(cr, layout);
-        x += Length::from_pt(double(r.width) / PANGO_SCALE);
-        x += space_extra_width;
-    }
-*/
-    std::abort();
+    ctx.render_text_obj(text);
 }
 
 void CapyPdfRenderer::render_text_as_is(const char *line,
@@ -326,37 +337,7 @@ void CapyPdfRenderer::serialize_single_run(const HBRun &run,
         hb_shape(hbfont, buf, nullptr, 0);
     }
 
-    unsigned int glyph_count;
-    hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
-    hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
-    for(unsigned int i = 0; i < glyph_count; i++) {
-        const hb_glyph_info_t *current = glyph_info + i;
-        const hb_glyph_position_t *curpos = glyph_pos + i;
-        hb_codepoint_t glyphid = current->codepoint;
-        hb_position_t x_offset = curpos->x_offset;
-        // hb_position_t y_offset = curpos->y_offset;
-        hb_position_t x_advance = curpos->x_advance;
-        // hb_position_t y_advance = curpos->y_advance;
-        std::string_view original_text(
-            run.text.data() + glyph_info[i].cluster,
-            run.text.data() + get_endpoint(glyph_info, glyph_count, i, run.text.data()));
-        auto hb_glyph_advance_in_font_units =
-            hb_font_get_glyph_h_advance(fontinfo.f, current->codepoint) / hbscale *
-            fontinfo.units_per_em;
-        const auto hb_advance_in_font_units = x_advance / hbscale * fontinfo.units_per_em;
-        const int32_t kerning_delta =
-            int32_t(hb_glyph_advance_in_font_units - hb_advance_in_font_units);
-        // FIXME, should check this better, such as if the original text consisted of only one
-        // codepoint.
-        if(original_text.size() == 1) {
-            ts.append_raw_glyph(glyphid, original_text.front());
-        } else {
-            ts.append_ligature_glyph(glyphid, original_text);
-        }
-        if(kerning_delta != 0) {
-            ts.append_kerning(kerning_delta);
-        }
-    }
+    hb_buffer_to_textsequence(buf, ts, fontinfo, hbscale, run.text.c_str());
 
     tobj.cmd_TJ(ts);
 }
@@ -567,7 +548,7 @@ void CapyPdfRenderer::add_section_outline(int section_number, const std::string 
 
 CapyPDF_FontId CapyPdfRenderer::hbfont2capyfont(const HBTextParameters &par,
                                                 const FontInfo &fontinfo) {
-
+    assert(fontinfo.f);
     auto it = loaded_fonts.find(fontinfo.f);
     if(it != loaded_fonts.end()) {
         return it->second;

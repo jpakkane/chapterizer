@@ -42,15 +42,9 @@ public:
                              HBFontCache &fc_);
     ~CapyPdfRenderer();
 
-    void render_line_justified(const std::vector<HBRun> &runs,
+    void render_line_justified(const HBLine line,
                                const HBTextParameters &par,
                                Length line_width_mm,
-                               Length x,
-                               Length y);
-
-    void render_line_justified(const std::vector<std::string> &markup_words,
-                               const HBTextParameters &par,
-                               Length line_width,
                                Length x,
                                Length y);
 

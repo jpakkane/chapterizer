@@ -34,7 +34,7 @@ struct TextDrawCommand {
 };
 
 struct JustifiedTextDrawCommand {
-    std::vector<HBRun> words_runs;
+    HBLine words;
     Length x;
     Length y;
     Length width;
