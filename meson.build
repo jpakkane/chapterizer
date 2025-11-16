@@ -4,7 +4,6 @@ cpp = meson.get_compiler('cpp')
 hyphen_dep = cpp.find_library('hyphen')
 ft_dep = dependency('freetype2')
 gtk4_dep = dependency('gtk4', required: false, method: 'pkg-config')
-fc_dep = dependency('fontconfig')
 glib_dep = dependency('glib-2.0')
 tixml_dep = dependency('tinyxml2')
 nljson_dep = dependency('nlohmann_json')
@@ -21,7 +20,6 @@ l = static_library('chap',
     'hbmeasurer.cpp',
     'capypdfrenderer.cpp',
     'utils.cpp',
-    'fchelpers.cpp',
     'formatting.cpp',
     'bookparser.cpp',
     'epub.cpp',
@@ -30,7 +28,7 @@ l = static_library('chap',
     'chapterformatter.cpp',
     'metadata.cpp',
     'hbfontcache.cpp',
-    dependencies: [hyphen_dep, fc_dep, glib_dep, voikko_dep, hb_dep, capy_dep]
+    dependencies: [hyphen_dep, glib_dep, voikko_dep, hb_dep, ft_dep, capy_dep]
 )
 
 executable('bookmaker', 'bookmaker.cpp',
