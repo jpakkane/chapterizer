@@ -42,11 +42,8 @@ public:
                              HBFontCache &fc_);
     ~CapyPdfRenderer();
 
-    void render_line_justified(const HBLine line,
-                               const HBTextParameters &par,
-                               Length line_width_mm,
-                               Length x,
-                               Length y);
+    void render_line_justified(
+        const HBLine line, const HBTextParameters &par, Length line_width_mm, Length x, Length y);
 
     void render_text_as_is(const char *line, const HBTextParameters &par, Length x, Length y);
     void render_text_as_is(

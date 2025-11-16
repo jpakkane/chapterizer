@@ -26,6 +26,8 @@
 
 // Measures a single "run", that is, a single text sequence with the same font properties.
 
+void append_shaping_options(const HBTextParameters &pars, std::vector<hb_feature_t> &out);
+
 class HBMeasurer {
 public:
     explicit HBMeasurer(const HBFontCache &cache, const char *language);

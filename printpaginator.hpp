@@ -192,10 +192,9 @@ public:
 private:
     void build_main_text();
 
-    std::vector<TextCommands>
-    build_justified_paragraph(const std::vector<HBLine> &lines,
-                              const HBChapterParameters &text_par,
-                              const Length target_width);
+    std::vector<TextCommands> build_justified_paragraph(const std::vector<HBLine> &lines,
+                                                        const HBChapterParameters &text_par,
+                                                        const Length target_width);
     std::vector<TextCommands> build_ragged_paragraph(const std::vector<HBLine> &lines,
                                                      const HBChapterParameters &text_par,
                                                      const TextAlignment alignment);
@@ -259,4 +258,5 @@ private:
     // Add backmatter
     std::vector<TextElement> elements;
     FILE *stats;
+    bool debug_page = true;
 };

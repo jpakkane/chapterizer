@@ -216,6 +216,7 @@ void CapyPdfRenderer::render_line_justified(
 
     capypdf::Text text = ctx.text_new();
     text.cmd_Td(x.pt(), y.pt());
+    std::vector<hb_feature_t> features;
 
     for(size_t i = 0; i < line.words.size(); ++i) {
         const bool is_first = i == 0;
@@ -237,8 +238,9 @@ void CapyPdfRenderer::render_line_justified(
 
             hb_font_set_scale(fontinfo.f, hbscale, hbscale);
 
-            // FIXME: set shaping options.
-            hb_shape(fontinfo.f, buf, nullptr, 0);
+            features.clear();
+            append_shaping_options(run.par, features);
+            hb_shape(fontinfo.f, buf, features.data(), features.size());
 
             text.cmd_Tf(capyfont_id, run.par.size.pt());
             hb_buffer_to_textsequence(buf, ts, fontinfo, hbscale, run.text.c_str());
@@ -326,16 +328,9 @@ void CapyPdfRenderer::serialize_single_run(const HBRun &run,
     // tobj.cmd_Tf(capyfont_id, run.par.size.pt());
     capypdf::TextSequence ts;
 
-    if(run.par.par.extra == TextExtra::SmallCaps) {
-        hb_feature_t userfeatures[1];
-        userfeatures[0].tag = HB_TAG('s', 'm', 'c', 'p');
-        userfeatures[0].value = 1;
-        userfeatures[0].start = HB_FEATURE_GLOBAL_START;
-        userfeatures[0].end = HB_FEATURE_GLOBAL_END;
-        hb_shape(hbfont, buf, userfeatures, 1);
-    } else {
-        hb_shape(hbfont, buf, nullptr, 0);
-    }
+    std::vector<hb_feature_t> features;
+    append_shaping_options(run.par, features);
+    hb_shape(hbfont, buf, features.data(), features.size());
 
     hb_buffer_to_textsequence(buf, ts, fontinfo, hbscale, run.text.c_str());
 

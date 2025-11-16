@@ -49,6 +49,25 @@ const std::unordered_map<uint32_t, double> overhang_right{
 
 }
 
+void append_shaping_options(const HBTextParameters &par, std::vector<hb_feature_t> &out) {
+    if(par.par.extra == TextExtra::SmallCaps) {
+        hb_feature_t userfeature;
+        userfeature.tag = HB_TAG('s', 'm', 'c', 'p');
+        userfeature.value = 1;
+        userfeature.start = HB_FEATURE_GLOBAL_START;
+        userfeature.end = HB_FEATURE_GLOBAL_END;
+        out.push_back(std::move(userfeature));
+    }
+    if(true) {
+        hb_feature_t userfeature;
+        userfeature.tag = HB_TAG('o', 'n', 'u', 'm');
+        userfeature.value = 1;
+        userfeature.start = HB_FEATURE_GLOBAL_START;
+        userfeature.end = HB_FEATURE_GLOBAL_END;
+        out.push_back(std::move(userfeature));
+    }
+}
+
 HBMeasurer::HBMeasurer(const HBFontCache &cache, const char *language) : fc{cache} {
     buf = hb_buffer_create();
     assert(buf);
@@ -110,18 +129,9 @@ Length HBMeasurer::compute_width(const char *utf8_text, const HBTextParameters &
     auto &font = font_o.value();
     hb_font_set_scale(font.f, hbscale, hbscale);
 
-    if(text_par.par.extra == TextExtra::None) {
-        hb_shape(font.f, buf, nullptr, 0);
-    } else if(text_par.par.extra == TextExtra::SmallCaps) {
-        hb_feature_t userfeatures[1];
-        userfeatures[0].tag = HB_TAG('s', 'm', 'c', 'p');
-        userfeatures[0].value = 1;
-        userfeatures[0].start = HB_FEATURE_GLOBAL_START;
-        userfeatures[0].end = HB_FEATURE_GLOBAL_END;
-        hb_shape(font.f, buf, userfeatures, 1);
-    } else {
-        std::abort();
-    }
+    std::vector<hb_feature_t> features;
+    append_shaping_options(text_par, features);
+    hb_shape(font.f, buf, features.data(), features.size());
 
     unsigned int glyph_count;
     hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);

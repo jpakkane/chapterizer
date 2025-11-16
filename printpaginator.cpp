@@ -190,6 +190,15 @@ void PrintPaginator::generate_pdf(const char *outfile) {
         dumpfile.replace_extension(".dump.txt");
         dump_text(dumpfile.string().c_str());
     }
+    if(debug_page) {
+        rend->draw_box(Length::zero(), Length::zero(), page.w, page.h, 0.8, Length::from_pt(0.5));
+        rend->draw_box(current_left_margin(),
+                       m.lower,
+                       textblock_width(),
+                       textblock_height(),
+                       0.8,
+                       Length::from_pt(0.5));
+    }
     // rend->init_page();
     render_output();
 }
@@ -360,7 +369,7 @@ void PrintPaginator::render_mainmatter() {
                 assert(section_element.lines.size() == 1);
                 const auto &chapter_number =
                     std::get<TextDrawCommand>(section_element.lines.front());
-                const Length hack_delta = Length::from_pt(-90);
+                const Length hack_delta = Length::from_pt(-20);
                 rend->render_runs(chapter_number.runs,
                                   textblock_left + textblock_width() / 2,
                                   y - hack_delta,
@@ -482,7 +491,6 @@ void PrintPaginator::new_page() {
         }
     }
     rend->new_page();
-    const bool debug_page = true;
     if(debug_page) {
         rend->draw_box(Length::zero(), Length::zero(), page.w, page.h, 0.8, Length::from_pt(0.5));
         rend->draw_box(current_left_margin(),
@@ -510,18 +518,10 @@ void PrintPaginator::draw_page_number(size_t page_number) {
     const Length x = (page_number % 2) ? page.w - m.outer : m.outer;
     const Length y = styles.normal.line_height * 2;
     const TextAlignment align = (page_number % 2) ? TextAlignment::Right : TextAlignment::Left;
-    const bool use_oldstyle_nums = true;
-
-    if(use_oldstyle_nums) {
-        // https://gitlab.gnome.org/GNOME/pango/-/issues/855
-        char buf[80];
-        snprintf(buf, 80, "<span font_features=\"onum=1\">%d</span>", (int)page_number);
-        rend->render_text_as_is(buf, styles.normal.font, x, y, align);
-    } else {
-        char buf[20];
-        snprintf(buf, 20, "%d", (int)page_number);
-        rend->render_text_as_is(buf, styles.normal.font, x, y, align);
-    }
+    // https://gitlab.gnome.org/GNOME/pango/-/issues/855
+    char buf[80];
+    snprintf(buf, 80, "%d", (int)page_number);
+    rend->render_text_as_is(buf, styles.normal.font, x, y, align);
 }
 
 void PrintPaginator::build_main_text() {
