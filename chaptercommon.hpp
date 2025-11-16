@@ -202,6 +202,14 @@ struct HBRun {
     std::string text;
 };
 
+struct HBWord {
+    std::vector<HBRun> runs;
+};
+
+struct HBLine {
+    std::vector<HBWord> words;
+};
+
 struct HBStyledPlainText {
     std::string text;
     HBTextParameters font;
