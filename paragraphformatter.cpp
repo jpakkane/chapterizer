@@ -265,7 +265,7 @@ std::vector<std::string> ParagraphFormatter::split_lines() {
     }
 }
 
-std::vector<std::vector<HBRun>> ParagraphFormatter::split_formatted_lines() {
+std::vector<HBLine> ParagraphFormatter::split_formatted_lines() {
     precompute();
     HBMeasurer shaper{fc, "fi"};
     best_penalty = 1e100;
@@ -287,9 +287,9 @@ std::vector<LineStats> ParagraphFormatter::simple_split(HBMeasurer &shaper) {
     return lines;
 }
 
-std::vector<std::vector<HBRun>>
+std::vector<HBLine>
 ParagraphFormatter::stats_to_markup_lines(const std::vector<LineStats> &linestats) const {
-    std::vector<std::vector<HBRun>> lines;
+    std::vector<HBLine> lines;
     lines.reserve(linestats.size());
     lines.push_back(build_line_words_runs(0, linestats[0].end_split));
     for(size_t i = 1; i < linestats.size(); ++i) {
@@ -305,7 +305,7 @@ Length ParagraphFormatter::current_line_width(size_t line_num) const {
     return paragraph_width;
 }
 
-std::vector<std::vector<HBRun>> ParagraphFormatter::global_split_runs(const HBMeasurer &shaper) {
+std::vector<HBLine> ParagraphFormatter::global_split_runs(const HBMeasurer &shaper) {
     std::vector<std::string> lines;
     std::vector<TextLocation> splits;
     size_t current_split = 0;
@@ -479,14 +479,8 @@ std::string ParagraphFormatter::build_line_text_debug(size_t from_split_ind,
     return result;
 }
 
-std::vector<HBRun> ParagraphFormatter::build_line_markup(size_t from_split_ind,
-                                                         size_t to_split_ind) const {
-    std::vector<HBRun> line;
-    const auto word_runs = build_line_words_runs(from_split_ind, to_split_ind);
-    for(const auto &w : word_runs) {
-        line.push_back(std::move(w));
-    }
-    return line;
+HBLine ParagraphFormatter::build_line_markup(size_t from_split_ind, size_t to_split_ind) const {
+    return build_line_words_runs(from_split_ind, to_split_ind);
 }
 
 StyleStack ParagraphFormatter::determine_style(TextLocation t) const {
@@ -644,11 +638,10 @@ bool SplitStates::abandon_search(const std::vector<LineStats> &new_splits,
     return false;
 }
 
-std::vector<HBRun> ParagraphFormatter::build_line_words_runs(size_t from_split_ind,
-                                                             size_t to_split_ind) const {
-    std::vector<HBRun> runs;
+HBLine ParagraphFormatter::build_line_words_runs(size_t from_split_ind, size_t to_split_ind) const {
+    HBLine line;
     if(to_split_ind == from_split_ind) {
-        return runs;
+        return line;
     }
 
     const WordsOnLine line_words = words_for_splits(from_split_ind, to_split_ind);
@@ -664,29 +657,23 @@ std::vector<HBRun> ParagraphFormatter::build_line_words_runs(size_t from_split_i
                                           std::string::npos,
                                           true,
                                           false);
-        for(auto &r : new_word.runs) {
-            runs.push_back(std::move(r));
-        }
+        line.words.push_back(std::move(new_word));
     }
     for(size_t i = line_words.full_word_begin; i < line_words.full_word_end; ++i) {
         const bool add_space = i + 1 != line_words.full_word_end || line_words.last;
         auto new_word = wordfragment2runs(
             params.font, current_style, words[i], 0, std::string::npos, add_space, false);
-        for(auto &r : new_word.runs) {
-            runs.push_back(std::move(r));
-        }
+        line.words.push_back(std::move(new_word));
     }
     if(line_words.last) {
-        auto word = wordfragment2runs(params.font,
-                                      current_style,
-                                      words[line_words.last->word],
-                                      0,
-                                      line_words.last->to_bytes,
-                                      false,
-                                      line_words.last->add_dash);
-        for(auto &r : word.runs) {
-            runs.push_back(std::move(r));
-        }
+        auto new_word = wordfragment2runs(params.font,
+                                          current_style,
+                                          words[line_words.last->word],
+                                          0,
+                                          line_words.last->to_bytes,
+                                          false,
+                                          line_words.last->add_dash);
+        line.words.push_back(std::move(new_word));
     }
-    return runs;
+    return line;
 }

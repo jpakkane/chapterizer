@@ -46,6 +46,17 @@ void plaintextprinter(FILE *f, const TextCommands &c) {
 const std::vector<TextCommands> empty_line{
     TextDrawCommand{{}, Length::zero(), Length::zero(), TextAlignment::Left}};
 
+// Does not do any justification, just a straight conversion.
+const std::vector<HBRun> line2runs(const HBLine &line) {
+    std::vector<HBRun> all_line_runs;
+    for(const auto &w : line.words) {
+        for(const auto &r : w.runs) {
+            all_line_runs.push_back(r);
+        }
+    }
+    return all_line_runs;
+}
+
 } // namespace
 
 const std::vector<TextCommands> &get_lines(const TextElement &e) {
@@ -724,21 +735,21 @@ void PrintPaginator::create_paragraph(const Paragraph &p,
 }
 
 std::vector<TextCommands>
-PrintPaginator::build_justified_paragraph(const std::vector<std::vector<HBRun>> &lines,
+PrintPaginator::build_justified_paragraph(const std::vector<HBLine> &lines,
                                           const HBChapterParameters &text_par,
                                           const Length target_width) {
     Length rel_y = Length::zero();
     std::vector<TextCommands> line_commands;
     line_commands.reserve(lines.size());
     size_t line_num = 0;
-    for(const auto &runs : lines) {
+    for(const auto &line : lines) {
         Length current_indent = line_num == 0 ? text_par.indent : Length{};
         if(line_num < lines.size() - 1) {
             line_commands.emplace_back(JustifiedTextDrawCommand{
-                runs, current_indent, rel_y, target_width - current_indent});
+                line2runs(line) /*FIXME*/, current_indent, rel_y, target_width - current_indent});
         } else {
             line_commands.emplace_back(
-                TextDrawCommand{runs, current_indent, rel_y, TextAlignment::Left});
+                TextDrawCommand{line2runs(line), current_indent, rel_y, TextAlignment::Left});
         }
         line_num++;
         rel_y += text_par.line_height;
@@ -747,7 +758,7 @@ PrintPaginator::build_justified_paragraph(const std::vector<std::vector<HBRun>> 
 }
 
 std::vector<TextCommands>
-PrintPaginator::build_ragged_paragraph(const std::vector<std::vector<HBRun>> &lines,
+PrintPaginator::build_ragged_paragraph(const std::vector<HBLine> &lines,
                                        const HBChapterParameters &text_par,
                                        const TextAlignment alignment) {
     std::vector<TextCommands> line_commands;
@@ -755,9 +766,9 @@ PrintPaginator::build_ragged_paragraph(const std::vector<std::vector<HBRun>> &li
         alignment == TextAlignment::Centered ? textblock_width() / 2 : Length::zero();
     const auto rel_y = Length::zero(); // FIXME, eventually remove.
     line_commands.reserve(lines.size());
-    for(const auto &word_runs : lines) {
-        assert(alignment != TextAlignment::Right);
-        line_commands.emplace_back(TextDrawCommand{word_runs, rel_x, rel_y, alignment});
+    std::vector<HBRun> all_line_runs;
+    for(const auto &line : lines) {
+        line_commands.emplace_back(TextDrawCommand{line2runs(line), rel_x, rel_y, alignment});
     }
     return line_commands;
 }

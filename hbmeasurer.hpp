@@ -37,7 +37,11 @@ public:
         return text_width(s.c_str(), font);
     };
 
+    Length text_width(const HBLine &line) const;
+
     Length text_width(const std::vector<HBRun> &runs) const;
+
+    Length text_width(const HBWord &word) const;
 
     Length codepoint_right_overhang(const uint32_t uchar, const HBTextParameters &font) const;
 

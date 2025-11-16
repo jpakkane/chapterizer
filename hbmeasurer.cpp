@@ -70,6 +70,22 @@ Length HBMeasurer::text_width(const char *utf8_text, const HBTextParameters &tex
     return total_size;
 }
 
+Length HBMeasurer::text_width(const HBLine &line) const {
+    Length total_size;
+    for(const auto &w : line.words) {
+        total_size += text_width(w);
+    }
+    return total_size;
+}
+
+Length HBMeasurer::text_width(const HBWord &word) const {
+    Length total_size;
+    for(const auto &r : word.runs) {
+        total_size += compute_width(r.text.c_str(), r.par);
+    }
+    return total_size;
+}
+
 Length HBMeasurer::text_width(const std::vector<HBRun> &runs) const {
     Length total_size;
     for(const auto &r : runs) {
