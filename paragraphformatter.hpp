@@ -149,7 +149,7 @@ private:
     void global_split_recursive(const HBMeasurer &shaper,
                                 std::vector<LineStats> &line_stats,
                                 size_t split_pos);
-    std::vector<HBLine> stats_to_markup_lines(const std::vector<LineStats> &linestats) const;
+    std::vector<HBLine> stats_to_lines(const std::vector<LineStats> &linestats) const;
     Length current_line_width(size_t line_num) const;
     double total_penalty(const std::vector<LineStats> &lines, bool is_complete = false) const;
 

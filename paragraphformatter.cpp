@@ -288,7 +288,7 @@ std::vector<LineStats> ParagraphFormatter::simple_split(HBMeasurer &shaper) {
 }
 
 std::vector<HBLine>
-ParagraphFormatter::stats_to_markup_lines(const std::vector<LineStats> &linestats) const {
+ParagraphFormatter::stats_to_lines(const std::vector<LineStats> &linestats) const {
     std::vector<HBLine> lines;
     lines.reserve(linestats.size());
     lines.push_back(build_line_words_runs(0, linestats[0].end_split));
@@ -317,7 +317,7 @@ std::vector<HBLine> ParagraphFormatter::global_split_runs(const HBMeasurer &shap
     //    const auto line = build_line_text_debug(i, split_points.size() - 1);
     //    printf("%s\n", line.c_str());
     //}
-    return stats_to_markup_lines(best_split);
+    return stats_to_lines(best_split);
 }
 
 void ParagraphFormatter::global_split_recursive(const HBMeasurer &shaper,
