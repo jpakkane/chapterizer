@@ -155,7 +155,6 @@ private:
 
     WordsOnLine words_for_splits(size_t from_split_ind, size_t to_split_ind) const;
     HBLine build_line_words_runs(size_t from_split_ind, size_t to_split_ind) const;
-    HBLine build_line_markup(size_t from_split_ind, size_t to_split_ind) const;
     std::string build_line_text_debug(size_t from_split_ind, size_t to_split_ind) const;
 
     Length paragraph_width;

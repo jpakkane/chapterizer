@@ -479,10 +479,6 @@ std::string ParagraphFormatter::build_line_text_debug(size_t from_split_ind,
     return result;
 }
 
-HBLine ParagraphFormatter::build_line_markup(size_t from_split_ind, size_t to_split_ind) const {
-    return build_line_words_runs(from_split_ind, to_split_ind);
-}
-
 StyleStack ParagraphFormatter::determine_style(TextLocation t) const {
     const auto &current_word = words[t.word_index];
     StyleStack style = words[t.word_index].start_style;
@@ -546,7 +542,7 @@ LineStats ParagraphFormatter::compute_closest_line_end(size_t start_split,
         chosen_point = size_t(&(*ppoint) - split_points.data());
     }
 
-    const auto final_line = build_line_markup(start_split, chosen_point);
+    const auto final_line = build_line_words_runs(start_split, chosen_point);
     const auto final_width = shaper.text_width(final_line);
     // FIXME, check whether the word ends in a dash.
     return LineStats{chosen_point,
@@ -573,7 +569,7 @@ std::vector<LineStats> ParagraphFormatter::get_line_end_choices(size_t start_spl
     check_word_split(tightest_split.end_split);
     auto add_point = [&](size_t split_point) {
         const auto trial_split = split_point;
-        const auto trial_line = build_line_markup(start_split, trial_split);
+        const auto trial_line = build_line_words_runs(start_split, trial_split);
         const auto trial_width = shaper.text_width(trial_line);
         potentials.emplace_back(
             LineStats{trial_split,
