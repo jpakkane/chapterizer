@@ -42,14 +42,6 @@ struct SimpleTextDrawCommand {
     TextAlignment alignment;
 };
 
-struct HBJustifiedMarkupDrawCommand {
-    std::vector<std::string> markup_words;
-    const HBTextParameters *font;
-    Length x;
-    Length y;
-    Length width;
-};
-
 struct CapyImageCommand {
     CapyImageInfo i;
     Length x; // Relative to left edge of text block.
@@ -58,8 +50,7 @@ struct CapyImageCommand {
     Length display_width;
 };
 
-typedef std::variant<SimpleTextDrawCommand, HBRunDrawCommand, HBJustifiedMarkupDrawCommand>
-    HBTextCommands;
+typedef std::variant<SimpleTextDrawCommand, HBRunDrawCommand> HBTextCommands;
 
 struct PageLayout {
     std::vector<CapyImageCommand> images;

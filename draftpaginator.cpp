@@ -43,9 +43,6 @@ void adjust_y(HBTextCommands &c, Length diff) {
     if(std::holds_alternative<HBRunDrawCommand>(c)) {
         auto &mc = std::get<HBRunDrawCommand>(c);
         mc.y += diff;
-    } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(c)) {
-        auto &mc = std::get<HBJustifiedMarkupDrawCommand>(c);
-        mc.y += diff;
     } else {
         std::abort();
     }
@@ -357,8 +354,6 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
             std::get<SimpleTextDrawCommand>(first_line).x += chpar.indent;
         } else if(std::holds_alternative<HBRunDrawCommand>(first_line)) {
             std::get<HBRunDrawCommand>(first_line).x += chpar.indent;
-        } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(first_line)) {
-            std::get<HBJustifiedMarkupDrawCommand>(first_line).x += chpar.indent;
         } else {
             std::abort();
         }
@@ -369,8 +364,6 @@ void DraftPaginator::create_paragraph(const Paragraph &p,
             std::get<SimpleTextDrawCommand>(line).x += extra_indent;
         } else if(std::holds_alternative<HBRunDrawCommand>(line)) {
             std::get<HBRunDrawCommand>(line).x += extra_indent;
-        } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(line)) {
-            std::get<HBJustifiedMarkupDrawCommand>(line).x += extra_indent;
         } else {
             std::abort();
         }
@@ -490,6 +483,8 @@ DraftPaginator::build_justified_paragraph(const std::vector<std::vector<std::str
                                           const Length target_width,
                                           const Length x_off,
                                           const Length y_off) {
+    // This should really be removed, because draft versions never have justified
+    // text. For now leave it in due to laziness and bw compatibility.
     Length rel_y;
     const Length x;
     std::vector<HBTextCommands> line_commands;
@@ -497,24 +492,16 @@ DraftPaginator::build_justified_paragraph(const std::vector<std::vector<std::str
     size_t line_num = 0;
     for(const auto &markup_words : lines) {
         Length current_indent = line_num == 0 ? text_par.indent : Length{};
-        if(line_num < lines.size() - 1) {
-            line_commands.emplace_back(HBJustifiedMarkupDrawCommand{markup_words,
-                                                                    &text_par.font,
-                                                                    (x + current_indent) + x_off,
-                                                                    rel_y + y_off,
-                                                                    target_width - current_indent});
-        } else {
-            std::string full_line;
-            for(const auto &w : markup_words) {
-                full_line += w;
-            }
-            // FIXME, not correct.
-            line_commands.emplace_back(SimpleTextDrawCommand{std::move(full_line),
-                                                             text_par.font,
-                                                             x + current_indent + x_off,
-                                                             rel_y + y_off,
-                                                             TextAlignment::Left});
+        std::string full_line;
+        for(const auto &w : markup_words) {
+            full_line += w;
         }
+        // FIXME, not correct.
+        line_commands.emplace_back(SimpleTextDrawCommand{std::move(full_line),
+                                                         text_par.font,
+                                                         x + current_indent + x_off,
+                                                         rel_y + y_off,
+                                                         TextAlignment::Left});
         line_num++;
         rel_y -= text_par.line_height;
     }
@@ -701,15 +688,6 @@ void DraftPaginator::flush_draw_commands() {
                               md.x + current_left_margin(),
                               page.h - m.upper - heights.figure_height + md.y,
                               md.alignment);
-        } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(c)) {
-#if 0
-            const auto &md = std::get<HBJustifiedMarkupDrawCommand>(c);
-            rend->render_line_justified(md.markup_words,
-                                        *md.font,
-                                        md.width,
-                                        current_left_margin() + md.x,
-                                        md.y + m.upper + heights.figure_height);
-#endif
         } else {
             printf("Unknown draw command.\n");
         }
@@ -727,15 +705,6 @@ void DraftPaginator::flush_draw_commands() {
             const auto &md = std::get<HBRunDrawCommand>(c);
             rend->render_runs(
                 md.runs, current_left_margin() + md.x, md.y + footnote_block_start, md.alignment);
-        } else if(std::holds_alternative<HBJustifiedMarkupDrawCommand>(c)) {
-#if 0
-            const auto &md = std::get<HBJustifiedMarkupDrawCommand>(c);
-            rend->render_line_justified(md.markup_words,
-                                        *md.font,
-                                        md.width,
-                                        current_left_margin() + md.x,
-                                        md.y + footnote_block_start);
-#endif
         } else {
             printf("Unknown draw command.\n");
         }
