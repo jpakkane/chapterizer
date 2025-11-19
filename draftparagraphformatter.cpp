@@ -120,52 +120,6 @@ void toggle_format(StyleStack &current_style, const char format_to_toggle) {
     }
 }
 
-std::string wordfragment2markup(StyleStack &current_style,
-                                const EnrichedWord &w,
-                                size_t start,
-                                size_t end,
-                                bool add_space,
-                                bool add_dash) {
-    std::string markup;
-    current_style.write_buildup_markup(markup);
-
-    std::string_view view = std::string_view{w.text}.substr(start, end);
-    assert(g_utf8_validate(view.data(), view.length(), nullptr));
-    size_t style_point = 0;
-    while(style_point < w.f.size() && w.f[style_point].offset < start) {
-        ++style_point;
-    }
-    for(size_t i = 0; i < view.size(); ++i) {
-        while(style_point < w.f.size() && w.f[style_point].offset == start + i) {
-            toggle_format(current_style, markup, w.f[style_point].format);
-            ++style_point;
-        }
-        if(view[i] == '<') {
-            markup += "&lt;";
-        } else if(view[i] == '>') {
-            markup += "&gt;";
-        } else if(view[i] == '&') {
-            markup += "&amp;";
-        } else {
-            markup += view[i];
-        }
-    }
-
-    if(add_dash) {
-        markup += '-';
-    }
-    while(style_point < w.f.size()) {
-        toggle_format(current_style, markup, w.f[style_point].format);
-        ++style_point;
-    }
-    if(add_space) {
-        markup += ' '; // The space must be inside the markup to get the correct width.
-    }
-    current_style.write_teardown_markup(markup);
-    assert(g_utf8_validate(markup.c_str(), -1, nullptr));
-    return markup;
-}
-
 std::vector<HBRun> wordfragment2runs(const HBTextParameters &original_par,
                                      StyleStack &sstack,
                                      const EnrichedWord &w,
@@ -230,12 +184,6 @@ DraftParagraphFormatter::DraftParagraphFormatter(const std::vector<EnrichedWord>
                                                  HBFontCache &hbfc)
     : paragraph_width(target_width), words{words_}, params{in_params}, fc(hbfc) {}
 
-std::vector<std::vector<std::string>> DraftParagraphFormatter::split_formatted_lines() {
-    HBMeasurer shaper(fc, "fi");
-    precompute();
-    return stats_to_markup_lines(simple_split(shaper));
-}
-
 std::vector<std::vector<HBRun>> DraftParagraphFormatter::split_formatted_lines_to_runs() {
     HBMeasurer shaper(fc, "fi");
     precompute();
@@ -272,18 +220,6 @@ std::vector<LineStats> DraftParagraphFormatter::simple_split(HBMeasurer &shaper)
         auto line_end = get_closest_line_end(current_split, shaper, lines.size());
         lines.emplace_back(line_end);
         current_split = line_end.end_split;
-    }
-    return lines;
-}
-
-std::vector<std::vector<std::string>>
-DraftParagraphFormatter::stats_to_markup_lines(const std::vector<LineStats> &linestats) const {
-    std::vector<std::vector<std::string>> lines;
-    lines.reserve(linestats.size());
-    lines.emplace_back(build_line_words_markup(0, linestats[0].end_split));
-    for(size_t i = 1; i < linestats.size(); ++i) {
-        lines.emplace_back(
-            build_line_words_markup(linestats[i - 1].end_split, linestats[i].end_split));
     }
     return lines;
 }
@@ -362,54 +298,6 @@ std::string DraftParagraphFormatter::build_line_text_debug(size_t from_split_ind
     }
 
     return result;
-}
-
-std::string DraftParagraphFormatter::build_line_markup(size_t from_split_ind,
-                                                       size_t to_split_ind) const {
-    std::string line;
-    const auto markup_words = build_line_words_markup(from_split_ind, to_split_ind);
-    for(const auto &w : markup_words) {
-        line += w;
-    }
-    return line;
-}
-
-std::vector<std::string>
-DraftParagraphFormatter::build_line_words_markup(size_t from_split_ind, size_t to_split_ind) const {
-    assert(to_split_ind >= from_split_ind);
-    std::vector<std::string> line;
-    std::vector<std::string> markup_words;
-    if(to_split_ind == from_split_ind) {
-        return line;
-    }
-    const WordsOnLine line_words = words_for_splits(from_split_ind, to_split_ind);
-    const auto &from_loc = split_locations[from_split_ind];
-
-    StyleStack current_style = determine_style(from_loc);
-
-    if(line_words.first) {
-        markup_words.emplace_back(wordfragment2markup(current_style,
-                                                      words[line_words.first->word],
-                                                      line_words.first->from_bytes,
-                                                      std::string::npos,
-                                                      true,
-                                                      false));
-    }
-    for(size_t i = line_words.full_word_begin; i < line_words.full_word_end; ++i) {
-        const bool add_space = i + 1 != line_words.full_word_end || line_words.last;
-        markup_words.emplace_back(
-            wordfragment2markup(current_style, words[i], 0, std::string::npos, add_space, false));
-    }
-    if(line_words.last) {
-        markup_words.emplace_back(wordfragment2markup(current_style,
-                                                      words[line_words.last->word],
-                                                      0,
-                                                      line_words.last->to_bytes,
-                                                      false,
-                                                      line_words.last->add_dash));
-    }
-
-    return markup_words;
 }
 
 std::vector<HBRun> DraftParagraphFormatter::build_line_words_runs(size_t from_split_ind,
@@ -517,8 +405,8 @@ LineStats DraftParagraphFormatter::compute_closest_line_end(size_t start_split,
         chosen_point = size_t(&(*ppoint) - split_points.data());
     }
 
-    const auto final_line = build_line_markup(start_split, chosen_point);
-    const auto final_width = shaper.text_width(final_line.c_str(), params.font); // FIXME!
+    const auto final_line = build_line_words_runs(start_split, chosen_point);
+    const auto final_width = shaper.text_width(final_line);
     // FIXME, check whether the word ends in a dash.
     return LineStats{chosen_point,
                      final_width,

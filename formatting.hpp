@@ -126,61 +126,6 @@ public:
         return true;
     }
 
-    void write_buildup_markup(std::string &buf) const {
-        for(int i = 0; i < size; ++i) {
-            switch(arr[i]) {
-            case ITALIC_S:
-                buf += "<i>";
-                break;
-            case BOLD_S:
-                buf += "<b>";
-                break;
-            case TT_S:
-                buf += tt_start_tag;
-                break;
-            case SMALLCAPS_S:
-                buf += "<span variant=\"small-caps\" letter_spacing=\"100\">";
-                break;
-            case SUPERSCRIPT_S:
-                buf += "<sup>";
-                break;
-            case SUBSCRIPT_S:
-                buf += "<sub>";
-                break;
-            default:
-                std::abort();
-            }
-        }
-    }
-
-    void write_teardown_markup(std::string &buf) const {
-
-        for(int i = size - 1; i >= 0; --i) {
-            switch(arr[i]) {
-            case ITALIC_S:
-                buf += "</i>";
-                break;
-            case BOLD_S:
-                buf += "</b>";
-                break;
-            case TT_S:
-                buf += tt_end_tag;
-                break;
-            case SMALLCAPS_S:
-                buf += "</span>";
-                break;
-            case SUPERSCRIPT_S:
-                buf += "</sup>";
-                break;
-            case SUBSCRIPT_S:
-                buf += "</sub>";
-                break;
-            default:
-                std::abort();
-            }
-        }
-    }
-
     const T *cbegin() const { return arr; }
     const T *cend() const { return arr + size; }
 
