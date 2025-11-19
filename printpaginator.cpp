@@ -407,15 +407,17 @@ void PrintPaginator::render_backmatter() {
             buf += key.c_str();
             buf += "</span>";
             if(!key.empty()) {
-                rend->render_markup_as_is(
-                    buf.c_str(), styles.normal.font, x1, y, TextAlignment::Right);
+                std::abort();
+                // rend->render_markup_as_is(
+                //     buf.c_str(), styles.normal.font, x1, y, TextAlignment::Right);
             }
             buf = stylespan;
             buf += value.c_str();
             buf += "</span>";
             if(!value.empty()) {
-                rend->render_markup_as_is(
-                    buf.c_str(), styles.normal.font, x2, y, TextAlignment::Left);
+                std::abort();
+                // rend->render_markup_as_is(
+                //     buf.c_str(), styles.normal.font, x2, y, TextAlignment::Left);
             }
         } else {
             const auto &line = std::get<CreditsTitle>(centry).line;
@@ -423,8 +425,9 @@ void PrintPaginator::render_backmatter() {
                 buf = stylespan;
                 buf += line;
                 buf += "</span>";
-                rend->render_markup_as_is(
-                    buf.c_str(), styles.normal.font, xmiddle, y, TextAlignment::Centered);
+                std::abort();
+                // rend->render_markup_as_is(
+                //     buf.c_str(), styles.normal.font, xmiddle, y, TextAlignment::Centered);
             }
         }
         y += styles.normal.line_height;

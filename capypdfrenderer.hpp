@@ -50,9 +50,6 @@ public:
         const char *line, const HBTextParameters &par, Length x, Length y, TextAlignment align);
     void render_text(
         const char *line, const HBTextParameters &par, Length x, Length y, TextAlignment alignment);
-    void render_markup_as_is(const char *line, const HBTextParameters &par, Length x, Length y);
-    void render_markup_as_is(
-        const char *line, const HBTextParameters &par, Length x, Length y, TextAlignment align);
 
     void render_runs(const std::vector<HBRun> &runs, Length x, Length y, TextAlignment alignment);
     void render_run(const HBRun &runs, Length x, Length y);

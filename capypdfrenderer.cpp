@@ -359,18 +359,6 @@ void CapyPdfRenderer::render_text(
     }
 }
 
-void CapyPdfRenderer::render_markup_as_is(const char *line,
-                                          const HBTextParameters &par,
-                                          Length x,
-                                          Length y) {
-    std::abort();
-}
-
-void CapyPdfRenderer::render_markup_as_is(
-    const char *line, const HBTextParameters &par, Length x, Length y, TextAlignment align) {
-    std::abort();
-}
-
 void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
                                   Length x,
                                   Length y,
