@@ -94,12 +94,6 @@ public:
 private:
     void render_page_num(const HBChapterParameters &par);
     std::vector<HBTextCommands>
-    build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
-                              const HBChapterParameters &text_par,
-                              const Length target_width,
-                              const Length x_off = Length::zero(),
-                              const Length y_off = Length::zero());
-    std::vector<HBTextCommands>
     build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
                            const HBChapterParameters &text_par,
                            const TextAlignment alignment,

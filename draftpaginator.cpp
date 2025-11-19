@@ -478,37 +478,6 @@ void DraftPaginator::render_page_num(const HBChapterParameters &par) {
 }
 
 std::vector<HBTextCommands>
-DraftPaginator::build_justified_paragraph(const std::vector<std::vector<std::string>> &lines,
-                                          const HBChapterParameters &text_par,
-                                          const Length target_width,
-                                          const Length x_off,
-                                          const Length y_off) {
-    // This should really be removed, because draft versions never have justified
-    // text. For now leave it in due to laziness and bw compatibility.
-    Length rel_y;
-    const Length x;
-    std::vector<HBTextCommands> line_commands;
-    line_commands.reserve(lines.size());
-    size_t line_num = 0;
-    for(const auto &markup_words : lines) {
-        Length current_indent = line_num == 0 ? text_par.indent : Length{};
-        std::string full_line;
-        for(const auto &w : markup_words) {
-            full_line += w;
-        }
-        // FIXME, not correct.
-        line_commands.emplace_back(SimpleTextDrawCommand{std::move(full_line),
-                                                         text_par.font,
-                                                         x + current_indent + x_off,
-                                                         rel_y + y_off,
-                                                         TextAlignment::Left});
-        line_num++;
-        rel_y -= text_par.line_height;
-    }
-    return line_commands;
-}
-
-std::vector<HBTextCommands>
 DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string>> &lines,
                                        const HBChapterParameters &text_par,
                                        const TextAlignment alignment,
@@ -518,9 +487,9 @@ DraftPaginator::build_ragged_paragraph(const std::vector<std::vector<std::string
         alignment == TextAlignment::Centered ? textblock_width() / 2 : Length::zero();
 
     line_commands.reserve(lines.size());
-    for(const auto &markup_words : lines) {
+    for(const auto &line : lines) {
         std::string full_line;
-        for(const auto &w : markup_words) {
+        for(const auto &w : line) {
             full_line += w;
         }
         assert(alignment != TextAlignment::Right);
