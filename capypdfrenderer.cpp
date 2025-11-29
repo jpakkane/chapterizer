@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-#include "capypdfrenderer.hpp"
+#include <capypdfrenderer.hpp>
 #include <utils.hpp>
 
 #include <cassert>
 
 #include <hb.h>
+#include <glib.h>
 
 #include <hbmeasurer.hpp>
 #include <cstring>
@@ -54,19 +55,20 @@ void hb_buffer_to_textsequence(hb_buffer_t *buf,
         // hb_position_t y_offset = curpos->y_offset;
         hb_position_t x_advance = curpos->x_advance;
         // hb_position_t y_advance = curpos->y_advance;
-        std::string_view original_text(unshaped_text + glyph_info[i].cluster,
-                                       unshaped_text +
-                                           get_endpoint(glyph_info, glyph_count, i, unshaped_text));
-        auto hb_glyph_advance_in_font_units =
+        const auto original_text_start = unshaped_text + glyph_info[i].cluster;
+        const auto original_text_end =
+            unshaped_text + get_endpoint(glyph_info, glyph_count, i, unshaped_text);
+        const std::string_view original_text(original_text_start, original_text_end);
+        const auto hb_glyph_advance_in_font_units =
             hb_font_get_glyph_h_advance(fontinfo.f, current->codepoint) / hbscale *
             fontinfo.units_per_em;
         const auto hb_advance_in_font_units = x_advance / hbscale * fontinfo.units_per_em;
         const int32_t kerning_delta =
             int32_t(hb_glyph_advance_in_font_units - hb_advance_in_font_units);
-        // FIXME, should check this better, such as if the original text consisted of only one
-        // codepoint.
-        if(original_text.size() == 1) {
-            ts.append_raw_glyph(glyphid, original_text.front());
+        const auto *one_char_forward = g_utf8_next_char(original_text_start);
+        if(one_char_forward == original_text_end) {
+            const uint32_t original_codepoint = g_utf8_get_char(original_text_start);
+            ts.append_raw_glyph(glyphid, original_codepoint);
         } else {
             ts.append_ligature_glyph(glyphid, original_text);
         }
