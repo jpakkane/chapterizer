@@ -311,6 +311,10 @@ Metadata load_book_json(const char *path) {
         m.draftdata.phone = get_string(draft, "phone");
         m.draftdata.surname = get_string(draft, "surname");
         m.draftdata.page_number_template = m.draftdata.surname + " / " + m.title + " / ";
+        if(draft.contains("fontfiles")) {
+            m.draftdata.fonts = FontFilePaths{};
+            parse_font_paths(m.draftdata.fonts.value(), draft["fontfiles"]);
+        }
     }
     if(data.contains("debug_draw")) {
         m.debug_draw = data["debug_draw"].get<bool>();

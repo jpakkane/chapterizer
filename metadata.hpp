@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 #include <variant>
+#include <optional>
 #include <filesystem>
 
 enum class Language : int {
@@ -99,6 +100,7 @@ struct DraftData {
     std::string email;
     std::string phone;
     std::string page_number_template;
+    std::optional<FontFilePaths> fonts;
 };
 
 struct Colophon {

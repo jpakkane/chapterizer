@@ -14,7 +14,28 @@
     "draft2": {
         "surname": "McBob",
         "email": "bob.mcbob@example.com",
-        "phone": "040 222 2222"
+        "phone": "040 222 2222",
+        "fontfiles": {
+            "serif": {
+                "regular": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyretermes-regular.otf",
+                "italic": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyretermes-italic.otf",
+                "bold": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyretermes-bold.otf",
+                "bolditalic": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyretermes-bolditalic.otf"
+            },
+            "sans": {
+                "regular": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyreheros-regular.otf",
+                "italic": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyreheros-italic.otf",
+                "bold": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyreheros-bold.otf",
+                "bolditalic": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyreheros-bolditalic.otf"
+            },
+            "mono": {
+                "regular": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyrecursor-regular.otf",
+                "italic": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyrecursor-italic.otf",
+                "bold": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyrecursor-bold.otf",
+                "bolditalic": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyrecursor-bolditalic.otf"
+            }
+        },
+
     },
     "pdf": {
         "colophon": "colophon.txt",
