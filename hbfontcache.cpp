@@ -7,16 +7,19 @@
 #include FT_FREETYPE_H
 
 HBFontCache::HBFontCache() {
-    std::filesystem::path font_root("/usr/share/fonts/truetype/noto");
-    FontFiles nserif{"NotoSerif-Regular.ttf",
-                     "NotoSerif-Italic.ttf",
-                     "NotoSerif-Bold.ttf",
-                     "NotoSerif-BoldItalic.ttf"};
-    FontFiles nsans{"NotoSans-Regular.ttf",
-                    "NotoSans-Italic.ttf",
-                    "NotoSans-Bold.ttf",
-                    "NotoSans-BoldItalic.ttf"};
-    FontFiles mspace{"NotoMono-Regular.ttf", "", "", ""};
+    std::filesystem::path font_root("/usr/share/fonts/truetype/liberation");
+    FontFiles nserif{"LiberationSerif-Regular.ttf",
+                     "LiberationSerif-Italic.ttf",
+                     "LiberationSerif-Bold.ttf",
+                     "LiberationSerif-BoldItalic.ttf"};
+    FontFiles nsans{"LiberationSans-Regular.ttf",
+                    "LiberationSans-Italic.ttf",
+                    "LiberationSans-Bold.ttf",
+                    "LiberationSans-BoldItalic.ttf"};
+    FontFiles mspace{"LiberationMono-Regular.ttf",
+                     "LiberationMono-Italic.ttf",
+                     "LiberationMono-Bold.ttf",
+                     "LiberationMono-BoldItalic.ttf"};
     open_files(serif, font_root, nserif);
     open_files(sansserif, font_root, nsans);
     open_files(monospace, font_root, mspace);
