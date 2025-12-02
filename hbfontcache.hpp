@@ -47,6 +47,7 @@ struct FontInfo {
 class HBFontCache {
 public:
     HBFontCache();
+    HBFontCache(const FontFiles &serif, const FontFiles &sansserif, const FontFiles &mono);
 
     std::optional<FontInfo> get_font(TextCategory cat, TextStyle style) const;
     std::optional<FontInfo> get_font(const HBFontProperties &par) const {
@@ -57,7 +58,10 @@ public:
 
 private:
     void
-    open_files(FontPtrs &ptrs, const std::filesystem::path &font_root, const FontFiles &fnames);
+    open_files_relative(FontPtrs &ptrs, const std::filesystem::path &font_root, const FontFiles &fnames);
+
+    void
+    open_files(FontPtrs &ptrs, const FontFiles &fnames);
 
     FontOwner open_file(const std::filesystem::path &font_file);
 

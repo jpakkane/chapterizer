@@ -20,14 +20,22 @@ HBFontCache::HBFontCache() {
                      "LiberationMono-Italic.ttf",
                      "LiberationMono-Bold.ttf",
                      "LiberationMono-BoldItalic.ttf"};
-    open_files(serif, font_root, nserif);
-    open_files(sansserif, font_root, nsans);
-    open_files(monospace, font_root, mspace);
+    open_files_relative(serif, font_root, nserif);
+    open_files_relative(sansserif, font_root, nsans);
+    open_files_relative(monospace, font_root, mspace);
 }
 
-void HBFontCache::open_files(FontPtrs &ptrs,
-                             const std::filesystem::path &font_root,
-                             const FontFiles &fnames) {
+HBFontCache::HBFontCache(const FontFiles &serif_files,
+                         const FontFiles &sansserif_files,
+                         const FontFiles &mono_files) {
+    open_files(serif, serif_files);
+    open_files(sansserif, sansserif_files);
+    open_files(monospace, mono_files);
+}
+
+void HBFontCache::open_files_relative(FontPtrs &ptrs,
+                                      const std::filesystem::path &font_root,
+                                      const FontFiles &fnames) {
     if(!fnames.regular.empty()) {
         ptrs.regular = open_file(font_root / fnames.regular);
     }
@@ -39,6 +47,21 @@ void HBFontCache::open_files(FontPtrs &ptrs,
     }
     if(!fnames.bolditalic.empty()) {
         ptrs.bolditalic = open_file(font_root / fnames.bolditalic);
+    }
+}
+
+void HBFontCache::open_files(FontPtrs &ptrs, const FontFiles &fnames) {
+    if(!fnames.regular.empty()) {
+        ptrs.regular = open_file(fnames.regular);
+    }
+    if(!fnames.italic.empty()) {
+        ptrs.italic = open_file(fnames.italic);
+    }
+    if(!fnames.bold.empty()) {
+        ptrs.bold = open_file(fnames.bold);
+    }
+    if(!fnames.bolditalic.empty()) {
+        ptrs.bolditalic = open_file(fnames.bolditalic);
     }
 }
 
