@@ -50,10 +50,10 @@ void hb_buffer_to_textsequence(hb_buffer_t *buf,
     for(unsigned int i = 0; i < glyph_count; i++) {
         const hb_glyph_info_t *current = glyph_info + i;
         const hb_glyph_position_t *curpos = glyph_pos + i;
-        hb_codepoint_t glyphid = current->codepoint;
-        hb_position_t x_offset = curpos->x_offset;
+        const hb_codepoint_t glyphid = current->codepoint;
+        // const hb_position_t x_offset = curpos->x_offset;
         // hb_position_t y_offset = curpos->y_offset;
-        hb_position_t x_advance = curpos->x_advance;
+        const hb_position_t x_advance = curpos->x_advance;
         // hb_position_t y_advance = curpos->y_advance;
         const auto original_text_start = unshaped_text + glyph_info[i].cluster;
         const auto original_text_end =
@@ -165,24 +165,21 @@ void CapyPdfRenderer::fill_rounded_corner_box(
 }
 
 void CapyPdfRenderer::draw_dash_line(const std::vector<Coord> &points, double line_width) {
-    /*
     if(points.size() < 2) {
         return;
     }
-    capyctx.cmd_q();
-    cairo_set_source_rgb(cr, 0, 0, 0);
-    cairo_set_line_width(cr, line_width);
+    ctx.cmd_q();
+    ctx.cmd_G(0);
+    ctx.cmd_w(line_width);
     const double dashes[2] = {4.0, 2.0};
-    cairo_set_dash(cr, dashes, 2, 0.0);
-    cairo_set_line_cap(cr, CAIRO_LINE_CAP_ROUND);
-    cairo_move_to(cr, points[0].x.pt(), points[0].y.pt());
+    ctx.cmd_d(dashes, 2, 0.0);
+    ctx.cmd_J(CAPY_LC_ROUND);
+    ctx.cmd_m(points[0].x.pt(), points[0].y.pt());
     for(size_t i = 1; i < points.size(); ++i) {
-        cairo_line_to(cr, points[i].x.pt(), points[i].y.pt());
+        ctx.cmd_l(points[i].x.pt(), points[i].y.pt());
     }
-    cairo_stroke(cr);
-    capyctx.cmd_Q();
-*/
-    std::abort();
+    ctx.cmd_S();
+    ctx.cmd_Q();
 }
 
 void CapyPdfRenderer::draw_poly_line(const std::vector<Coord> &points, Length thickness) {
