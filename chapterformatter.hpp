@@ -39,7 +39,6 @@ private:
 
     void optimize_recursive(TextElementIterator run_start,
                             PageLayoutResult &r,
-                            size_t previous_page_height,
                             const std::optional<ImageElement> incoming_pending_image = {});
 
     bool stop_recursing(TextElementIterator loc, const PageLayoutResult &r);

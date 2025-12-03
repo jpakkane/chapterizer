@@ -29,7 +29,7 @@ PageLayoutResult ChapterFormatter::optimize_pages() {
 
     auto run_start = start;
     try {
-        optimize_recursive(run_start, r, 0);
+        optimize_recursive(run_start, r);
     } catch(const OptimalResultFound &) {
     }
     return std::move(best_layout);
@@ -54,7 +54,6 @@ bool ChapterFormatter::stop_recursing(TextElementIterator loc, const PageLayoutR
 void ChapterFormatter::optimize_recursive(
     TextElementIterator run_start,
     PageLayoutResult &r,
-    size_t previous_page_height,
     const std::optional<ImageElement> incoming_pending_image) {
     size_t lines_on_page = 0;
     std::optional<size_t> page_section_number;
@@ -80,7 +79,7 @@ void ChapterFormatter::optimize_recursive(
                 r.pages.emplace_back(RegularPage{limits, {}, current_page_image});
             }
             const size_t height_validation = r.pages.size();
-            optimize_recursive(endpoint, r, lines_on_page);
+            optimize_recursive(endpoint, r);
             assert(height_validation == r.pages.size());
             r.pages.pop_back();
         };
