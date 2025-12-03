@@ -616,7 +616,7 @@ void PrintPaginator::create_sign(const SignBlock &sign) {
             auto lines = b.split_formatted_lines();
             el.extra_indent = textblock_width() / 2;
             el.alignment = TextAlignment::Centered;
-            auto rag_lines = build_ragged_paragraph(lines, styles.normal, el.alignment);
+            auto rag_lines = build_ragged_paragraph(lines, el.alignment);
             assert(rag_lines.size() == 1);
             // FIXME
             // https://gitlab.gnome.org/GNOME/pango/-/issues/855
@@ -656,7 +656,7 @@ void PrintPaginator::create_letter(const Letter &letter) {
         ParagraphFormatter b(processed_words, paragraph_width, styles.letter, extra, fc);
         auto lines = b.split_formatted_lines();
         el.extra_indent = spaces.letter_indent;
-        el.lines = build_ragged_paragraph(lines, styles.letter, el.alignment);
+        el.lines = build_ragged_paragraph(lines, el.alignment);
         elements.emplace_back(std::move(el));
         ++par_number;
     }
@@ -713,7 +713,7 @@ void PrintPaginator::create_section(const Section &s, const ExtraPenaltyAmounts 
         std::vector<EnrichedWord> processed_words = text_to_formatted_words(title_string, false);
         ParagraphFormatter b(processed_words, section_width, styles.section, extras, fc);
         auto lines = b.split_formatted_lines();
-        auto built_lines = build_ragged_paragraph(lines, styles.section, section_alignment);
+        auto built_lines = build_ragged_paragraph(lines, section_alignment);
         for(auto &line : built_lines) {
             selem.lines.emplace_back(std::move(line));
         }
@@ -763,10 +763,8 @@ PrintPaginator::build_justified_paragraph(const std::vector<HBLine> &lines,
     return line_commands;
 }
 
-std::vector<TextCommands>
-PrintPaginator::build_ragged_paragraph(const std::vector<HBLine> &lines,
-                                       const HBChapterParameters &text_par,
-                                       const TextAlignment alignment) {
+std::vector<TextCommands> PrintPaginator::build_ragged_paragraph(const std::vector<HBLine> &lines,
+                                                                 const TextAlignment alignment) {
     std::vector<TextCommands> line_commands;
     const auto rel_x =
         alignment == TextAlignment::Centered ? textblock_width() / 2 : Length::zero();

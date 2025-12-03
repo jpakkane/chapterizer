@@ -196,7 +196,6 @@ private:
                                                         const HBChapterParameters &text_par,
                                                         const Length target_width);
     std::vector<TextCommands> build_ragged_paragraph(const std::vector<HBLine> &lines,
-                                                     const HBChapterParameters &text_par,
                                                      const TextAlignment alignment);
 
     void create_section(const Section &s, const ExtraPenaltyAmounts &extras);
