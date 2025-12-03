@@ -6,24 +6,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-HBFontCache::HBFontCache() {
-    std::filesystem::path font_root("/usr/share/fonts/truetype/liberation");
-    FontFiles nserif{"LiberationSerif-Regular.ttf",
-                     "LiberationSerif-Italic.ttf",
-                     "LiberationSerif-Bold.ttf",
-                     "LiberationSerif-BoldItalic.ttf"};
-    FontFiles nsans{"LiberationSans-Regular.ttf",
-                    "LiberationSans-Italic.ttf",
-                    "LiberationSans-Bold.ttf",
-                    "LiberationSans-BoldItalic.ttf"};
-    FontFiles mspace{"LiberationMono-Regular.ttf",
-                     "LiberationMono-Italic.ttf",
-                     "LiberationMono-Bold.ttf",
-                     "LiberationMono-BoldItalic.ttf"};
-    open_files_relative(serif, font_root, nserif);
-    open_files_relative(sansserif, font_root, nsans);
-    open_files_relative(monospace, font_root, mspace);
-}
+HBFontCache::HBFontCache() { load_default_fonts(); }
 
 HBFontCache::HBFontCache(const FontFiles &serif_files,
                          const FontFiles &sansserif_files,
@@ -31,6 +14,22 @@ HBFontCache::HBFontCache(const FontFiles &serif_files,
     open_files(serif, serif_files);
     open_files(sansserif, sansserif_files);
     open_files(monospace, mono_files);
+}
+
+HBFontCache::HBFontCache(const std::optional<FontFilePaths> &fs) {
+    if(fs) {
+        open_files(serif, fs->serif);
+        open_files(sansserif, fs->sansserif);
+        open_files(monospace, fs->mono);
+    } else {
+        load_default_fonts();
+    }
+}
+
+HBFontCache::HBFontCache(const FontFilePaths &fs) {
+    open_files(serif, fs.serif);
+    open_files(sansserif, fs.sansserif);
+    open_files(monospace, fs.mono);
 }
 
 void HBFontCache::open_files_relative(FontPtrs &ptrs,
@@ -85,6 +84,25 @@ FontOwner HBFontCache::open_file(const std::filesystem::path &fontfile) {
     FontOwner result{std::move(h), fontfile, get_em_units(fontfile)};
 
     return result;
+}
+
+void HBFontCache::load_default_fonts() {
+    std::filesystem::path font_root("/usr/share/fonts/truetype/liberation");
+    FontFiles nserif{"LiberationSerif-Regular.ttf",
+                     "LiberationSerif-Italic.ttf",
+                     "LiberationSerif-Bold.ttf",
+                     "LiberationSerif-BoldItalic.ttf"};
+    FontFiles nsans{"LiberationSans-Regular.ttf",
+                    "LiberationSans-Italic.ttf",
+                    "LiberationSans-Bold.ttf",
+                    "LiberationSans-BoldItalic.ttf"};
+    FontFiles mspace{"LiberationMono-Regular.ttf",
+                     "LiberationMono-Italic.ttf",
+                     "LiberationMono-Bold.ttf",
+                     "LiberationMono-BoldItalic.ttf"};
+    open_files_relative(serif, font_root, nserif);
+    open_files_relative(sansserif, font_root, nsans);
+    open_files_relative(monospace, font_root, mspace);
 }
 
 uint32_t HBFontCache::get_em_units(const std::filesystem::path &fontfile) {

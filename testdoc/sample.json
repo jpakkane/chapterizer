@@ -34,8 +34,7 @@
                 "bold": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyrecursor-bold.otf",
                 "bolditalic": "/usr/share/texmf/fonts/opentype/public/tex-gyre/texgyrecursor-bolditalic.otf"
             }
-        },
-
+        }
     },
     "pdf": {
         "colophon": "colophon.txt",

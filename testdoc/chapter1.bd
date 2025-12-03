@@ -28,7 +28,7 @@ This is the paragraph that should not be indented. Some more text here
 to make sure it takes more than one line in the final output.
 
 This paragraph should again be indented. Some math: /a/·2 + /b/·2 =
-/c/⁴
+/c/.
 
 
 ```footnote

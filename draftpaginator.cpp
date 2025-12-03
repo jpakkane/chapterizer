@@ -144,7 +144,7 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
 
 DraftPaginator::DraftPaginator(const Document &d)
     : doc(d), page(doc.data.pdf.page), styles(build_default_styles()), spaces(d.data.pdf.spaces),
-      m(doc.data.pdf.margins) {
+      m(doc.data.pdf.margins), fc(d.data.draftdata.fonts) {
     if(!doc.data.is_draft) {
         fprintf(stderr, "Tried to create draft output in non-draft mode.\n");
         std::abort();

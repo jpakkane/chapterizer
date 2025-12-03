@@ -147,7 +147,7 @@ const TextCommands &TextElementIterator::line() { return get_lines(element()).at
 
 PrintPaginator::PrintPaginator(const Document &d)
     : doc(d), page(doc.data.pdf.page), styles(d.data.pdf.styles), spaces(d.data.pdf.spaces),
-      m(doc.data.pdf.margins) {
+      m(doc.data.pdf.margins), fc(d.data.pdf.font_files) {
     stats = nullptr;
     if(doc.data.is_draft) {
         fprintf(stderr, "Tried to generate final print when in draft mode.\n");

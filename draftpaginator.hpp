@@ -85,7 +85,7 @@ std::vector<FormattingChange> extract_styling(StyleStack &current_style, std::st
 
 class DraftPaginator {
 public:
-    DraftPaginator(const Document &d);
+    explicit DraftPaginator(const Document &d);
 
     void generate_pdf(const char *outfile);
 

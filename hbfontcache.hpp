@@ -47,6 +47,8 @@ struct FontInfo {
 class HBFontCache {
 public:
     HBFontCache();
+    explicit HBFontCache(const std::optional<FontFilePaths> &fs);
+    explicit HBFontCache(const FontFilePaths &fs);
     HBFontCache(const FontFiles &serif, const FontFiles &sansserif, const FontFiles &mono);
 
     std::optional<FontInfo> get_font(TextCategory cat, TextStyle style) const;
@@ -66,6 +68,8 @@ private:
     FontOwner open_file(const std::filesystem::path &font_file);
 
     uint32_t get_em_units(const std::filesystem::path &fontfile);
+
+    void load_default_fonts();
 
     FontPtrs serif;
     FontPtrs sansserif;

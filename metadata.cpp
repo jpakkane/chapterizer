@@ -182,7 +182,7 @@ void parse_font_files(FontFiles &f, const json &fdict) {
         f.bold = fdict["bold"];
     }
     if(fdict.contains("bolditalic")) {
-        f.bold = fdict["bolditalic"];
+        f.bolditalic = fdict["bolditalic"];
     }
 }
 
