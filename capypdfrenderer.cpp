@@ -197,8 +197,10 @@ void CapyPdfRenderer::draw_poly_line(const std::vector<Coord> &points, Length th
     ctx.cmd_Q();
 }
 
-void CapyPdfRenderer::render_line_justified(
-    const HBLine line, const HBTextParameters &par, Length line_width, Length x, Length y) {
+void CapyPdfRenderer::render_line_justified(const HBLine line,
+                                            Length line_width,
+                                            Length x,
+                                            Length y) {
     const Length text_width = meas.text_width(line);
     const double num_spaces = line.words.size() - 1;
     // assert(num_spaces > 1);
@@ -218,14 +220,14 @@ void CapyPdfRenderer::render_line_justified(
     std::vector<hb_feature_t> features;
 
     for(size_t i = 0; i < line.words.size(); ++i) {
-        const bool is_first = i == 0;
+        // const bool is_first = i == 0;
         const bool is_last = i == line.words.size() - 1;
         const auto &word = line.words[i];
         capypdf::TextSequence ts = capypdf::TextSequence();
         for(const auto &run : word.runs) {
             // FIXME, only set font if the style changes.
             auto fontinfo = std::move(fc.get_font(run.par.par).value());
-            auto capyfont_id = hbfont2capyfont(run.par, fontinfo);
+            auto capyfont_id = hbfont2capyfont(fontinfo);
             const double run_font_size = run.par.size.pt();
 
             const double hbscale = run_font_size * num_steps;
@@ -269,7 +271,7 @@ void CapyPdfRenderer::render_text_as_is(const char *line,
 
 void CapyPdfRenderer::render_run(const HBRun &run, Length x, Length y) {
     auto fontinfo = std::move(fc.get_font(run.par.par).value());
-    auto capyfont_id = hbfont2capyfont(run.par, fontinfo);
+    auto capyfont_id = hbfont2capyfont(fontinfo);
     hb_buffer_t *buf = hb_buffer_create();
     std::unique_ptr<hb_buffer_t, HBBufferCloser> bc(buf);
 
@@ -363,6 +365,7 @@ void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
                                   Length y,
                                   TextAlignment alignment) {
     // FIXME, use alignment.
+    assert(alignment == TextAlignment::Left);
 
     hb_buffer_t *buf = hb_buffer_create();
     std::unique_ptr<hb_buffer_t, HBBufferCloser> bc(buf);
@@ -381,7 +384,7 @@ void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
         const auto &run = runs[i];
         if(i == 0 || runs[i].par != runs[i - 1].par) {
             auto fontinfo = std::move(fc.get_font(run.par.par).value());
-            auto capyfont_id = hbfont2capyfont(run.par, fontinfo);
+            auto capyfont_id = hbfont2capyfont(fontinfo);
             const double hbscale = run.par.size.pt() * num_steps;
             hb_font_set_scale(fontinfo.f, hbscale, hbscale);
             text.cmd_Tf(capyfont_id, run.par.size.pt());
@@ -400,15 +403,12 @@ void CapyPdfRenderer::render_wonky_text(const char *text,
                                         double color,
                                         Length x,
                                         Length y) {
-    /*
-    capyctx.cmd_q();
-    cairo_set_source_rgb(cr, color, color, color);
-    cairo_translate(cr, (x + shift).pt(), (y + raise).pt());
-    cairo_rotate(cr, tilt);
+    ctx.cmd_q();
+    ctx.cmd_g(color);
+    ctx.translate((x + shift).pt(), (y + raise).pt());
+    ctx.rotate(tilt);
     render_text_as_is(text, par, Length::zero(), Length::zero());
-    capyctx.cmd_Q();
-    */
-    std::abort();
+    ctx.cmd_Q();
 }
 
 void CapyPdfRenderer::new_page() {
@@ -528,8 +528,7 @@ void CapyPdfRenderer::add_section_outline(int section_number, const std::string 
     capygen.add_outline(ol);
 }
 
-CapyPDF_FontId CapyPdfRenderer::hbfont2capyfont(const HBTextParameters &par,
-                                                const FontInfo &fontinfo) {
+CapyPDF_FontId CapyPdfRenderer::hbfont2capyfont(const FontInfo &fontinfo) {
     assert(fontinfo.f);
     auto it = loaded_fonts.find(fontinfo.f);
     if(it != loaded_fonts.end()) {

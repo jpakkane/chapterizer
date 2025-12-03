@@ -450,8 +450,7 @@ void PrintPaginator::render_maintext_lines(const TextElementIterator &start_loc,
         if(std::holds_alternative<ParagraphElement>(it.element())) {
             const auto &line = it.line();
             if(const auto *j = std::get_if<JustifiedTextDrawCommand>(&line)) {
-                rend->render_line_justified(
-                    j->words, styles.normal.font, j->width, textblock_left + j->x, y);
+                rend->render_line_justified(j->words, j->width, textblock_left + j->x, y);
             } else if(const auto *r = std::get_if<TextDrawCommand>(&line)) {
                 rend->render_runs(r->runs, textblock_left + r->x, y, TextAlignment::Left);
             } else {

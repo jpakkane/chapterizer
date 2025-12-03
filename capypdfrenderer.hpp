@@ -43,7 +43,7 @@ public:
     ~CapyPdfRenderer();
 
     void render_line_justified(
-        const HBLine line, const HBTextParameters &par, Length line_width_mm, Length x, Length y);
+        const HBLine line, Length line_width_mm, Length x, Length y);
 
     void render_text_as_is(const char *line, const HBTextParameters &par, Length x, Length y);
     void render_text_as_is(
@@ -100,7 +100,7 @@ private:
 
     void serialize_single_run(const HBRun &run, capypdf::Text &tobj, hb_buffer_t *buf);
 
-    CapyPDF_FontId hbfont2capyfont(const HBTextParameters &par, const FontInfo &fontinfo);
+    CapyPDF_FontId hbfont2capyfont(const FontInfo &fontinfo);
 
     capypdf::Generator capygen;
     capypdf::DrawContext ctx;
