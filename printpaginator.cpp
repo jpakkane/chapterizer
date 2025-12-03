@@ -23,6 +23,8 @@
 namespace {
 
 void plaintextprinter(FILE *f, const TextCommands &c) {
+    (void)f;
+    (void)c;
     /*
     if(const auto *just = std::get_if<JustifiedTextDrawCommand>(&c)) {
         for(const auto &w : just->markup_words) {
@@ -47,7 +49,7 @@ const std::vector<TextCommands> empty_line{
     TextDrawCommand{{}, Length::zero(), Length::zero(), TextAlignment::Left}};
 
 // Does not do any justification, just a straight conversion.
-const std::vector<HBRun> line2runs(const HBLine &line) {
+std::vector<HBRun> line2runs(const HBLine &line) {
     std::vector<HBRun> all_line_runs;
     for(const auto &w : line.words) {
         for(const auto &r : w.runs) {
@@ -394,8 +396,8 @@ void PrintPaginator::render_backmatter() {
     auto y = m.upper;
     const Length halfgap = Length::from_mm(2);
     const auto xmiddle = current_left_margin() + paragraph_width / 2;
-    const auto x1 = xmiddle - halfgap;
-    const auto x2 = x1 + 2 * halfgap;
+    // const auto x1 = xmiddle - halfgap;
+    //  const auto x2 = x1 + 2 * halfgap;
     const char stylespan[] = R"(<span variant="small-caps" letter_spacing="1500">)";
 
     std::string buf;
@@ -618,13 +620,6 @@ void PrintPaginator::create_sign(const SignBlock &sign) {
             el.alignment = TextAlignment::Centered;
             auto rag_lines = build_ragged_paragraph(lines, el.alignment);
             assert(rag_lines.size() == 1);
-            // FIXME
-            // https://gitlab.gnome.org/GNOME/pango/-/issues/855
-            {
-                auto &textline = std::get<TextDrawCommand>(rag_lines.front());
-                // textline.markup.insert(0, "<span font_features=\"onum=1\">");
-                // textline.markup.append("</span>");
-            }
             el.lines.emplace_back(std::move(rag_lines.front()));
         } else {
             std::abort();
