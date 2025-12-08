@@ -70,6 +70,8 @@ HBChapterStyles build_default_styles() {
 
     def.colophon = def.normal;
     def.dedication = def.normal;
+    def.sign = def.normal;
+    def.sign.font.par.extra = TextExtra::SmallCaps;
     def.footnote = def.normal;
     def.lists = def.normal;
     def.letter = def.normal;
@@ -270,24 +272,20 @@ void DraftPaginator::create_maintext() {
             create_numberlist(nl, rel_y);
         } else if(std::holds_alternative<SignBlock>(e)) {
             const SignBlock &sign = std::get<SignBlock>(e);
-            rel_y += spaces.different_paragraphs;
+            rel_y -= spaces.different_paragraphs;
             heights.whitespace_height += spaces.different_paragraphs;
             for(const auto &line : sign.raw_lines) {
                 if(heights.total_height() >= bottom_watermark) {
                     new_page(true);
                     rel_y = Length::zero();
                 }
-                // FIXME, should use small caps.
-                layout.text.emplace_back(SimpleTextDrawCommand{line,
-                                                               styles.normal.font,
-                                                               textblock_width() / 2,
-                                                               rel_y,
-                                                               TextAlignment::Centered});
-                rel_y += styles.code.line_height;
-                heights.text_height += styles.code.line_height;
+                layout.text.emplace_back(SimpleTextDrawCommand{
+                    line, styles.sign.font, textblock_width() / 2, rel_y, TextAlignment::Centered});
+                rel_y -= styles.sign.line_height;
+                heights.text_height += styles.sign.line_height;
             }
             first_paragraph = true;
-            rel_y += spaces.different_paragraphs;
+            rel_y -= spaces.different_paragraphs;
             heights.whitespace_height += spaces.different_paragraphs;
         } else {
             printf("Unknown element in document array.\n");

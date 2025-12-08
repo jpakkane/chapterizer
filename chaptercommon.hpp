@@ -190,6 +190,7 @@ struct HBChapterStyles {
     HBChapterParameters section;
     HBChapterParameters letter;
     HBChapterParameters footnote;
+    HBChapterParameters sign;
     HBChapterParameters lists;
     HBChapterParameters title;
     HBChapterParameters author;
