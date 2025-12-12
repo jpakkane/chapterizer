@@ -58,7 +58,8 @@ void append_shaping_options(const HBTextParameters &par, std::vector<hb_feature_
         userfeature.end = HB_FEATURE_GLOBAL_END;
         out.push_back(std::move(userfeature));
     }
-    if(true) {
+    // FIXME, a hack, but works well enough.
+    if(par.par.cat == TextCategory::Serif) {
         hb_feature_t userfeature;
         userfeature.tag = HB_TAG('o', 'n', 'u', 'm');
         userfeature.value = 1;
