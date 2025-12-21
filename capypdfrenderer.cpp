@@ -364,8 +364,16 @@ void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
                                   Length x,
                                   Length y,
                                   TextAlignment alignment) {
-    // FIXME, use alignment.
-    assert(alignment == TextAlignment::Left);
+    Length deltax;
+
+    if(alignment != TextAlignment::Left) {
+        const auto text_width = meas.text_width(runs);
+        if(alignment == TextAlignment::Centered) {
+            deltax = -text_width / 2;
+        } else {
+            deltax = -text_width;
+        }
+    }
 
     hb_buffer_t *buf = hb_buffer_create();
     std::unique_ptr<hb_buffer_t, HBBufferCloser> bc(buf);
@@ -379,7 +387,7 @@ void CapyPdfRenderer::render_runs(const std::vector<HBRun> &runs,
     hb_buffer_guess_segment_properties(buf);
 
     capypdf::Text text = ctx.text_new();
-    text.cmd_Td(x.pt(), y.pt());
+    text.cmd_Td((x + deltax).pt(), y.pt());
     for(size_t i = 0; i < runs.size(); ++i) {
         const auto &run = runs[i];
         if(i == 0 || runs[i].par != runs[i - 1].par) {

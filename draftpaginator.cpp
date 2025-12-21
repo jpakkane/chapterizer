@@ -287,6 +287,38 @@ void DraftPaginator::create_maintext() {
             first_paragraph = true;
             rel_y -= spaces.different_paragraphs;
             heights.whitespace_height += spaces.different_paragraphs;
+        } else if(std::holds_alternative<Menu>(e)) {
+            const Menu &menu = std::get<Menu>(e);
+            rel_y -= spaces.different_paragraphs;
+            heights.whitespace_height += spaces.different_paragraphs;
+            for(const auto &line : menu.raw_lines) {
+                if(heights.total_height() >= bottom_watermark) {
+                    new_page(true);
+                    rel_y = Length::zero();
+                }
+                if(!line.empty()) {
+                    std::vector<EnrichedWord> processed_words =
+                        text_to_formatted_words(line, false);
+                    // FIXME, menu should have its own style.
+                    DraftParagraphFormatter b(
+                        processed_words, Length::from_mm(100000), styles.normal, fc);
+                    auto processed_lines = b.split_formatted_lines_to_runs();
+                    if(processed_lines.size() == 1) {
+                        layout.text.emplace_back(HBRunDrawCommand{processed_lines.front(),
+                                                                  textblock_width() / 2,
+                                                                  rel_y,
+                                                                  TextAlignment::Centered});
+                    } else {
+                        printf("Menu processing failed.\n");
+                    }
+                }
+                rel_y -= styles.normal.line_height;
+                heights.text_height += styles.normal.line_height;
+            }
+            first_paragraph = true;
+            rel_y -= spaces.different_paragraphs;
+            heights.whitespace_height += spaces.different_paragraphs;
+
         } else {
             printf("Unknown element in document array.\n");
             std::abort();

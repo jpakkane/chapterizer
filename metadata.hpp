@@ -174,6 +174,11 @@ struct NumberList {
     std::vector<std::string> items;
 };
 
+struct Menu {
+    std::vector<std::string> raw_lines;
+};
+
+
 struct Figure {
     std::string file;
 };
@@ -189,7 +194,8 @@ typedef std::variant<Paragraph,
                      NumberList,
                      Figure,
                      Letter,
-                     SignBlock>
+                     SignBlock,
+                     Menu>
     DocElement;
 
 struct Document {

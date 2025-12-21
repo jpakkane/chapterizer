@@ -31,6 +31,7 @@ const std::unordered_map<std::string, SpecialBlockType> specialmap{
     {"numberlist", SpecialBlockType::NumberList},
     {"letter", SpecialBlockType::Letter},
     {"sign", SpecialBlockType::Sign},
+    {"menu", SpecialBlockType::Menu},
 };
 
 } // namespace
@@ -200,7 +201,10 @@ void StructureParser::build_element() {
             doc.elements.emplace_back(Letter{pop_lines_to_paragraphs()});
         } else if(current_special == SpecialBlockType::Sign) {
             doc.elements.emplace_back(SignBlock{std::move(stored_lines)});
+        } else if(current_special == SpecialBlockType::Menu) {
+            doc.elements.emplace_back(Menu{std::move(stored_lines)});
         } else {
+            printf("Unknown block type (%d) in input file.\n", (int)current_special);
             std::abort();
         }
         break;
