@@ -226,6 +226,16 @@ void write_letter(tinyxml2::XMLDocument &epubdoc,
     }
 }
 
+void write_menu(tinyxml2::XMLDocument &epubdoc, tinyxml2::XMLElement *body, const Menu &menu) {
+    auto p = epubdoc.NewElement("p");
+    p->SetAttribute("class", "menu");
+    body->InsertEndChild(p);
+    for(const auto &par : menu.raw_lines) {
+        append_block_of_text(epubdoc, p, par.c_str());
+        p->InsertEndChild(epubdoc.NewElement("br"));
+    }
+}
+
 } // namespace
 
 Epub::Epub(const Document &d) : doc(d) {
@@ -541,8 +551,11 @@ void Epub::write_chapters(const fs::path &outdir) {
             auto img = epubdoc.NewElement("img");
             img->SetAttribute("src", imagepath.c_str());
             p->InsertEndChild(img);
+        } else if(std::holds_alternative<Menu>(e)) {
+            write_menu(epubdoc, body, std::get<Menu>(e));
+            is_new_after_special = true;
         } else {
-            printf("Unkown block type in epub generation.\n");
+            printf("Unknown block type in epub generation.\n");
             std::abort();
         }
     }
