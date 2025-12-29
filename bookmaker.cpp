@@ -23,6 +23,36 @@
 #include <cassert>
 #include <cstring>
 
+void replace_dashes(std::string &str) {
+    while(size_t dash_loc = str.find("---") != std::string::npos) {
+        str.replace(dash_loc, dash_loc + 3, "—");
+    }
+
+    while(size_t dash_loc = str.find("--") != std::string::npos) {
+        str.replace(dash_loc, dash_loc + 2, "–");
+    }
+}
+
+void replace_quotes(std::string &str) {
+    while(size_t quote_loc = str.find('"') != std::string::npos) {
+        str.replace(quote_loc, quote_loc + 1, "”");
+    }
+    // Support only Finnish style for now.
+}
+
+void replace_ellipses(std::string &str) {
+    while(size_t quote_loc = str.find("...") != std::string::npos) {
+        str.replace(quote_loc, quote_loc + 3, "…");
+    }
+    // Assume other types do not exist.
+}
+
+void replace_characters(std::string &str) {
+    replace_dashes(str);
+    replace_quotes(str);
+    replace_ellipses(str);
+}
+
 Document load_document(const char *fname) {
     Document doc;
     doc.data = load_book_json(fname);
