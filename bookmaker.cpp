@@ -24,25 +24,32 @@
 #include <cstring>
 
 void replace_dashes(std::string &str) {
-    while(size_t dash_loc = str.find("---") != std::string::npos) {
-        str.replace(dash_loc, dash_loc + 3, "—");
+    size_t dash_loc;
+    while((dash_loc = str.find("---")) != std::string::npos) {
+        str.replace(dash_loc, 3, "—");
     }
 
-    while(size_t dash_loc = str.find("--") != std::string::npos) {
-        str.replace(dash_loc, dash_loc + 2, "–");
+    while((dash_loc = str.find("--")) != std::string::npos) {
+        str.replace(dash_loc, 2, "–");
     }
 }
 
 void replace_quotes(std::string &str) {
-    while(size_t quote_loc = str.find('"') != std::string::npos) {
-        str.replace(quote_loc, quote_loc + 1, "”");
+    size_t quote_loc;
+    while((quote_loc = str.find('"')) != std::string::npos) {
+        str.replace(quote_loc, 1, "”");
+    }
+
+    while((quote_loc = str.find("'")) != std::string::npos) {
+        str.replace(quote_loc, 1, "’");
     }
     // Support only Finnish style for now.
 }
 
 void replace_ellipses(std::string &str) {
-    while(size_t quote_loc = str.find("...") != std::string::npos) {
-        str.replace(quote_loc, quote_loc + 3, "…");
+    size_t quote_loc;
+    while((quote_loc = str.find("...")) != std::string::npos) {
+        str.replace(quote_loc, 3, "…");
     }
     // Assume other types do not exist.
 }
@@ -51,6 +58,42 @@ void replace_characters(std::string &str) {
     replace_dashes(str);
     replace_quotes(str);
     replace_ellipses(str);
+}
+
+void preprocess_document(Document &d) {
+    for(auto &e : d.elements) {
+        if(auto *p = std::get_if<Paragraph>(&e)) {
+            replace_characters(p->text);
+        } else if(auto *s = std::get_if<Section>(&e)) {
+            replace_characters(s->text);
+        } else if(auto *sc = std::get_if<SceneChange>(&e)) {
+            (void)sc;
+        } else if(auto *code = std::get_if<CodeBlock>(&e)) {
+            // Code is always written as-is.
+            (void)code;
+        } else if(auto *footnote = std::get_if<Footnote>(&e)) {
+            (void)footnote;
+            std::abort();
+        } else if(auto *figure = std::get_if<Figure>(&e)) {
+            (void)figure;
+            std::abort();
+        } else if(auto *letter = std::get_if<Letter>(&e)) {
+            for(auto &lp : letter->paragraphs) {
+                replace_characters(lp);
+            }
+        } else if(auto *sign = std::get_if<SignBlock>(&e)) {
+            for(auto &l : sign->raw_lines) {
+                replace_characters(l);
+            }
+        } else if(auto *menu = std::get_if<Menu>(&e)) {
+            for(auto &l : menu->raw_lines) {
+                replace_characters(l);
+            }
+        } else {
+            printf("Unknown type in preprocess.\n");
+            std::abort();
+        }
+    }
 }
 
 Document load_document(const char *fname) {
@@ -75,10 +118,10 @@ Document load_document(const char *fname) {
             if(c == 0 || c == '\n' || c >= 32 || c < 0) {
                 // OK.
             } else {
-                printf(
-                    "Input file %s contains a prohibited invisible ASCII control character %d.\n",
-                    fpath.c_str(),
-                    int(c));
+                printf("Input file %s contains a prohibited invisible ASCII control character "
+                       "%d.\n",
+                       fpath.c_str(),
+                       int(c));
                 std::abort();
             }
         }
@@ -104,7 +147,10 @@ int main(int argc, char **argv) {
         printf("%s <bookdef.json>\n", argv[0]);
         return 1;
     }
+    // std::string bob("Hello \" there --- my ... man");
+    // replace_characters(bob);
     auto doc = load_document(argv[1]);
+    preprocess_document(doc);
     if(doc.data.generate_pdf) {
         if(doc.data.is_draft) {
             DraftPaginator p(doc);
