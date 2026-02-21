@@ -178,7 +178,7 @@ void PrintPaginator::generate_pdf(const char *outfile) {
     dprop.set_default_page_properties(pprop);
     dprop.set_title(doc.data.title);
     dprop.set_author(doc.data.author);
-    dprop.set_creator("SuperPDF from outer space!");
+    dprop.set_creator("Bookmaker");
     assert(!doc.data.is_draft);
 
     rend.reset(new CapyPdfRenderer(outfile, page.w, page.h, doc.data.pdf.bleed, dprop, fc));
