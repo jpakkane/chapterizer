@@ -354,7 +354,7 @@ Metadata load_book_json(const char *path) {
             auto credits_path = m.top_dir / text;
             m.credits = load_credits(credits_path.c_str());
         } else {
-            fprintf(stderr, "Backmatter not yet supported.\n");
+            fprintf(stderr, "Backmatter of type %s not yet supported.\n", text.c_str());
             std::abort();
         }
     }
