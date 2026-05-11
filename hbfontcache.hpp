@@ -59,11 +59,11 @@ public:
     static constexpr double NUM_STEPS = 64;
 
 private:
-    void
-    open_files_relative(FontPtrs &ptrs, const std::filesystem::path &font_root, const FontFiles &fnames);
+    void open_files_relative(FontPtrs &ptrs,
+                             const std::filesystem::path &font_root,
+                             const FontFiles &fnames);
 
-    void
-    open_files(FontPtrs &ptrs, const FontFiles &fnames);
+    void open_files(FontPtrs &ptrs, const FontFiles &fnames);
 
     FontOwner open_file(const std::filesystem::path &font_file);
 

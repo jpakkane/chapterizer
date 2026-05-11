@@ -178,7 +178,6 @@ struct Menu {
     std::vector<std::string> raw_lines;
 };
 
-
 struct Figure {
     std::string file;
 };
