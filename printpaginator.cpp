@@ -603,30 +603,14 @@ void PrintPaginator::create_sign(const SignBlock &sign) {
     el.font = &styles.normal.font;
     const auto textwidth = textblock_width();
     for(const auto &line : sign.raw_lines) {
-        // FIXME. This should not be done here. Smallcapsness should be a
-        // font property instead.
-        if(line.empty() || line.front() != '|') {
-            std::string tmpline("|");
-            tmpline += line;
-            tmpline += '|';
-            std::vector<EnrichedWord> processed_words = text_to_formatted_words(tmpline);
-            ParagraphFormatter b(processed_words, textwidth, styles.normal, extra, fc);
-            auto lines = b.split_formatted_lines();
-            el.extra_indent = textblock_width() / 2;
-            el.alignment = TextAlignment::Centered;
-            auto rag_lines = build_ragged_paragraph(lines, el.alignment);
-            assert(rag_lines.size() == 1);
-            el.lines.emplace_back(std::move(rag_lines.front()));
-        } else {
-            std::abort();
-            /*
-            el.lines.emplace_back(MarkupDrawCommand{line.c_str(),
-                                                    &styles.normal.font,
-                                                    Length::zero(),
-                                                    Length::zero(),
-                                                    TextAlignment::Centered});
-*/
-        }
+        std::vector<EnrichedWord> processed_words = text_to_formatted_words(line);
+        ParagraphFormatter b(processed_words, textwidth, styles.sign, extra, fc);
+        auto lines = b.split_formatted_lines();
+        el.extra_indent = textblock_width() / 2;
+        el.alignment = TextAlignment::Centered;
+        auto rag_lines = build_ragged_paragraph(lines, el.alignment);
+        assert(rag_lines.size() == 1);
+        el.lines.emplace_back(std::move(rag_lines.front()));
     }
     elements.emplace_back(std::move(el));
 }
