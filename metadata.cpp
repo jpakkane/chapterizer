@@ -241,6 +241,10 @@ void load_pdf_element(Metadata &m, const json &pdf) {
         m.pdf.styles.colophon = parse_chapterstyle(styles["colophon"]);
         m.pdf.styles.dedication = parse_chapterstyle(styles["dedication"]);
 
+        // Should be done properly, but meh.
+        m.pdf.styles.credits = m.pdf.styles.normal;
+        m.pdf.styles.credits.font.par.extra = TextExtra::SmallCaps;
+
         auto spaces = pdf["spaces"];
         m.pdf.spaces.above_section = Length::from_mm(get_double(spaces, "above_section"));
         m.pdf.spaces.below_section = Length::from_mm(get_double(spaces, "below_section"));

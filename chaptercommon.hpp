@@ -196,6 +196,7 @@ struct HBChapterStyles {
     HBChapterParameters author;
     HBChapterParameters colophon;
     HBChapterParameters dedication;
+    HBChapterParameters credits;
 };
 
 struct HBRun {

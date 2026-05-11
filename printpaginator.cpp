@@ -392,49 +392,37 @@ void PrintPaginator::render_backmatter() {
     if(doc.data.credits.empty()) {
         return;
     }
-    // const auto paragraph_width = page.w - m.inner - m.outer;
-    auto y = m.upper;
-    // const Length halfgap = Length::from_mm(2);
-    // const auto xmiddle = current_left_margin() + paragraph_width / 2;
-    // const auto x1 = xmiddle - halfgap;
+    const auto paragraph_width = page.w - m.inner - m.outer;
+    auto y = page.h - m.upper;
+    const Length halfgap = Length::from_mm(2);
+    const auto xmiddle = current_left_margin() + paragraph_width / 2;
+    const auto x1 = xmiddle - halfgap;
     // const auto x2 = x1 + 2 * halfgap;
-    const char stylespan[] = R"(<span variant="small-caps" letter_spacing="1500">)";
 
-    std::string buf;
     for(const auto &centry : doc.data.credits) {
         if(const auto *regular = std::get_if<CreditsEntry>(&centry)) {
             const auto &key = regular->key;
             const auto &value = regular->value;
-            buf = stylespan;
-            buf += key.c_str();
-            buf += "</span>";
             if(!key.empty()) {
                 std::abort();
                 // rend->render_markup_as_is(
-                //     buf.c_str(), styles.normal.font, x1, y, TextAlignment::Right);
+                //     line.c_str(), styles.credits.font, x1, y, TextAlignment::Right);
             }
-            buf = stylespan;
-            buf += value.c_str();
-            buf += "</span>";
             if(!value.empty()) {
                 std::abort();
                 // rend->render_markup_as_is(
-                //     buf.c_str(), styles.normal.font, x2, y, TextAlignment::Left);
+                //     line.c_str(), styles.credits.font, x2, y, TextAlignment::Left);
             }
         } else {
             const auto &line = std::get<CreditsTitle>(centry).line;
             if(!line.empty()) {
-                buf = stylespan;
-                buf += line;
-                buf += "</span>";
-                std::abort();
-                // rend->render_markup_as_is(
-                //     buf.c_str(), styles.normal.font, xmiddle, y, TextAlignment::Centered);
+                rend->render_text_as_is(
+                    line.c_str(), styles.credits.font, xmiddle, y, TextAlignment::Centered);
             }
         }
-        y += styles.normal.line_height;
+        y -= styles.credits.line_height;
     }
-    rend->finalize_page();
+    rend->new_page();
 }
 
 void PrintPaginator::render_maintext_lines(const TextElementIterator &start_loc,
@@ -575,6 +563,15 @@ void PrintPaginator::build_main_text() {
             create_sign(*sign);
             elements.emplace_back(EmptyLineElement{1});
             first_paragraph = true;
+        } else if(auto *menu = std::get_if<Menu>(&e)) {
+            /*
+            elements.emplace_back(EmptyLineElement{1});
+            create_sign(*sign);
+            elements.emplace_back(EmptyLineElement{1});
+            first_paragraph = true;
+*/
+            fprintf(stderr, "Menus not supported yet.\n");
+            std::abort();
         } else {
             fprintf(stderr, "Maintext entry not supported yet.\n");
             std::abort();
