@@ -242,6 +242,8 @@ void load_pdf_element(Metadata &m, const json &pdf) {
         m.pdf.styles.dedication = parse_chapterstyle(styles["dedication"]);
 
         // Should be done properly, but meh.
+        m.pdf.styles.sign = m.pdf.styles.normal;
+        m.pdf.styles.sign.font.par.extra = TextExtra::SmallCaps;
         m.pdf.styles.credits = m.pdf.styles.normal;
         m.pdf.styles.credits.font.par.extra = TextExtra::SmallCaps;
 

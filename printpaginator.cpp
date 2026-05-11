@@ -564,14 +564,10 @@ void PrintPaginator::build_main_text() {
             elements.emplace_back(EmptyLineElement{1});
             first_paragraph = true;
         } else if(auto *menu = std::get_if<Menu>(&e)) {
-            /*
             elements.emplace_back(EmptyLineElement{1});
-            create_sign(*sign);
+            create_menu(*menu);
             elements.emplace_back(EmptyLineElement{1});
             first_paragraph = true;
-*/
-            fprintf(stderr, "Menus not supported yet.\n");
-            std::abort();
         } else {
             fprintf(stderr, "Maintext entry not supported yet.\n");
             std::abort();
@@ -611,6 +607,31 @@ void PrintPaginator::create_sign(const SignBlock &sign) {
         auto rag_lines = build_ragged_paragraph(lines, el.alignment);
         assert(rag_lines.size() == 1);
         el.lines.emplace_back(std::move(rag_lines.front()));
+    }
+    elements.emplace_back(std::move(el));
+}
+
+void PrintPaginator::create_menu(const Menu &menu) {
+    SpecialTextElement el;
+    ExtraPenaltyAmounts extra;
+    el.extra_indent = Length::zero();
+    el.font = &styles.normal.font;
+    const auto textwidth = textblock_width();
+    for(const auto &line : menu.raw_lines) {
+        if(line.empty()) {
+            el.lines.push_back(
+                TextDrawCommand{{}, Length::zero(), Length::zero(), TextAlignment::Centered});
+        } else {
+            std::vector<EnrichedWord> processed_words = text_to_formatted_words(line);
+            // FIXME, should use a custom style element for menu.
+            ParagraphFormatter b(processed_words, textwidth, styles.normal, extra, fc);
+            auto lines = b.split_formatted_lines();
+            el.extra_indent = textblock_width() / 2;
+            el.alignment = TextAlignment::Centered;
+            auto rag_lines = build_ragged_paragraph(lines, el.alignment);
+            assert(rag_lines.size() == 1);
+            el.lines.emplace_back(std::move(rag_lines.front()));
+        }
     }
     elements.emplace_back(std::move(el));
 }

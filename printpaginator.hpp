@@ -201,6 +201,7 @@ private:
     void create_section(const Section &s, const ExtraPenaltyAmounts &extras);
     void create_codeblock(const CodeBlock &cb);
     void create_sign(const SignBlock &cb);
+    void create_menu(const Menu &menu);
     void create_letter(const Letter &letter);
 
     void create_paragraph(const Paragraph &p,
