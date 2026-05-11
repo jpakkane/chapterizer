@@ -296,6 +296,10 @@ std::vector<Credits> load_credits(const char *credits_path) {
     return c;
 }
 
+std::vector<std::string> load_recipe(const char *credits_path) {
+    return read_paragraphs(credits_path);
+}
+
 Metadata load_book_json(const char *path) {
     Metadata m;
     std::filesystem::path json_file(path);
@@ -359,6 +363,9 @@ Metadata load_book_json(const char *path) {
         if(text == "credits.txt") {
             auto credits_path = m.top_dir / text;
             m.credits = load_credits(credits_path.c_str());
+        } else if(text == "recipe.bd") {
+            auto recipe_path = m.top_dir / text;
+            m.recipe = load_recipe(recipe_path.c_str());
         } else {
             fprintf(stderr, "Backmatter of type %s not yet supported.\n", text.c_str());
             std::abort();

@@ -139,6 +139,7 @@ struct Metadata {
     // FIXME, remove these three.
     std::vector<std::string> dedication;
     std::vector<Credits> credits;
+    std::vector<std::string> recipe;
     std::vector<std::string> postcredits;
     bool debug_draw = false;
 };

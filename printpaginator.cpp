@@ -389,9 +389,66 @@ void PrintPaginator::render_mainmatter() {
 }
 
 void PrintPaginator::render_backmatter() {
-    if(doc.data.credits.empty()) {
-        return;
+    if(!doc.data.recipe.empty()) {
+        render_recipe();
     }
+
+    if(!doc.data.credits.empty()) {
+        render_credits();
+    }
+}
+
+void PrintPaginator::render_recipe() {
+    auto y = page.h - m.upper;
+    const auto x = current_left_margin();
+    const auto &recipe_style = doc.data.pdf.styles.code;
+    const auto textwidth = textblock_width();
+    ExtraPenaltyAmounts extra;
+    std::string tmp;
+
+    for(const auto &line : doc.data.recipe) {
+        assert(!line.empty());
+        if(line.front() == '#') {
+            tmp = line.substr(2);
+            auto boldstyle = recipe_style.font;
+            boldstyle.par.style = TextStyle::Bold;
+            rend->render_text_as_is(tmp.c_str(), boldstyle, x, y);
+            y -= 2 * recipe_style.line_height;
+        } else if(line.front() == '-') {
+            // The parser joins all lines together, so we need to get them out again.
+            size_t i = 0;
+
+            while(true) {
+                size_t next_i = line.find('-', i + 1);
+                if(next_i == std::string::npos) {
+                    break;
+                }
+                tmp = line.substr(i, next_i - i);
+                rend->render_text_as_is(tmp.c_str(), recipe_style.font, x, y);
+                y -= recipe_style.line_height;
+                i = next_i;
+            }
+            tmp = line.substr(i);
+            rend->render_text_as_is(tmp.c_str(), recipe_style.font, x, y);
+            y -= 2 * recipe_style.line_height;
+        } else {
+            std::vector<EnrichedWord> processed_words = text_to_formatted_words(line);
+            ParagraphFormatter b(processed_words, textwidth, recipe_style, extra, fc);
+            auto lines = b.split_formatted_lines();
+            auto rag_lines = build_ragged_paragraph(lines, TextAlignment::Left);
+            for(const auto &tl : rag_lines) {
+                const auto &tc = std::get<TextDrawCommand>(tl);
+                rend->render_runs(tc.runs, x, y, TextAlignment::Left);
+                y -= recipe_style.line_height;
+            }
+            // rend->render_text_as_is(line.c_str(), recipe_style.font, current_left_margin(), y);
+            y -= recipe_style.line_height;
+        }
+    }
+    rend->new_page();
+}
+
+void PrintPaginator::render_credits() {
     const auto paragraph_width = page.w - m.inner - m.outer;
     auto y = page.h - m.upper;
     const Length halfgap = Length::from_mm(2);

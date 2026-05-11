@@ -216,6 +216,9 @@ private:
     void render_mainmatter();
     void render_backmatter();
 
+    void render_recipe();
+    void render_credits();
+
     void render_floating_image(const ImageElement &imel);
 
     std::vector<EnrichedWord> text_to_formatted_words(const std::string &text,
