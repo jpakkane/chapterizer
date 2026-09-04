@@ -24,9 +24,6 @@
 
 #include <hbmeasurer.hpp>
 #include <cstring>
-#include <algorithm>
-
-#include <sstream>
 
 namespace {
 
@@ -438,6 +435,15 @@ void CapyPdfRenderer::finalize_page() {
         ctx.cmd_Q();
         draw_cropmarks();
     }
+}
+
+void CapyPdfRenderer::add_comment_annotation(
+    Length x, Length y, Length w, Length h, const std::string &text) {
+    auto annotation = capypdf::Annotation::new_text_annotation(text);
+    annotation.set_rectangle(x.pt(), y.pt(), (x + w).pt(), (y + h).pt());
+    // annotation.set_rectangle(100, 100, 50, 50);
+    auto anno_id = capygen.add_annotation(annotation);
+    ctx.annotate(anno_id);
 }
 
 void CapyPdfRenderer::draw_cropmarks() {

@@ -180,6 +180,8 @@ private:
 
     void build_element();
 
+    bool current_is_comment() const;
+
     std::string pop_lines_to_string();
 
     std::vector<std::string> pop_lines_to_paragraphs();

@@ -212,13 +212,31 @@ void StructureParser::build_element() {
         doc.elements.emplace_back(Section{1, section_number, pop_lines_to_string()});
         break;
     case ParsingState::paragraph:
-        unquote_lines();
-        number_super_fix();
-        doc.elements.emplace_back(Paragraph{pop_lines_to_string()});
+        if(current_is_comment()) {
+            auto &first_line = stored_lines.front();
+            first_line.erase(first_line.begin());
+            while(!first_line.empty() && first_line.front() == ' ') {
+                first_line.erase(first_line.begin());
+            }
+            doc.elements.emplace_back(Comment{pop_lines_to_string()});
+        } else {
+            unquote_lines();
+            number_super_fix();
+            doc.elements.emplace_back(Paragraph{pop_lines_to_string()});
+        }
         break;
     default:
         std::abort();
     }
+}
+
+bool StructureParser::current_is_comment() const {
+    assert(current_state == ParsingState::paragraph);
+    if(!stored_lines.empty()) {
+        auto &first_line = stored_lines.front();
+        return first_line.size() > 1 && first_line.front() == '%';
+    }
+    return false;
 }
 
 static gboolean eval_quote_cb(const GMatchInfo *info, GString *res, gpointer) {

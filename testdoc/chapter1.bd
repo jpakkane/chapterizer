@@ -30,13 +30,15 @@ to make sure it takes more than one line in the final output.
 This paragraph should again be indented. Some math: /a/·2 + /b/·2 =
 /c/.
 
-
 ```footnote
 This is a footnote with some text in it. You can't yet name them or refer
 to them, but then again why would you.
 ```
 
 “Henderson,” he called, “you saw that shooting star last night?”
+
+% This should be a comment that shows up as a PDF annotation near the
+paragraph that starts with "Henderson".
 
 I think everyone expected to see a man emerge—possibly something a
 little unlike us terrestrial men, but in all essentials a man. I know I

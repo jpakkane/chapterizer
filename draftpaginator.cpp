@@ -318,7 +318,13 @@ void DraftPaginator::create_maintext() {
             first_paragraph = true;
             rel_y -= spaces.different_paragraphs;
             heights.whitespace_height += spaces.different_paragraphs;
-
+        } else if(std::holds_alternative<Comment>(e)) {
+            const auto &comment = std::get<Comment>(e);
+            auto anno_x = page.w - Length::from_mm(15);
+            auto anno_y = m.lower + textblock_height() + rel_y;
+            auto anno_w = Length::from_mm(10);
+            auto anno_h = Length::from_mm(10);
+            rend->add_comment_annotation(anno_x, anno_y, anno_w, anno_h, comment.text);
         } else {
             printf("Unknown element in document array.\n");
             std::abort();

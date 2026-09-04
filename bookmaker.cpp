@@ -89,6 +89,8 @@ void preprocess_document(Document &d) {
             for(auto &l : menu->raw_lines) {
                 replace_characters(l);
             }
+        } else if(auto *comment = std::get_if<Comment>(&e)) {
+            (void)comment;
         } else {
             printf("Unknown type in preprocess.\n");
             std::abort();

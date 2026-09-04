@@ -18,9 +18,9 @@
     "backmatter": [
         "credits.txt"
     ],
-    "draft2": {
-        "surname": "Pakkanen",
-        "email": "jpakkane@gmail.com",
+    "draft": {
+        "surname": "Author",
+        "email": "author@example.com",
         "phone": "040 111 1111"
     },
     "pdf": {

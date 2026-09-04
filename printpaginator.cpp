@@ -451,9 +451,9 @@ void PrintPaginator::render_recipe() {
 void PrintPaginator::render_credits() {
     const auto paragraph_width = page.w - m.inner - m.outer;
     auto y = page.h - m.upper;
-    const Length halfgap = Length::from_mm(2);
+    // const Length halfgap = Length::from_mm(2);
     const auto xmiddle = current_left_margin() + paragraph_width / 2;
-    const auto x1 = xmiddle - halfgap;
+    // const auto x1 = xmiddle - halfgap;
     // const auto x2 = x1 + 2 * halfgap;
 
     for(const auto &centry : doc.data.credits) {

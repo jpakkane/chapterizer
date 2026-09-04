@@ -90,6 +90,8 @@ public:
 
     void add_section_outline(int section_number, const std::string &text);
 
+    void add_comment_annotation(Length x, Length y, Length w, Length h, const std::string &text);
+
     void init_page();
     void finalize_page();
 

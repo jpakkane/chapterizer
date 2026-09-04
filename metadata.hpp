@@ -185,6 +185,10 @@ struct Figure {
 
 struct SceneChange {};
 
+struct Comment {
+    std::string text;
+};
+
 // Also needs images, footnotes, unformatted text etc.
 typedef std::variant<Paragraph,
                      Section,
@@ -195,7 +199,8 @@ typedef std::variant<Paragraph,
                      Figure,
                      Letter,
                      SignBlock,
-                     Menu>
+                     Menu,
+                     Comment>
     DocElement;
 
 struct Document {
